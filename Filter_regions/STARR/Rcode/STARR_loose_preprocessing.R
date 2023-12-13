@@ -1,5 +1,5 @@
 setwd("/maps/projects/ralab/people/pcr980/DeepCompare/Filter_regions/")
-source("/maps/projects/ralab/people/pcr980/DeepCompare/Filter_regions/Rcode/Function_utils.R")
+source("/maps/projects/ralab/people/pcr980/DeepCompare/Scripts_R/Generate_data/Function_utils.R")
 
 
 data_dir <- "STARR/STARRPeaker_res/"

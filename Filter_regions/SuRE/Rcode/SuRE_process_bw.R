@@ -1,6 +1,6 @@
 setwd("/maps/projects/ralab/people/pcr980/DeepCompare/Filter_regions")
 library(rtracklayer)
-source("Rcode/Function_bigwig.R")
+source("/maps/projects/ralab/people/pcr980/DeepCompare/Scripts_R/Generate_data/Function_bigwig.R")
     # combine_bw
 
 process_dir <- function(dir,cell_type,outname){

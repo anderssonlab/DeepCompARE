@@ -1,3 +1,6 @@
+Preprocess each data modality, including preprocessing and liftover Bigwig files of SuRE-Seq. Then output reproducible regions to Pd1_bed_processed/
+
+
 ----------------------
 Preprocess: SuRE 
 ----------------------
@@ -13,7 +16,7 @@ Filter_regions/SuRE/BW_hg19/
 Filter_regions/SuRE/NarrowPeak_hg19
   * SuRE_narrowPeak_EDA_filter_liftover.R --> Raw_data/SuRE_files/NarrowPeak_hg38_c4_RMSNP
  
- 
+ lift hg19 to hg38 using listover_sure_hg19.sh
  
   
 -----------------------
@@ -38,7 +41,7 @@ Pd1_bed_processed/
 Preprocess: STARR
 ----------------------
 Only for loose
-code: STARR_loose_preprocessing
+code: STARR_loose_preprocessing.R
 
 
 
@@ -80,9 +83,11 @@ Reproducibility SuRE
 ----------------------
 code: generate_reproducible_regions.R
 
-Irreproducible: -c4
+Irreproducible: -c4 RMSNP
+
 
 Reproducible within modality: -c4, #overlap=2, min_length=240
+Filter_regions/SuRE/Peaks_reproducible_within_modality/
 
 Loose: -c2
 
