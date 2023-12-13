@@ -3,7 +3,7 @@
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Train/Utils/")
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python/")
-from models import Conv5D, CRConv5D, AstigConv5D, AstigCRConv5D, BPNet
+from models import Conv5D, CRConv5D, AstigConv5D, AstigCRConv5D, BPNet21, BPNet64
 from trainer import *
 
 import json
