@@ -11,7 +11,7 @@ Train/ stores the code for training models.
 Test/ stores the code for benchmarking models.
 
 Naming convention:
-    write_* : write to csv format, return NULL.
+    write_* : write to csv format,or other format, return NULL.
     compute_: returns numpy array
     feat_attr: direct output from captum (e.g. gradxinp)
     feat_imp: including feat_attr, ism_delta and importance derived from all other methods
