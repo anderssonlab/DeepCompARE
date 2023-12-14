@@ -1,4 +1,4 @@
-# Bench mark models on a common test
+# Bench mark models on a common test set
 
 
 import os
@@ -10,7 +10,7 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from write_prediction import write_predictions
 
 dir_models="/isdata/alab/people/pcr980/DeepCompare/Models"
-dir_predictions="/isdata/alab/people/pcr980/DeepCompare/Test/"
+dir_predictions="/isdata/alab/people/pcr980/DeepCompare/Test/Pd1_model_predictions/"
 #------------------------------------------------------
 # Task1: write predictions on unified standard test set
 #------------------------------------------------------
@@ -36,13 +36,13 @@ for model_name in os.listdir(dir_predictions):
     pred_path=os.path.join(dir_predictions,model_name)
     if os.path.isdir(pred_path):
         if len(os.listdir(pred_path)) == 0:
-            print(f"Remove {model_name}")
+            print(f"Remove empty directory {model_name}")
             os.rmdir(pred_path)
         
         
     
 #------------------------------------------------------
-# Task2: calculate either accuracy and classification
+# Task2: calculate ST
 #------------------------------------------------------
 # functions
 def split(name):
@@ -72,24 +72,17 @@ def calc_pcc(pred,truth):
     pred=np.array(pred).squeeze()
     truth=np.array(truth).squeeze()
     return float(np.corrcoef(pred,truth)[0][1])
+    
 
 def append_list_in_dict(dict_database,dict_new):
     for key,value in dict_new.items():
         dict_database[key].append(value)
         
 
-
-
-
-
-
-
-
 # analysis
 df_truth=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Datasets/Dataset_final_rep/dat_test.csv")
 
-        
-res_dict={
+res_dict_ST={
     "model_name":[],
     "task_type":[],
     "model_type":[],
@@ -98,10 +91,7 @@ res_dict={
     "pcc":[],
     "acc":[]
 }
-    
-
 for model_name in os.listdir(dir_models):
-    print(model_name)
     info_dict=split(model_name)
     if info_dict["task_type"]=="ST":
         pred=pd.read_csv(os.path.join(dir_predictions,model_name,"pred_dat_test.csv"),header=None)
@@ -117,17 +107,72 @@ for model_name in os.listdir(dir_models):
             acc=calc_acc(pred.iloc[:,0],df_truth.loc[:,info_dict["file"]+"_class"])
         else: 
             print("Model type not recognized")
+        # append metrics
         
-        res_dict["pcc"].append(pcc)
-        res_dict["acc"].append(acc)
-        append_list_in_dict(res_dict,info_dict)            
+        res_dict_ST["pcc"].append(pcc)
+        res_dict_ST["acc"].append(acc)
+        append_list_in_dict(res_dict_ST,info_dict)            
 
-for key,value in res_dict.items():
-    print(key)
-    print(len(value))
-        
-res_df=pd.DataFrame(res_dict)
+res_df=pd.DataFrame(res_dict_ST)
+res_df.to_csv("/isdata/alab/people/pcr980/DeepCompare/Test/ST_metrics.csv")
 
-res_df.to_csv(os.path.join(dir_predictions,"ST_metrics.csv"))
+            
 
 
+#------------------------------------------------------
+# Task3: calculate MT
+#------------------------------------------------------
+def create_colnames():
+    colnames=[]
+    for modality in ["cage","dhs","starr","sure"]:
+        for cell in ["hepg2","k562"]:
+            colnames.append("_".join([modality,cell]))
+    return colnames
+
+def calc_columnwise_metrics(df_pred,df_truth,metric,metric_func):
+    res=[]
+    assert df_pred.shape==df_truth.shape
+    for i in range(df_pred.shape[1]):
+        res.append(metric_func(df_pred.iloc[:,i],df_truth.iloc[:,i]))
+    df_res=pd.DataFrame({"file":df_pred.columns,metric:res})
+    return df_res
+
+def add_suffix(my_list,suffix):
+    return [item+suffix for item in my_list]
+
+
+
+
+df_truth_reg=df_truth.loc[:,add_suffix(create_colnames(),"_intensity")]
+df_truth_class=df_truth.loc[:,add_suffix(create_colnames(),"_class")]
+
+for model_name in os.listdir(dir_models):
+    info_dict=split(model_name)
+    if info_dict["task_type"]=="MT":
+        print(model_name)
+        df_pred=pd.read_csv(os.path.join(dir_predictions,model_name,"pred_dat_test.csv"),header=None)
+        if info_dict["model_type"]=="CR":
+            df_pred_reg=df_pred.iloc[:,0:8]
+            df_pred_class=df_pred.iloc[:,8:16]
+            df_pred_reg.columns=create_colnames()
+            df_pred_class.columns=create_colnames()
+            df_metric=calc_columnwise_metrics(df_pred_reg,df_truth_reg,'pcc',calc_pcc)
+            df_acc=calc_columnwise_metrics(df_pred_class,df_truth_class,'acc',calc_acc)
+            df_metric.loc[:,"acc"]=df_acc.acc
+        elif info_dict["model_type"]=="Reg":
+            df_pred.columns=create_colnames()
+            df_metric=calc_columnwise_metrics(df_pred,df_truth_reg,'pcc',calc_pcc)
+            df_metric.loc[:,"acc"]=0
+        elif info_dict["model_type"]=="Class":
+            df_pred.columns=create_colnames()
+            df_metric=calc_columnwise_metrics(df_pred,df_truth_class,'acc',calc_acc)
+            df_metric.loc[:,"pcc"]=0
+        else: 
+            print("Model type not recognized")
+            
+        df_metric.loc[:,"model_name"]=info_dict["model_name"]
+        df_metric.loc[:,"task_type"]=info_dict["task_type"]
+        df_metric.loc[:,"model_type"]=info_dict["model_type"]
+        df_metric.loc[:,"data_dir"]=info_dict["data_dir"]   
+        df_metric=df_metric.loc[:,['file', 'pcc', 'acc', 'model_name', 'task_type', 'model_type', 'data_dir']]
+        df_metric.to_csv("/isdata/alab/people/pcr980/DeepCompare/Test/MT_metrics.csv",mode='a',index=False,header=False)

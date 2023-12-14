@@ -5,6 +5,10 @@ This modules mutate bases in sequences and calculate ism_delta
 Can be used in two mode: single and bulk
 Single mode: Use in python script only: input one sequence, no intermediate directory is generated.
 Bulk mode: Input sequences, create intermediate directory containing all mutated files for paralle processing
+Files created in Bulk mode:
+    sequences_mutated.csv
+    prediction_mutated_seqs.csv
+    prediction_ref_seqs.csv
 """
 
 
@@ -68,17 +72,18 @@ def saturation_SNPs_one_seq(seq):
 
 
 
-def saturation_SNPs_all_seqs(seqs,temp_out_path):
+def write_saturation_SNPs_for_all_seqs(seqs,dir_temp):
     """
     Write all mutated sequences of all sequences in seq_file into dir_temp
     Args:
         seq_file: a file containing sequences
         seq_colname: the column name of the sequences 
     Output:
-        NULL
+        NULL, but write mutated sequences to csv file.
     """
     colnames=["mutated_sequence","mutated_location","Refseq_idx"]
-    with open(temp_out_path) as f:
+    out_path=os.path.join(dir_temp,"sequences_mutated.csv")
+    with open(out_path) as f:
         f.write(",".join(colnames)+"\n")
 
     for i,seq in enumerate(seqs):
@@ -87,55 +92,68 @@ def saturation_SNPs_all_seqs(seqs,temp_out_path):
                          "mutated_location":[item for item in list(range(0,len(seq)))for _ in range(3)]
         })
         df["Refseq_idx"]="Ref"+str(i)
-        df.to_csv(temp_out_path,index=False,header=False,mode="a")
+        df.to_csv(out_path,index=False,header=False,mode="a")
 
 
 
-def aggregate_mutation_prediction(key):
+
+
+
+
+def aggregate_mutation_prediction(dir_temp):
     """
     Calculate average effect of mutating each location
     """
     df_mutated_info=pd.read_csv("Temp_ism/sequences_mutated.csv")
-    df_mutated_prediction=pd.read_csv("Temp_ism/prediction_mutated.csv")
+    df_mutated_prediction=pd.read_csv("Temp_ism/prediction_mutated_seqs.csv")
     assert df_mutated_info.shape[0]==df_mutated_prediction.shape[0]
     df_mutated=pd.concat([df_mutated_info,df_mutated_prediction],axis=1)
     df_mutated=df_mutated.groupby(["Refseq_idx","mutated_location"])["signal_"+key].mean().reset_index()
     return df_mutated
 
 
-def calculate_ism_delta(device,model,seq_file,seq_colname,key,out_path):
-    """ Sequence needs to be 600 bp"""
-    # make directory for temp result
+def _create_dir_name():
     random_number = random.randint(100000, 999999)
-    dir_temp=f"Temp_ism_{random_number}"
+    return f"Temp_ism_{random_number}"
+
+def calculate_ism_delta(device,model_dir,seq_file,seq_colname,out_path):
+    """ 
+    Args:
+        
+    """
+    # make directory for temp result
+    dir_temp=_create_dir_name()
     
-    if not os.path.isdir("Temp_ism/"):
-        os.makedirs("Temp_ism/")
+    while os.path.isdir(dir_temp):
+        dir_temp=_create_dir_name()
+    
+    print(f"Create directory {dir_temp}")
+    os.makedirs(dir_temp)
 
     # write signal for reference sequence
-    write_predictions(device,model,seq_file,
-                            seq_colname,"Temp_ism/prediction_reference.csv",key,
-                            variable_length=True,batch_size=8192)
+    write_predictions(device,model_dir,seq_file,seq_colname,
+                      os.path.join(dir_temp,"prediction_ref_seqs.csv"))
 
     # write all mutated sequences
     seqs=pd.read_csv(seq_file).loc[:,seq_colname]
-    saturation_SNPs_all_seqs(seqs)
+    write_saturation_SNPs_for_all_seqs(seqs,dir_temp)
 
     # write signal for mutated sequences
-    write_predictions(device,model,"Temp_ism/sequences_mutated.csv",
-                            "mutated_sequence","Temp_ism/prediction_mutated.csv",key,
-                            variable_length=True,batch_size=8192)
+    write_predictions(device,model_dir,
+                      os.path.join(dir_temp,"sequences_mutated.csv"),
+                      "mutated_sequence",
+                      os.path.join(dir_temp,"prediction_mutated_seqs.csv"))
 
     # aggretate sequence signal
-    prediction_mutated=aggregate_mutation_prediction(key)
-    prediction_reference=pd.read_csv("Temp_ism/prediction_reference.csv")
+    prediction_mutated=aggregate_mutation_prediction(dir_temp)
+    prediction_reference=pd.read_csv(os.path.join(dir_temp,"prediction_ref_seqs.csv"))
     refseq_idx=prediction_mutated["Refseq_idx"].str.replace('Ref', '').astype(int).values
     prediction_mutated["reference_signal"]=prediction_reference["signal_"+key].values[refseq_idx]
     prediction_mutated["ism_delta"]=prediction_mutated["reference_signal"]-prediction_mutated["signal_"+key]
     ism=prediction_mutated.loc[:,"ism_delta"].values.reshape(-1,600)
     pd.DataFrame(ism).to_csv(out_path,index=False)
 
-    shutil.rmtree("Temp_ism/")
+    shutil.rmtree(dir_temp)
 
 
 
