@@ -74,7 +74,7 @@ def write_predictions(gpu_idx,model_dir,data_path,seq_colname,out_path,variable_
     """
     Aimed to be used as a independent commandline tool. 
     Args:
-        gpu_idx: gpu index, from "0" to "7"
+        gpu_idx: gpu index, from "0" to "7", or a torch.device()
         model_dir: need to be absolute path of the directory that stores "model.h5"
     Output:
         NULL, but write model output to csv file
