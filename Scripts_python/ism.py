@@ -17,7 +17,7 @@ import pandas as pd
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python/")
-from write_prediction import compute_predictions,write_predictions
+from Scripts_python.prediction import compute_predictions,write_predictions
 
 
 
