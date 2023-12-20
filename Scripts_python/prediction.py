@@ -8,15 +8,12 @@ a python function: compute_predictions()
 
 
 from utils import encode, find_available_gpu
-import json
 import numpy as np
 import pandas as pd
 import torch
 import os
+import math
 import argparse
-
-index_dict=json.load(open("/isdata/alab/people/pcr980/DeepCompare/Scripts_python/index_dict.json"))
-
 
 
 def _crop_seq(seq,padding="both_ends"):
@@ -53,27 +50,33 @@ def _seq2x(seqs,device):
 
 
 
-
 def compute_predictions(seqs,model=False,device=False):
     """
     Aimed to be used in other python scripts, as a part of bigger analyses
     Args:
-        seqs: a list of strings, shouldn't contain more than 10k sequences
+        seqs: a list of strings
         model: optional, loaded torch model. If absent, just use default model.
         device: optional, a torch.device(). If absent, find first GPU that has more than 5GB memory.
     Output: 
         numpy array of model output
     """
+    BATCH_SIZE=16384
+    
     if not device:
         gpu_idx=find_available_gpu()
         device=torch.device(f"cuda:{gpu_idx}")
     if not model:
         model=torch.load("/isdata/alab/people/pcr980/DeepCompare/AstigCRConv5D_Dataset_final_CR_Trainer/model.h5",map_location=device)
         model.eval()
-    X=_seq2x(seqs,device)
-    with torch.no_grad():
-        res=model(X).cpu().detach().numpy()
-    return res
+        
+    res=np.empty((0, 16))
+    for i in range(math.ceil(len(seqs) / BATCH_SIZE)):
+        start_idx, end_idx = BATCH_SIZE*i, min(BATCH_SIZE*(i+1), len(seqs))
+        X=_seq2x(seqs[start_idx:end_idx],device)
+        with torch.no_grad():
+            res=np.concatenate((res,model(X).cpu().detach().numpy()),axis=0)
+
+    return np.array(res)
 
 
 
