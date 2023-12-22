@@ -66,7 +66,7 @@ def compute_predictions(seqs,model=False,device=False):
         gpu_idx=find_available_gpu()
         device=torch.device(f"cuda:{gpu_idx}")
     if not model:
-        model=torch.load("/isdata/alab/people/pcr980/DeepCompare/AstigCRConv5D_Dataset_final_CR_Trainer/model.h5",map_location=device)
+        model=torch.load("/isdata/alab/people/pcr980/DeepCompare/DeepCompare_model/model.h5",map_location=device)
         model.eval()
         
     res=np.empty((0, 16))
@@ -82,7 +82,7 @@ def compute_predictions(seqs,model=False,device=False):
 
 def write_predictions(data_path,seq_colname,out_path,
                       gpu_idx="infer",
-                      model_dir="/isdata/alab/people/pcr980/DeepCompare/AstigCRConv5D_Dataset_final_CR_Trainer/",
+                      model_dir="/isdata/alab/people/pcr980/DeepCompare/DeepCompare_model/",
                       variable_length=False,
                       batch_size=16384):
     """
@@ -91,7 +91,7 @@ def write_predictions(data_path,seq_colname,out_path,
         gpu_idx: optional, gpu index, from "0" to "7", or a torch.device()
         model_dir: optional, need to be absolute path of the directory that stores "model.h5"
     Output:
-        NULL, but write model output to csv file
+        NULL, but write model output to csv file. No header
     """
     model=torch.load(os.path.join(model_dir, "model.h5"))
     model.eval()
@@ -119,7 +119,7 @@ if __name__=="__main__":
     parser.add_argument("-d", "--data_path", type=str, required=True, help="Data path")
     parser.add_argument("-c", "--seq_colname", type=str, required=True, help="Name of column that contains the sequences")
     parser.add_argument("-o", "--out_path", type=str, help="Output path")
-    parser.add_argument("-m", "--model", type=str, default="/isdata/alab/people/pcr980/DeepCompare/AstigCRConv5D_Dataset_final_CR_Trainer/",help="Model name")
+    parser.add_argument("-m", "--model", type=str, default="/isdata/alab/people/pcr980/DeepCompare/DeepCompare_model/",help="Model name")
     parser.add_argument("-g", "--gpu_index", type=str, default="infer",help="GPU index")
     parser.add_argument("-v", "--variable_length", type=bool, default=False, help="Is input sequence of variable lengths? (default False)")
     parser.add_argument("-b", "--batch_size", type=int, default=8192, help="Batch size (default 8192)")
