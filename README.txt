@@ -6,9 +6,9 @@ Filter_regions/ stores the code to clean up raw data and produce Pd1_bed_process
 
 Quantify_regions/ stores the code to quantify regions and produce Datasets/. The python code should run on styx.
 
-Train/ stores the code for training models.
+Train/ stores the code for training models for benchmark.
 
-Test/ stores the code for benchmarking models.
+Test/ stores the code for calculating model metrics and plot performance curves for final model.
 
 Naming convention:
     write_* : write to csv format,or other format, return NULL.
