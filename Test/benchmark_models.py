@@ -4,10 +4,10 @@
 import os
 import sys
 import pandas as pd
-import numpy as np
+from utils_metrics import calc_acc,calc_pcc,calc_columnwise_metrics,create_colnames,add_suffix
 
-sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
-from write_prediction import write_predictions
+sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python/")
+from prediction import write_predictions
 
 dir_models="/isdata/alab/people/pcr980/DeepCompare/Models"
 dir_predictions="/isdata/alab/people/pcr980/DeepCompare/Test/Pd1_model_predictions/"
@@ -59,21 +59,6 @@ def split(name):
         info_dict["data_dir"]="_".join(parts[1:-4])
     return info_dict
 
-def calc_acc(pred,truth):
-    pred=np.array(pred).squeeze()
-    pred=(pred>0)
-    truth=np.array(truth).squeeze()
-    mask=(truth!=-1)
-    pred=pred[mask]
-    truth=truth[mask]
-    return float((pred==truth).mean())
-    
-def calc_pcc(pred,truth):
-    pred=np.array(pred).squeeze()
-    truth=np.array(truth).squeeze()
-    return float(np.corrcoef(pred,truth)[0][1])
-    
-
 def append_list_in_dict(dict_database,dict_new):
     for key,value in dict_new.items():
         dict_database[key].append(value)
@@ -122,26 +107,6 @@ res_df.to_csv("/isdata/alab/people/pcr980/DeepCompare/Test/ST_metrics.csv")
 #------------------------------------------------------
 # Task3: calculate MT
 #------------------------------------------------------
-def create_colnames():
-    colnames=[]
-    for modality in ["cage","dhs","starr","sure"]:
-        for cell in ["hepg2","k562"]:
-            colnames.append("_".join([modality,cell]))
-    return colnames
-
-def calc_columnwise_metrics(df_pred,df_truth,metric,metric_func):
-    res=[]
-    assert df_pred.shape==df_truth.shape
-    for i in range(df_pred.shape[1]):
-        res.append(metric_func(df_pred.iloc[:,i],df_truth.iloc[:,i]))
-    df_res=pd.DataFrame({"file":df_pred.columns,metric:res})
-    return df_res
-
-def add_suffix(my_list,suffix):
-    return [item+suffix for item in my_list]
-
-
-
 
 df_truth_reg=df_truth.loc[:,add_suffix(create_colnames(),"_intensity")]
 df_truth_class=df_truth.loc[:,add_suffix(create_colnames(),"_class")]
