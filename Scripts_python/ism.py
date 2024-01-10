@@ -17,7 +17,7 @@ import pandas as pd
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python/")
-from Scripts_python.prediction import compute_predictions,write_predictions
+from prediction import compute_predictions,write_predictions
 
 
 
@@ -161,8 +161,14 @@ def calculate_ism_delta(*args):
         print(f"ISM calculation complete!\nRemove directory {dir_temp}")
         
     elif len([*args])==1:
-        print("Calculate ISM for one sequence")
-        return _aggregate_mutation_prediction(seq=args[0])
+        if isinstance(args[0],str):
+            print("Calculate ISM for one sequence")
+            return _aggregate_mutation_prediction(seq=args[0])
+        elif isinstance(args[0],list):
+            # to do
+            pass
+        else:
+            raise ValueError("Wrong type of argument")
         
     else:
         raise ValueError("Wrong number of arguments")

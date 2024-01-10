@@ -13,7 +13,11 @@ class TestPredictionMethods(unittest.TestCase):
         os.makedirs(self.test_dir, exist_ok=True)
         self.seqs = generate_random_seqs(20000, 600)
         self.res1 = compute_predictions(self.seqs)
-
+        
+    def test_dimensions(self):
+        # Check if the output has correct dimensions
+        self.assertEqual(self.res1.shape, (20000, 16))
+        
     def test_prediction_results(self):
         # Save sequences to CSV
         pd.DataFrame(self.seqs, columns=["sequence"]).to_csv(os.path.join(self.test_dir, "seqs.csv"), index=False)
