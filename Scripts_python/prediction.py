@@ -6,8 +6,7 @@ a commandline tool: Given sequence file, write model prediction to csv.
 a python function: compute_predictions()
 """
 
-
-from utils import encode, find_available_gpu
+from utils import find_available_gpu, seq2x
 import numpy as np
 import pandas as pd
 import torch
@@ -15,6 +14,8 @@ import os
 import math
 import argparse
 
+
+BATCH_SIZE=16384
 
 def _crop_seq(seq,padding="both_ends"):
     if len(seq)==600:
@@ -35,20 +36,6 @@ def _crop_seq(seq,padding="both_ends"):
     return seq[start_idx:start_idx+600]
 
 
-def _seq2x(seqs,device):
-    if isinstance(seqs,str):
-        seqs=[seqs]
-    X=np.zeros((len(seqs),len(seqs[0]),4))
-    X=np.array(list(map(encode,seqs))).transpose(0, 2, 1)
-    if not device:
-        return X
-    X=torch.tensor(X,device=device).float()
-    return X
-
-
-
-
-
 
 def compute_predictions(seqs,model=False,device=False):
     """
@@ -58,9 +45,8 @@ def compute_predictions(seqs,model=False,device=False):
         model: optional, loaded torch model. If absent, just use default model.
         device: optional, a torch.device(). If absent, find first GPU that has more than 5GB memory.
     Output: 
-        numpy array of model output
+        numpy array of model output of all tracks, shape (len(seqs), 16)
     """
-    BATCH_SIZE=16384
     
     if not device:
         gpu_idx=find_available_gpu()
@@ -72,7 +58,7 @@ def compute_predictions(seqs,model=False,device=False):
     res=np.empty((0, 16))
     for i in range(math.ceil(len(seqs) / BATCH_SIZE)):
         start_idx, end_idx = BATCH_SIZE*i, min(BATCH_SIZE*(i+1), len(seqs))
-        X=_seq2x(seqs[start_idx:end_idx],device)
+        X=seq2x(seqs[start_idx:end_idx],device)
         with torch.no_grad():
             res=np.concatenate((res,model(X).cpu().detach().numpy()),axis=0)
 
@@ -84,7 +70,7 @@ def write_predictions(data_path,seq_colname,out_path,
                       gpu_idx="infer",
                       model_dir="/isdata/alab/people/pcr980/DeepCompare/DeepCompare_model/",
                       variable_length=False,
-                      batch_size=16384):
+                      batch_size=BATCH_SIZE):
     """
     Aimed to be used as a independent commandline tool. 
     Args:
@@ -110,8 +96,7 @@ def write_predictions(data_path,seq_colname,out_path,
 
 
 # export functions
-__all__ = ['compute_predictions',
-           'write_predictions']
+__all__ = ['compute_predictions','write_predictions']
 
 if __name__=="__main__":
     # parse parameters
@@ -122,7 +107,7 @@ if __name__=="__main__":
     parser.add_argument("-m", "--model", type=str, default="/isdata/alab/people/pcr980/DeepCompare/DeepCompare_model/",help="Model name")
     parser.add_argument("-g", "--gpu_index", type=str, default="infer",help="GPU index")
     parser.add_argument("-v", "--variable_length", type=bool, default=False, help="Is input sequence of variable lengths? (default False)")
-    parser.add_argument("-b", "--batch_size", type=int, default=8192, help="Batch size (default 8192)")
+    parser.add_argument("-b", "--batch_size", type=int, default=16384, help="Batch size (default 16384)")
     
     args=parser.parse_args()
     

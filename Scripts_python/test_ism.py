@@ -5,7 +5,7 @@ import numpy as np
 import shutil
 from ism import calculate_ism_delta
 from utils_for_test import generate_random_seq, generate_random_seqs
-
+from gradxinput import compute_gradxinput_from_seq
 
 
 class TestISM(unittest.TestCase):
@@ -52,8 +52,9 @@ class TestISM(unittest.TestCase):
         df_bulk_mode = pd.read_csv(os.path.join(self.wd, "Temp_test_ism", "ism_multi_seqs_bulk_mode.csv"))
         self.assertTrue(np.allclose(df_single_mode.values, df_bulk_mode.iloc[:, 2:].values, atol=1e-5))
     
-    # To do: test ism has OK correlation with gradxinput
-    
+    def test_corr_with_gradxinput(self):
+        # generate sequence
+        pass
     
     @classmethod
     def tearDownClass(cls):
