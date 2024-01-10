@@ -1,5 +1,9 @@
+# This file contains functions to calculate delta for variant interpretation
+# For both DeepCompare and Enformer
+
+
 library(Biostrings)
-TRACK_MEANING_FILE <- "/maps/projects/ralab/people/pcr980/Resource_Enformer/targets_human.txt"
+ENFORMER_TRACK_INFO <- "/maps/projects/ralab/people/pcr980/Resource/Enformer_info/targets_human.txt"
 
 
 
@@ -36,16 +40,16 @@ get_rc_from_char_vec <- function(seqs){
 
 
 
-aggregate_enformer_delta <- function(delta,suffix){
-  track_meaning<-read.csv(TRACK_MEANING_FILE,sep="\t", header=TRUE,row.names = 1)
-  avg <- rowMeans(delta)
-  cage_avg <- rowMeans(delta[,grep("CAGE",track_meaning$description)])
-  dhs_avg <- rowMeans(delta[,grep("DNASE",track_meaning$description)])
-  cage_dhs_avg <- rowMeans(delta[,grep("CAGE|DNASE",track_meaning$description)])
-  cage_hepg2_avg <-delta[,which(grepl("HepG2",track_meaning$description) & grepl("CAGE",track_meaning$description))]
-  cage_k562_avg <- rowMeans(delta[,grepl("K562",track_meaning$description) & grepl("CAGE",track_meaning$description)])
-  dhs_hepg2_avg <- rowMeans(delta[,grepl("HepG2",track_meaning$description) & grepl("DNASE",track_meaning$description)])
-  dhs_k562_avg <- rowMeans(delta[,grepl("K562",track_meaning$description) & grepl("DNASE",track_meaning$description)])
+aggregate_enformer_tracks <- function(enformer_res,suffix=""){
+  track_meaning<-read.csv(ENFORMER_TRACK_INFO,sep="\t", header=TRUE,row.names = 1)
+  avg <- rowMeans(enformer_res)
+  cage_avg <- rowMeans(enformer_res[,grep("CAGE",track_meaning$description)])
+  dhs_avg <- rowMeans(enformer_res[,grep("DNASE",track_meaning$description)])
+  cage_dhs_avg <- rowMeans(enformer_res[,grep("CAGE|DNASE",track_meaning$description)])
+  cage_hepg2_avg <-enformer_res[,which(grepl("HepG2",track_meaning$description) & grepl("CAGE",track_meaning$description))]
+  cage_k562_avg <- rowMeans(enformer_res[,grepl("K562",track_meaning$description) & grepl("CAGE",track_meaning$description)])
+  dhs_hepg2_avg <- rowMeans(enformer_res[,grepl("HepG2",track_meaning$description) & grepl("DNASE",track_meaning$description)])
+  dhs_k562_avg <- rowMeans(enformer_res[,grepl("K562",track_meaning$description) & grepl("DNASE",track_meaning$description)])
   df_summary <- data.frame(cbind(avg,cage_avg,dhs_avg,cage_dhs_avg,cage_hepg2_avg,cage_k562_avg,dhs_hepg2_avg,dhs_k562_avg))
   colnames(df_summary) <- gsub("$",suffix,colnames(df_summary))
   df_summary
