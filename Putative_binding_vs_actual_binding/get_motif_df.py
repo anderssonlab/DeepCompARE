@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
+
 import pandas as pd
-import numpy as np
 import sys
 from loguru import logger
 
@@ -16,7 +17,7 @@ def annotate_one_region(region,gradxinp_value,out_path,idx):
     motif_df['motif_sequence'] = motif_df.apply(lambda row: seq_extractor.get_seq(row["chromosome"], row["start"], row["end"]), axis=1)
     motif_df=add_feat_imp(motif_df,region,gradxinp_value)
     motif_df = remap_annotator.annotate(motif_df,region)
-    motif_df["seq_idx"]=f"Seq{idx}"
+    motif_df["seq_idx"]= f"Seq{idx}"
     if idx==0:
         motif_df.to_csv(out_path,index=False,mode="a",header=True)
     else:

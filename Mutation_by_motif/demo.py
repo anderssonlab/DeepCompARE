@@ -67,11 +67,6 @@ region = ("chr10", 132396935, 132397534)
 # annotate with jaspar
 motif_df=jaspar_annotator.annotate(region)
 
-# add tf expression
-tf_expr=pd.read_csv("/binf-isilon/alab/people/pcr980/DeepCompare/Curate_motif_annot/TF_expression_k562.csv",index_col=0)
-tf_expr=tf_expr.loc[:,['HGNC.symbol','TPM']] # column "HGNC.symbol" contains only capital letters
-motif_df=add_tf_expr(motif_df,tf_expr)
-np.sum(motif_df['TPM']==0) # 363
 
 # get sequence from regions
 seq_extractor=SeqExtractor()
@@ -94,3 +89,23 @@ motif_df_sub=motif_df_sub.groupby('protein').apply(merge_intervals).reset_index(
 # sort motif_df_sub by max_gradxinp from high to low
 motif_df_sub.sort_values(by=['max_gradxinp','mean_abs_gradxinp'],ascending=False,inplace=True)
 motif_df_sub.reset_index(drop=True,inplace=True)
+
+
+
+
+
+
+
+
+
+
+
+
+#-----------------------
+# Archived
+#-----------------------
+# # add tf expression
+# tf_expr=pd.read_csv("/binf-isilon/alab/people/pcr980/DeepCompare/Curate_motif_annot/TF_expression_k562.csv",index_col=0)
+# tf_expr=tf_expr.loc[:,['HGNC.symbol','TPM']] # column "HGNC.symbol" contains only capital letters
+# motif_df=add_tf_expr(motif_df,tf_expr)
+# np.sum(motif_df['TPM']==0) # 363
