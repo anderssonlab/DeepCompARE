@@ -8,46 +8,17 @@ def subset_df_by_region(df,region,by):
         df: A data frame of bed file, containing short regions
         region: A tuple of (chromosome, start, end)
     Returns:
-        A data frame of bed file with only the rows that overlap (at least 1bp) with the region 
+        if by=="1bp": return data frame of bed file with only the rows that overlap (at least 1bp) with the region 
+        if by=="reverse": return the rows that do not overlap with the region
     """
     if by=="1bp":
         return df[(df['chromosome']==region[0]) & (df['end']>=region[1]) & (df['start']<=region[2])].copy()
     if by=="contained":
-        return df[(df['start']>=region[1]) & (df['end']<=region[2])].copy()
+        return df[(df['chromosome']==region[0]) & (df['start']>=region[1]) & (df['end']<=region[2])].copy()
+    if by=="reverse":
+        return df[(df['chromosome']!=region[0]) | (df['end']<region[1]) | (df['start']>region[2])].copy()
 
 
-def compute_relative_location(region_motif,region_seq):
-    """
-    Args:
-        region_motif: motif location, a tuple of (chromosome, start, end)
-        region_seq: location of entire sequence, a tuple of (chromosome, start, end)
-    Returns:
-        A tuple of (start_rel, end_rel)
-    """
-    start_rel=region_motif[1]-region_seq[1]
-    end_rel=region_motif[2]-region_seq[1]
-    return start_rel,end_rel
-
-
-def compute_motif_feat_imp(region_motif,region_seq,gradxinp):
-    """
-    Args:
-        region_motif: motif location, a tuple of (chromosome, start, end)
-        region_seq: location of entire sequence, a tuple of (chromosome, start, end)
-        gradxinp: A numpy array of feature importance
-    Returns:
-        A tuple of (max_gradxinp,max_abs_gradxinp,mean_gradxinp,mean_abs_gradxinp)
-    """
-    start_rel,end_rel=compute_relative_location(region_motif,region_seq)
-
-    max_gradxinp=float(np.max(gradxinp[start_rel:end_rel+1]))
-    max_abs_gradxinp=float(np.max(np.abs(gradxinp[start_rel:end_rel+1])))
-    mean_gradxinp=float(np.mean(gradxinp[start_rel:end_rel+1]))
-    mean_abs_gradxinp=float(np.mean(np.abs(gradxinp[start_rel:end_rel+1])))
-    min_gradxinp=float(np.min(gradxinp[start_rel:end_rel+1]))
-    min_abs_gradxinp=float(np.min(np.abs(gradxinp[start_rel:end_rel+1])))
-
-    return max_gradxinp,max_abs_gradxinp,mean_gradxinp,mean_abs_gradxinp,min_gradxinp,min_abs_gradxinp
 
 
 def add_feat_imp(df_motif,region,gradxinp):
@@ -57,14 +28,15 @@ def add_feat_imp(df_motif,region,gradxinp):
         region: A tuple of (chromosome, start, end)
         gradxinp: A numpy array of feature importance
     """
-    # for each row, compute the feature importance
-    res=df_motif.apply(lambda row: compute_motif_feat_imp((row[0],row[1],row[2]),region,gradxinp),axis=1)
-    df_motif[['max_gradxinp',
-              'max_abs_gradxinp',
-              'mean_gradxinp',
-              'mean_abs_gradxinp',
-              'min_gradxinp',
-              'min_abs_gradxinp']]=pd.DataFrame(res.tolist())
+    df_motif["start_rel"]=df_motif["start"]-region[1]
+    df_motif["end_rel"]=df_motif["end"]-region[1]
+    
+    df_motif["max_gradxinp"]=df_motif.apply(lambda row: np.max(gradxinp[row["start_rel"]:row["end_rel"]+1]), axis=1)
+    df_motif["max_abs_gradxinp"]=df_motif.apply(lambda row: np.max(np.abs(gradxinp[row["start_rel"]:row["end_rel"]+1])), axis=1)
+    df_motif["mean_gradxinp"]=df_motif.apply(lambda row: np.mean(gradxinp[row["start_rel"]:row["end_rel"]+1]), axis=1)
+    df_motif["mean_abs_gradxinp"]=df_motif.apply(lambda row: np.mean(np.abs(gradxinp[row["start_rel"]:row["end_rel"]+1])), axis=1)
+    df_motif["min_gradxinp"]=df_motif.apply(lambda row: np.min(gradxinp[row["start_rel"]:row["end_rel"]+1]), axis=1)
+    df_motif["min_abs_gradxinp"]=df_motif.apply(lambda row: np.min(gradxinp[row["start_rel"]:row["end_rel"]+1]), axis=1)
     return df_motif
 
 

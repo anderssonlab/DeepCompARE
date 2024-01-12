@@ -11,38 +11,23 @@ class TestSeqExtraction(unittest.TestCase):
 
     def setUp(self):
         self.seq_extractor = SeqExtractor()
-
-    def test_sequence_extraction(self):
-        df = pd.DataFrame.from_dict(
-            {
-                "chromosome": ["chr1", "chr1", "chr1"],
-                "start_motif": [11100, 111200, 300],
-                "end_motif": [11110, 111215, 309],
-                "start_seq": [11050, 111150, 250],
-                "end_seq": [11150, 111250, 350],
-            }
-        )
-        df["sequence"] = df.apply(lambda row: self.seq_extractor.get_seq(row["chromosome"], row["start_seq"], row["end_seq"]), axis=1)
-        for i in range(3):
-            start_rel, end_rel = compute_relative_location((df['chromosome'][i], df['start_motif'][i], df['end_motif'][i]),
-                                                           (df['chromosome'][i], df['start_seq'][i], df['end_seq'][i]))
-            motif_seq1 = self.seq_extractor.get_seq(df['chromosome'][i], df['start_motif'][i], df['end_motif'][i])
-            motif_seq2 = df["sequence"][i][start_rel:end_rel+1]
-            self.assertEqual(motif_seq1, motif_seq2, "Extracted sequences do not match")
-    
-    def test_add_feat_imp(self):
-        df = pd.DataFrame.from_dict(
+        self.df = pd.DataFrame.from_dict(
             {
                 "chromosome": ["chr1", "chr1", "chr1"],
                 "start": [11100, 11200, 11300],
                 "end": [11110, 11215, 11309]
             }
         )
-        region=("chr1", 11000, 11500)
-        df=add_feat_imp(df,region,np.random.rand(500))
-        self.assertEqual(df.shape[0],3,"The number of rows should not change")
-        self.assertEqual(df.shape[1],7,"The number of columns should increase by 4")
-            
+        self.region=("chr1", 11000, 11500)
+        self.sequence=self.seq_extractor.get_seq(self.region[0],self.region[1],self.region[2])
+
+    def test_sequence_extraction(self):
+        df_res=add_feat_imp(self.df,self.region,np.random.rand(500))
+        df_res["motif_sequence1"] = df_res.apply(lambda row: self.seq_extractor.get_seq(row["chromosome"], row["start"], row["end"]), axis=1)
+        df_res["motif_sequence2"] = df_res.apply(lambda row: self.sequence[row["start_rel"]:row["end_rel"]+1], axis=1)
+        self.assertEqual((df_res["motif_sequence1"]==df_res["motif_sequence2"]).all(),True,
+                          "The sequences extracted from absolute coord and relative coord should be the same")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -44,6 +44,7 @@ def compute_gradxinp_from_seq(seqs,targets=list(range(16)),
         attributions: attributions in pandas dataframe, with "SeqX_trackY" as row names.
                       SeqX has same order as seqs
     """
+    # to do: enable bulk (batch) mode
     
     # add default model and device
     model.to(device)
