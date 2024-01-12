@@ -7,11 +7,18 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+
+def generate_random_seq(length):
+    return ''.join(np.random.choice(["A", "C", "G", "T"], length))  
+    
+def generate_random_seqs(num_seqs, length):
+    return [generate_random_seq(length) for _ in range(num_seqs)]    
+    
+
+
 def encode(my_seq):
     mapping= { "A": [1, 0, 0, 0], "C": [0, 1, 0, 0],"G": [0, 0, 1, 0],"T": [0, 0, 0, 1],"N": [0, 0, 0, 0]}
     return np.array([mapping[i] for i in my_seq])
-
-
 
 
 def shift_seq(seq,direction,dist):
@@ -28,7 +35,7 @@ def shift_seq(seq,direction,dist):
 
 
 
-def seq2x(seqs,device):
+def seq2x(seqs,device=False):
     """
     Args:
         seqs: a list of strings, or a single string
@@ -38,6 +45,8 @@ def seq2x(seqs,device):
     """
     if isinstance(seqs,str):
         seqs=[seqs]
+    if hasattr(seqs,"values"):
+        seqs=seqs.values
     X=np.zeros((len(seqs),len(seqs[0]),4))
     X=np.array(list(map(encode,seqs))).transpose(0, 2, 1)
     if not device:
@@ -63,16 +72,12 @@ def find_available_gpu():
             total_memory = torch.cuda.get_device_properties(i).total_memory
             allocated_memory = torch.cuda.memory_reserved(device)
             free_memory = total_memory - allocated_memory
-            
             if free_memory>(1024**3)*20:
                 return str(i)
-            
         raise Exception("No GPU available.")
     
-    
-    
-    
-    
+
+
 class SeqExtractor:
     """
     Convert bed regions to fasta sequences

@@ -8,12 +8,17 @@ def subset_df_by_region(df,region,by):
         df: A data frame of bed file, containing short regions
         region: A tuple of (chromosome, start, end)
     Returns:
-        A data frame of bed file with only the rows that overlap (at least 1bp) with the region 
+        if by=="1bp": return data frame of bed file with only the rows that overlap (at least 1bp) with the region 
+        if by=="reverse": return the rows that do not overlap with the region
     """
     if by=="1bp":
         return df[(df['chromosome']==region[0]) & (df['end']>=region[1]) & (df['start']<=region[2])].copy()
     if by=="contained":
-        return df[(df['start']>=region[1]) & (df['end']<=region[2])].copy()
+        return df[(df['chromosome']==region[0]) & (df['start']>=region[1]) & (df['end']<=region[2])].copy()
+    if by=="reverse":
+        return df[(df['chromosome']!=region[0]) | (df['end']<region[1]) | (df['start']>region[2])].copy()
+
+
 
 
 def add_feat_imp(df_motif,region,gradxinp):

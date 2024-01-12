@@ -37,7 +37,9 @@ def _crop_seq(seq,padding="both_ends"):
 
 
 
-def compute_predictions(seqs,model=False,device=False):
+def compute_predictions(seqs,
+                        model=torch.load("/isdata/alab/people/pcr980/DeepCompare/DeepCompare_model/model.h5"),
+                        device=torch.device("cuda:"+find_available_gpu())):
     """
     Aimed to be used in other python scripts, as a part of bigger analyses
     Args:
@@ -47,21 +49,14 @@ def compute_predictions(seqs,model=False,device=False):
     Output: 
         numpy array of model output of all tracks, shape (len(seqs), 16)
     """
-    
-    if not device:
-        gpu_idx=find_available_gpu()
-        device=torch.device(f"cuda:{gpu_idx}")
-    if not model:
-        model=torch.load("/isdata/alab/people/pcr980/DeepCompare/DeepCompare_model/model.h5",map_location=device)
-        model.eval()
-        
+    model.to(device)
+    model.eval()
     res=np.empty((0, 16))
     for i in range(math.ceil(len(seqs) / BATCH_SIZE)):
         start_idx, end_idx = BATCH_SIZE*i, min(BATCH_SIZE*(i+1), len(seqs))
         X=seq2x(seqs[start_idx:end_idx],device)
         with torch.no_grad():
             res=np.concatenate((res,model(X).cpu().detach().numpy()),axis=0)
-
     return np.array(res)
 
 
