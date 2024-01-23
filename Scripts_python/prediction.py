@@ -15,7 +15,7 @@ import math
 import argparse
 
 
-BATCH_SIZE=16384
+BATCH_SIZE=8192
 
 def _crop_seq(seq,padding="both_ends"):
     if len(seq)==600:
@@ -62,8 +62,8 @@ def compute_predictions(seqs,
 
 
 def write_predictions(data_path,seq_colname,out_path,
-                      gpu_idx="infer",
-                      model_dir="/isdata/alab/people/pcr980/DeepCompare/DeepCompare_model/",
+                      model=torch.load("/isdata/alab/people/pcr980/DeepCompare/DeepCompare_model/model.h5"),
+                      device=torch.device("cuda:"+find_available_gpu()),
                       variable_length=False,
                       batch_size=BATCH_SIZE):
     """
@@ -74,11 +74,7 @@ def write_predictions(data_path,seq_colname,out_path,
     Output:
         NULL, but write model output to csv file. No header
     """
-    model=torch.load(os.path.join(model_dir, "model.h5"))
     model.eval()
-    if gpu_idx=="infer":
-        gpu_idx=find_available_gpu()
-    device=torch.device(f"cuda:{gpu_idx}")
     model.to(device)
     for chunk in pd.read_csv(data_path,chunksize=batch_size,header=0):
         query_seqs=list(chunk.loc[:,seq_colname])
@@ -110,6 +106,6 @@ if __name__=="__main__":
         args.gpu_idx=find_available_gpu()
     
     write_predictions(args.data_path, args.seq_colname, args.out_path, 
-                      args.gpu_index, args.model, args.variable_length, args.batch_size)
+                      torch.device(f"cuda:{args.gpu_idx}"), args.model, args.variable_length, args.batch_size)
 
 
