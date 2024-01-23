@@ -5,7 +5,7 @@ import shutil
 import unittest
 import sys
 sys.path.insert(1, "/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
-from utils_for_test import generate_random_seqs
+from utils import generate_random_seqs
 from gradxinp import *
 
 

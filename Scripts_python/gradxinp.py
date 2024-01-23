@@ -1,7 +1,18 @@
 #!/usr/bin/python3
+
+"""
+This modules calculates gradxinp.
+Output format: 
+    Row names are "SeqX_TrackY", where X is the index of sequence, Y is the index of track.
+    
+
+"""
+
+
+
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
-from utils import seq2x, find_available_gpu, SeqExtractor
+from utils import seq2x, find_available_gpu, SeqExtractor, extract_numbers
 
 import pandas as pd
 import numpy as np
@@ -9,6 +20,7 @@ import torch
 from captum.attr import InputXGradient
 from kipoiseq import Interval
 import re
+import argparse
 
 
 
@@ -17,11 +29,6 @@ def backprop(interpreter, x, target):
 
 
 
-def _extract_numbers(s):
-    """
-    Solely for sorting row names
-    """
-    return list(map(int, re.findall(r'\d+', s)))
 
 
 
@@ -35,8 +42,6 @@ def compute_gradxinp_from_seq(seqs,targets=list(range(16)),
     Args:
         seqs: sequence, either a string or a list of strings. Doesn't support batch operation, sow len(seq) should be small
         target: number of track to use. If False, return attributions for all targets
-        model: if False, load default model
-        device: if False, load gpu found by find_available_gpu()
         start_idx: if seqs is a list, start_idx is the index of the first sequence.
                    if function is called alone, start_idx is 0.
                    if function is called by write_gradxinp_from_seq(), start_idx is passed by write_gradxinp_from_seq().
@@ -69,7 +74,7 @@ def compute_gradxinp_from_seq(seqs,targets=list(range(16)),
     df=pd.DataFrame(attributions,index=indices)
     
     # reorder rows by indices
-    sorted_indices = sorted(indices, key=lambda x: _extract_numbers(x))
+    sorted_indices = sorted(indices, key=lambda x: extract_numbers(x))
     df=df.reindex(sorted_indices)
     return df
     
@@ -86,15 +91,12 @@ def write_gradxinp_from_seq(seqs,out_path,targets=list(range(16)),
     Write attributions to out_path
     """
     model.to(device)
-    
     start_idx=0
     for i in range(0,len(seqs),batch_size):
         chunk=seqs[i:i+batch_size]
         importance = compute_gradxinp_from_seq(chunk,targets=targets,model=model,device=device,start_idx=start_idx)
         importance.to_csv(out_path,mode="a",header=False)
         start_idx+=len(seqs)
-
-
 
 
 
@@ -114,8 +116,6 @@ def write_gradxinp_from_seq_file(seq_file,seq_colname,out_path,targets=list(rang
         start_idx+=len(seqs)
     
     
-
-    
     
     
 def write_gradxinp_from_bed_file(bed_file,out_path,targets=list(range(16)),
@@ -124,8 +124,6 @@ def write_gradxinp_from_bed_file(bed_file,out_path,targets=list(range(16)),
                                  batch_size=4096):
     extractor = SeqExtractor()
     bed_df=pd.read_csv(bed_file,header=None,sep="\t")
-    # resize to 600 bp
-    
     intervals = [Interval(chrom,start,end) for chrom,start,end in zip(bed_df.iloc[:,0],bed_df.iloc[:,1],bed_df.iloc[:,2])]
     seqs = [extractor.extract(interval) for interval in intervals]
     write_gradxinp_from_seq(seqs,out_path,targets=targets,model=model,device=device,batch_size=batch_size)
@@ -133,11 +131,12 @@ def write_gradxinp_from_bed_file(bed_file,out_path,targets=list(range(16)),
 
 
 
-def read_gradxinp(gradxinp_file,track_num):
-    """
-    Read gradxinp from gradxinp_file, subset by track_num
-    """
-    gradxinp_df=pd.read_csv(gradxinp_file,header=None,index_col=0)
-    # Given that indices are composed of "SeqX_TrackY", we can subset to contain only "_Track{track_num}"
-    gradxinp_df=gradxinp_df[gradxinp_df.index.str.contains(f"_Track{track_num}$")]
-    return gradxinp_df
+if __name__=="__main__":
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("--seq_file",type=str,help="path to sequence file")
+    argparser.add_argument("--seq_colname",type=str,help="column name of sequence")
+    argparser.add_argument("--out_path",type=str,help="path to output file")
+
+    args=argparser.parse_args()
+    write_gradxinp_from_seq_file(args.seq_file,args.seq_colname,args.out_path)
+    

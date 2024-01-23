@@ -1,5 +1,8 @@
 import numpy as np
+import pandas as pd
 import torch
+import nvidia_smi
+import re
 
 from pyfaidx import Fasta
 from kipoiseq import Interval
@@ -9,12 +12,11 @@ from Bio.SeqRecord import SeqRecord
 
 
 def generate_random_seq(length):
-    return ''.join(np.random.choice(["A", "C", "G", "T"], length))  
+    return ''.join(np.random.choice(["A", "C", "G", "T", "N"], length))  
     
 def generate_random_seqs(num_seqs, length):
     return [generate_random_seq(length) for _ in range(num_seqs)]    
     
-
 
 def encode(my_seq):
     mapping= { "A": [1, 0, 0, 0], "C": [0, 1, 0, 0],"G": [0, 0, 1, 0],"T": [0, 0, 0, 1],"N": [0, 0, 0, 0]}
@@ -56,26 +58,21 @@ def seq2x(seqs,device=False):
 
 
 
-
-
 def find_available_gpu():
     """
     Find first available GPU
     Returns:
         str: GPU id
     """
-    if torch.cuda.is_available():
-        # Number of GPUs available
-        num_gpus = torch.cuda.device_count()
-        for i in range(num_gpus):
-            device = torch.device("cuda:"+str(i))
-            total_memory = torch.cuda.get_device_properties(i).total_memory
-            allocated_memory = torch.cuda.memory_reserved(device)
-            free_memory = total_memory - allocated_memory
-            if free_memory>(1024**3)*20:
-                return str(i)
-        raise Exception("No GPU available.")
-    
+    nvidia_smi.nvmlInit()
+    deviceCount = nvidia_smi.nvmlDeviceGetCount()
+    for i in range(deviceCount):
+        handle = nvidia_smi.nvmlDeviceGetHandleByIndex(i)
+        mem = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+        if mem.free/1024**3>20:
+            return str(i)
+    raise ValueError("No available GPU found!")
+
 
 
 class SeqExtractor:
@@ -89,8 +86,29 @@ class SeqExtractor:
     def get_seq(self,chr,start,end):
         return str(self.fasta.get_seq(chr,start,end).seq).upper()
 
+
+def extract_numbers(s):
+    """
+    Solely for sorting row names
+    """
+    return list(map(int, re.findall(r'\d+', s)))
     
     
+def read_featimp(featimp_file,track_num):
+    """
+    Read featimp from featimp_file, subset by track_num
+    Featimp is either gradxinp or ism
+    """
+    featimp_df=pd.read_csv(featimp_file,header=None,index_col=0)
+    # Given that indices are composed of "SeqX_TrackY", we can subset to contain only "_Track{track_num}"
+    featimp_df=featimp_df[featimp_df.index.str.contains(f"_Track{track_num}$")]
+    # reorder rows by number if necessary   
+    if not np.all(featimp_df.index==[f'Seq{i}_Track{j}' for i in range(featimp_df.shape[0]/16) for j in range(16)]):
+        sorted_indices = sorted(featimp_df.index, key=lambda x: extract_numbers(x))
+        featimp_df=featimp_df.reindex(sorted_indices)
+    
+    return featimp_df
+
     
 def write_fasta(out_fname,importance,seqs_ids,seqs): # one number per location
     with open(out_fname,"a+") as f:
@@ -100,4 +118,3 @@ def write_fasta(out_fname,importance,seqs_ids,seqs): # one number per location
             SeqIO.write(seq_rec,f,"fasta")
             f.write(' '.join(map(lambda x: f'{float(x):.5f}', importance[i])))
             f.write("\n")
-
