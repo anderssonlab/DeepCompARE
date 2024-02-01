@@ -26,14 +26,8 @@ class TestPredictionMethods(unittest.TestCase):
         write_predictions(os.path.join(self.test_dir, "seqs.csv"),
                           "sequence",
                           os.path.join(self.test_dir, "preds.csv"))
-
-        # Read predictions from CSV
         res2 = pd.read_csv(os.path.join(self.test_dir, "preds.csv"), header=None).values
-
-        # Check if shapes are equal
         self.assertEqual(self.res1.shape, res2.shape)
-
-        # Check if values are almost equal
         self.assertTrue(np.allclose(self.res1, res2, atol=1e-6))
 
     def tearDown(self):

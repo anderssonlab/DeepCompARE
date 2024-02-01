@@ -1,0 +1,72 @@
+
+
+
+
+def subset_df_by_region(df,region,by):
+    """
+    Args:
+        df: A data frame of bed file, containing short regions
+        region: A tuple of (chromosome, start, end)
+    Returns:
+        if by=="1bp": return data frame of bed file with only the rows that overlap (at least 1bp) with the region 
+        if by=="reverse": return the rows that do not overlap with the region
+    """
+    if by=="1bp":
+        return df[(df['chromosome']==region[0]) & (df['end']>=region[1]) & (df['start']<=region[2])].copy()
+    if by=="contained":
+        return df[(df['chromosome']==region[0]) & (df['start']>=region[1]) & (df['end']<=region[2])].copy()
+    if by=="reverse":
+        return df[(df['chromosome']!=region[0]) | (df['end']<region[1]) | (df['start']>region[2])].copy()
+
+
+def resize_region(region,width,fix="center"):
+    """
+    Args:
+        region: A tuple of (chromosome, start, end)
+        width: An integer of the new width
+        fix: A string of "center" or "left"
+    Returns:
+        A tuple of (chromosome, start, end)
+    """
+    if fix=="center":
+        center=(region[1]+region[2])//2
+        return (region[0],center-width//2, center+width//2)
+    if fix=="left":
+        return (region[0],region[1],region[1]+width)
+    if fix=="expand":
+        return (region[0],region[1]-width,region[2]+width)  
+    
+    
+def resize_df(df_region,width,fix="center"):
+    """
+    Args:
+        df_region: A data frame of bed file, containing short regions
+        width: An integer of the new width
+        fix: A string of "center" or "left"
+    Returns:
+        A data frame of bed file, containing short regions
+    """
+    df_region=df_region.copy()
+    if fix=="center":
+        centers=(df_region["start"]+df_region["end"])//2
+        df_region["start"]=centers-width//2
+        df_region["end"]=centers+width//2
+        return df_region
+    if fix=="left":
+        df_region["end"]=df_region["start"]+width
+        return df_region
+    if fix=="expand":
+        df_region["start"]=df_region["start"]-width
+        df_region["end"]=df_region["end"]+width
+        return df_region
+    
+    
+    
+def calc_gc_context(df_region,context_width,seq_extractor):
+    """
+    Given a region, return the GC content of the context
+    """
+    df_resized=resize_df(df_region,context_width,fix="expand")
+    df_resized["seq"]=df_resized.apply(lambda row: seq_extractor.get_seq(row["chromosome"], row["start"], row["end"]), axis=1)
+    df_resized["gc"]=df_resized["seq"].apply(lambda x: (x.count("G")+x.count("C"))/len(x))
+    return df_resized["gc"]

@@ -49,7 +49,6 @@ def match_by_score(df, score_col, label_col):
     return matched_df
 
 
-
 corr, p_val = pearsonr(df.max_gradxinp, df.score)   
 
 occupancy_orig_list=[]
@@ -181,40 +180,6 @@ plt.close()
 
 
 
-#--------------------------------------------------------
-# Archived: plot feat_imp and motif_score
-#--------------------------------------------------------
-# scatter plot using sns
-# texts = []
-# plt.figure(figsize=(10, 8))  
-# scatter_plot = sns.scatterplot(data=df_ks, x='feat_imp_d_stat', y='motif_score_d_stat')
-# for line in range(0, df_ks.shape[0]):
-#     # if the x value or y value is beyond 25-75 percentile, then annotate
-#     if df_ks.motif_score_d_stat[line]>np.percentile(df_ks.motif_score_d_stat,80) or \
-#         df_ks.motif_score_d_stat[line]<np.percentile(df_ks.motif_score_d_stat,20) or \
-#         df_ks.feat_imp_d_stat[line]>np.percentile(df_ks.feat_imp_d_stat,80) or \
-#         df_ks.feat_imp_d_stat[line]<np.percentile(df_ks.feat_imp_d_stat,20):
-#         text=scatter_plot.text(df_ks.feat_imp_d_stat[line]+0.01, df_ks.motif_score_d_stat[line], 
-#                                df_ks.protein[line], horizontalalignment='left', 
-#                                size='medium', color='black', weight='semibold')
-#         texts.append(text)
-# adjust_text(texts)
-# plt.title("KS D statistics of feat_imp and motif_score")
-# plt.savefig("/isdata/alab/people/pcr980/DeepCompare/Putative_binding_vs_actual_binding/Plots_ks/before_score_matching_dstat_featimp_and_motif_score.pdf",dpi=300)
-# plt.close()
-
-
-# texts = []
-# plt.figure(figsize=(10, 8))  
-# scatter_plot = sns.scatterplot(data=df_ks, x='feat_impp_val', y='motif_score_p_val')
-# for line in range(0, df_ks.shape[0]):
-#     text=scatter_plot.text(df_ks.feat_impp_val[line]+0.01, df_ks.motif_score_p_val[line], 
-#                             df_ks.protein[line], horizontalalignment='left', 
-#                             size='medium', color='black', weight='semibold')
-#     texts.append(text)
-# adjust_text(texts)
-# plt.title("KS P value of feat_imp and motif_score")
-# plt.savefig("/isdata/alab/people/pcr980/DeepCompare/Putative_binding_vs_actual_binding/Plots_ks/before_score_matching_ks_pval_featimp_and_motif_score.pdf",dpi=300)
-# plt.close()
-
-
+## Todo adjust for GC content.
+## Work in TF families,
+## Case study: why do TFs with same motif bind differently?

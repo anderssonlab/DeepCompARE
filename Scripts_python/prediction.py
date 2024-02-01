@@ -13,6 +13,7 @@ import torch
 import os
 import math
 import argparse
+from loguru import logger
 
 
 BATCH_SIZE=8192
@@ -49,6 +50,9 @@ def compute_predictions(seqs,
     Output: 
         numpy array of model output of all tracks, shape (len(seqs), 16)
     """
+    logger.info(f"Use device {device} to compute predictions")
+    if isinstance(seqs,str):
+        seqs=[seqs]
     model.to(device)
     model.eval()
     res=np.empty((0, 16))
