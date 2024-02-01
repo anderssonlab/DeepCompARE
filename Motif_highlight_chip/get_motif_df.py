@@ -31,8 +31,6 @@ def annotate_one_region(region,gradxinp_value,out_path,idx):
 
 # Load data and tools
 df_regions = pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd1_bed_processed/resize_600bp_CAGE_K562.bed",sep='\t',header=None)
-# for debugging
-#df_gradxinp = pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd2_metadata_and_featimp/gradxinp_CAGE_K562.csv")
 df_gradxinp = read_gradxinp("/isdata/alab/people/pcr980/DeepCompare/Pd2_metadata_and_featimp/gradxinp_CAGE_K562.csv",track_num=1)
 seq_extractor = SeqExtractor()
 jaspar_annotator=JasparAnnotator()
@@ -44,5 +42,5 @@ for idx in range(df_regions.shape[0]):
         logger.info(f"{idx} regions processed.")
     region=df_regions.iloc[idx,:]
     gradxinp_value=df_gradxinp.iloc[idx,:]
-    annotate_one_region(region,gradxinp_value,"/isdata/alab/people/pcr980/DeepCompare/Putative_binding_vs_actual_binding/motif_df_v2.csv",idx)
+    annotate_one_region(region,gradxinp_value,"/isdata/alab/people/pcr980/DeepCompare/Putative_binding_vs_actual_binding/motif_df.csv",idx)
 

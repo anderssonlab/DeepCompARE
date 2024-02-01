@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
-import nvidia_smi
+import pynvml
 import re
 
 from pyfaidx import Fasta
@@ -64,11 +64,11 @@ def find_available_gpu():
     Returns:
         str: GPU id
     """
-    nvidia_smi.nvmlInit()
-    deviceCount = nvidia_smi.nvmlDeviceGetCount()
+    pynvml.nvmlInit()
+    deviceCount = pynvml.nvmlDeviceGetCount()
     for i in range(deviceCount):
-        handle = nvidia_smi.nvmlDeviceGetHandleByIndex(i)
-        mem = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+        handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+        mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
         if mem.free/1024**3>20:
             return str(i)
     raise ValueError("No available GPU found!")
@@ -97,16 +97,11 @@ def extract_numbers(s):
 def read_featimp(featimp_file,track_num):
     """
     Read featimp from featimp_file, subset by track_num
-    Featimp is either gradxinp or ism
+    Featimp is either gradxinp or ism, no header
     """
     featimp_df=pd.read_csv(featimp_file,header=None,index_col=0)
     # Given that indices are composed of "SeqX_TrackY", we can subset to contain only "_Track{track_num}"
     featimp_df=featimp_df[featimp_df.index.str.contains(f"_Track{track_num}$")]
-    # reorder rows by number if necessary   
-    if not np.all(featimp_df.index==[f'Seq{i}_Track{j}' for i in range(featimp_df.shape[0]/16) for j in range(16)]):
-        sorted_indices = sorted(featimp_df.index, key=lambda x: extract_numbers(x))
-        featimp_df=featimp_df.reindex(sorted_indices)
-    
     return featimp_df
 
     

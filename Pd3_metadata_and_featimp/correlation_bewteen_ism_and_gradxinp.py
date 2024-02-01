@@ -15,11 +15,8 @@ corrs=[]
 pvals=[]
 tracks=[]
 for i in range(8):
-    print(f"Track {i}: {track_info[i]}")
-    df_ism=pd.read_csv(f"ism_{track_info[i]}.csv",index_col=0)
+    df_ism=pd.read_csv(f"ism_{track_info[i]}.csv",header=None,index_col=0)
     df_gradxinp=pd.read_csv(f"gradxinp_{track_info[i]}.csv",header=None,index_col=0)
-    print(df_ism.index)
-    print(df_gradxinp.index)
     assert np.all(df_ism.index==df_gradxinp.index)
     ism=df_ism.values.reshape(-1,1).squeeze()
     gradxinp=df_gradxinp.values.reshape(-1,1).squeeze()
@@ -35,6 +32,6 @@ for i in range(8):
     tracks.append(track_info[i])
     
 df=pd.DataFrame({"track":tracks,"corr":corrs,"pval":pvals})
-df.to_csv("correlation_ism_gradxinp.csv",index=False)
+df.to_csv("correlation_between_ism_and_gradxinp.csv",index=False)
     
     
