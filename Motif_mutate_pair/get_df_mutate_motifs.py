@@ -1,32 +1,16 @@
 import pandas as pd
 import sys
-from pybedtools import BedTool
 
 
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from utils import SeqExtractor,generate_random_seq
 from prediction import compute_predictions
 from motif_annotation import JasparAnnotator, ReMapAnnotator, subset_df_by_region, add_feat_imp 
+from region_ops import merge_intervals
 from loguru import logger
 #-----------------------
 # Functions
 #-----------------------
-
-def merge_intervals(df, 
-                    other_cols=['protein'],    #['protein', 'max_gradxinp','mean_gradxinp','mean_abs_gradxinp'],
-                    operations=["mode"]  #["mode","mean","mean","mean"]
-                    ):
-    bed = BedTool.from_dataframe(df)
-    col_idxs = [df.columns.get_loc(col) + 1 for col in other_cols]  # +1 because BedTool columns are 1-indexed
-    col_str = ','.join(map(str, col_idxs))
-    op_str = ','.join(operations)
-    merged = bed.merge(c=col_str, o=op_str).to_dataframe(names=['chromosome', 'start', 'end'] + other_cols)
-    return merged
-
-def test_merge_intervals():
-    df=pd.DataFrame([["chr1",1,10,"a"],["chr1",5,15,"a"],["chr1",20,30,"a"]],columns=['chrom','start','end','protein'])
-    merged=merge_intervals(df)
-    assert merged.equals(pd.DataFrame([["chr1",1,15,"a"],["chr1",20,30,"a"]],columns=['chrom','start','end','protein']))
 
 
 def find_non_overlapping_combinations(df):

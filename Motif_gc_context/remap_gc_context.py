@@ -4,6 +4,7 @@ import pyranges as pr
 from loguru import logger  
 import argparse
 
+
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from utils import SeqExtractor
@@ -35,23 +36,13 @@ def annotate_region(region,tf,chip_evidence):
     df["chromosome"]=region[0]
     df["chip_evidence"]=chip_evidence
     df["motif_seq"]=df.apply(lambda row: seq_extractor.get_seq(row["chromosome"], row["start"], row["end"]), axis=1)
-    df["motif_gc"]=calc_gc_context(df,0)
+    df["motif_gc"]=calc_gc_context(df,0,seq_extractor)
+    df["context_gc_2bp"]=calc_gc_context(df,2,seq_extractor)
     df["context_gc_10bp"]=calc_gc_context(df,10,seq_extractor)
     df["context_gc_50bp"]=calc_gc_context(df,50,seq_extractor)
     df["context_gc_100bp"]=calc_gc_context(df,100,seq_extractor)
     df["context_gc_300bp"]=calc_gc_context(df,300,seq_extractor)
     return df
-
-
-
-def cut_and_sample(gr,num_samples):
-    gr_tiled = gr.tile(1000)
-    gr_sampled= gr_tiled.sample(n=num_samples)
-    return gr_sampled
-
-
-
-
 
 
 parser=argparse.ArgumentParser()
@@ -64,13 +55,9 @@ jaspar = pyBigWig.open(jaspar_path)
 jaspar.isBigBed()
 
 
-# create genome
-chrom_sizes=pd.DataFrame(jaspar.chroms().items(),columns=["Chromosome","Size"])
-chrom_sizes=chrom_sizes[chrom_sizes["Chromosome"].isin([f"chr{i}" for i in range(1,23)]+["chrX","chrY"])].reset_index(drop=True)
-chrom_sizes["Start"]=0
-chrom_sizes.columns=["Chromosome","End","Start"]
-chrom_sizes=chrom_sizes[["Chromosome","Start","End"]]
-genome=pr.PyRanges(chrom_sizes)
+# read in open chromatin regions
+gr_ocr=pr.read_bed("/isdata/alab/people/pcr980/DeepCompare/Pd1_bed_processed/DHS_K562_loose.bed")
+gr_ocr=gr_ocr.merge()
 
 
 # read in ChIP peak regions
@@ -83,9 +70,7 @@ df_chip.columns=["Chromosome","Start","End","protein","score","strand","thick_st
 df_chip=df_chip[df_chip.protein==tf]
 
 gr_chip_pos=pr.PyRanges(df_chip)
-gr_chip_neg=genome.subtract(gr_chip_pos)
-## to do: select only regions in open chromatin
-gr_chip_neg=cut_and_sample(gr_chip_neg,gr_chip_pos.df.shape[0]*10)
+gr_chip_neg=gr_ocr.subtract(gr_chip_pos)
 
 df_chip_pos=gr_chip_pos.as_df()
 df_chip_neg=gr_chip_neg.as_df()

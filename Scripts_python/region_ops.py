@@ -1,4 +1,4 @@
-
+from pybedtools import BedTool
 
 
 
@@ -12,7 +12,10 @@ def subset_df_by_region(df,region,by):
         if by=="reverse": return the rows that do not overlap with the region
     """
     if by=="1bp":
-        return df[(df['chromosome']==region[0]) & (df['end']>=region[1]) & (df['start']<=region[2])].copy()
+        try:
+            return df[(df['chromosome']==region[0]) & (df['end']>=region[1]) & (df['start']<=region[2])].copy()
+        except:
+            return df[(df['Chromosome']==region[0]) & (df['End']>=region[1]) & (df['Start']<=region[2])].copy()
     if by=="contained":
         return df[(df['chromosome']==region[0]) & (df['start']>=region[1]) & (df['end']<=region[2])].copy()
     if by=="reverse":
@@ -70,3 +73,16 @@ def calc_gc_context(df_region,context_width,seq_extractor):
     df_resized["seq"]=df_resized.apply(lambda row: seq_extractor.get_seq(row["chromosome"], row["start"], row["end"]), axis=1)
     df_resized["gc"]=df_resized["seq"].apply(lambda x: (x.count("G")+x.count("C"))/len(x))
     return df_resized["gc"]
+
+
+# This is probably problematic
+def merge_intervals(df, 
+                    other_cols=['protein'],    #['protein', 'max_gradxinp','mean_gradxinp','mean_abs_gradxinp'],
+                    operations=["mode"],  #["mode","mean","mean","mean"]
+                    ):
+    bed = BedTool.from_dataframe(df)
+    col_idxs = [df.columns.get_loc(col) + 1 for col in other_cols]  # +1 because BedTool columns are 1-indexed
+    col_str = ','.join(map(str, col_idxs))
+    op_str = ','.join(operations)
+    merged = bed.merge(c=col_str, o=op_str).to_dataframe(names=['chromosome', 'start', 'end'] + other_cols)
+    return merged

@@ -43,6 +43,8 @@ class JasparAnnotator:
         df['protein'] = df['protein'].str.upper()
         df['chromosome'] = region[0]
         df = df.loc[:, ['chromosome', 'start', 'end', 'strand', 'protein', 'score']]
+        # There might be duplicates, so remove them
+        #df = df.drop_duplicates(subset=['chromosome', 'start', 'end', 'strand', 'protein'])
         df = subset_df_by_region(df, region, by="contained")
         return df
 
