@@ -6,7 +6,7 @@ a commandline tool: Given sequence file, write model prediction to csv.
 a python function: compute_predictions()
 """
 
-from utils import find_available_gpu, seq2x
+from utils import find_available_gpu
 import numpy as np
 import pandas as pd
 import torch
@@ -15,27 +15,10 @@ import math
 import argparse
 from loguru import logger
 
+from seq_ops import seq2x, resize_seq
+
 
 BATCH_SIZE=8192
-
-def _crop_seq(seq,padding="both_ends"):
-    if len(seq)==600:
-        return seq
-    if len(seq)<=600:
-        if padding=="both_ends":
-            left_length=np.floor((600-len(seq))/2).astype(int)
-            right_length=np.ceil((600-len(seq))/2).astype(int)
-            return "N"*left_length+seq+"N"*right_length
-        elif padding=="from_left":
-            return "N"*(600-len(seq))+seq
-        elif padding=="from_right":
-            return seq+"N"*(600-len(seq))
-        else:
-            raise ValueError("Parameter padding unrecognized.Please enter 'both_ends', 'from_left' or 'from_right'")
-    # when seq is longer than 600"
-    start_idx=(len(seq)-600)//2
-    return seq[start_idx:start_idx+600]
-
 
 
 def compute_predictions(seqs,
@@ -83,7 +66,7 @@ def write_predictions(data_path,seq_colname,out_path,
     for chunk in pd.read_csv(data_path,chunksize=batch_size,header=0):
         query_seqs=list(chunk.loc[:,seq_colname])
         if variable_length:
-            query_seqs=list(map(_crop_seq,query_seqs))
+            query_seqs=list(map(resize_seq,query_seqs))
         df=pd.DataFrame(compute_predictions(query_seqs,model,device))
         df.to_csv(out_path, mode='a',index=False,header=False)
         

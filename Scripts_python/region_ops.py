@@ -43,11 +43,11 @@ def resize_region(region,width,fix="center"):
 def resize_df(df_region,width,fix="center"):
     """
     Args:
-        df_region: A data frame of bed file, containing short regions
+        df_region: A data frame containing columns "start", "end" (have to be this name)
         width: An integer of the new width
         fix: A string of "center" or "left"
     Returns:
-        A data frame of bed file, containing short regions
+        A data frame, and the column "start" and "end" are modified
     """
     df_region=df_region.copy()
     if fix=="center":

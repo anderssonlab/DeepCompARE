@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from scipy.stats import mannwhitneyu
-
+from utils import remove_nan_inf
+from scipy.stats import pearsonr
 
 
 def match_by_score(df, score_col, label_col):
@@ -67,3 +68,12 @@ def match_by_decile(df,score_col,label_col):
         logger.warning("There is a significant difference in score distribution between groups.")
     
     return balanced_df
+
+
+
+
+def pearsonr_tolerating_nan(x,y):
+    x,y=remove_nan_inf(x,y)
+    corr,pval=pearsonr(x,y)
+    return corr,pval
+    

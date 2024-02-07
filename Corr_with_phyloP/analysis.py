@@ -6,7 +6,8 @@ from scipy.stats import pearsonr
 from loguru import logger
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python/")
-from utils import read_featimp
+from utils import read_featimp,remove_nan_inf
+from stat_tests import pearsonr_tolerating_nan
 
 
 
@@ -23,30 +24,25 @@ track_info={0: "CAGE_HepG2",
             7: "SuRE_K562"}
 
 
-# def compute_correlation(feat_imp_file,cons_file,track_num,absolute_importance):
-#     """
-#     Args:
-#         feat_imp_file: file path to feature importance file
-#         cons_file: file path to conservation file
-#         track_num: track number to use
-#     Return:
-#         corr: correlation between feature importance and conservation
-#         pval: p-value
-#     """
-#     df_feat_imp=read_featimp(feat_imp_file,track_num=track_num)
-#     df_cons=pd.read_csv(cons_file,header=None)
-#     feat_imp=df_feat_imp.values.reshape(-1,1).squeeze()
-#     if absolute_importance:
-#         feat_imp=np.abs(feat_imp)
-#     cons=df_cons.values.reshape(-1,1).squeeze()
-#     assert len(feat_imp)==len(cons)
-#     mask_feat_imp_nan = np.isnan(feat_imp)
-#     mask_feat_imp_inf = np.isinf(feat_imp)
-#     mask_cons_nan = np.isnan(cons)
-#     mask_cons_inf = np.isinf(cons)
-#     mask_either = mask_feat_imp_nan | mask_feat_imp_inf | mask_cons_nan | mask_cons_inf
-#     corr,pval=pearsonr(feat_imp[~mask_either],cons[~mask_either])
-#     return corr,pval
+def compute_correlation(feat_imp_file,cons_file,track_num,absolute_importance):
+    """
+    Args:
+        feat_imp_file: file path to feature importance file
+        cons_file: file path to conservation file
+        track_num: track number to use
+    Return:
+        corr: correlation between feature importance and conservation
+        pval: p-value
+    """
+    df_feat_imp=read_featimp(feat_imp_file,track_num=track_num)
+    df_cons=pd.read_csv(cons_file,header=None)
+    feat_imp=df_feat_imp.values.reshape(-1,1).squeeze()
+    if absolute_importance:
+        feat_imp=np.abs(feat_imp)
+    cons=df_cons.values.reshape(-1,1).squeeze()
+    assert len(feat_imp)==len(cons)
+    corr,pval=pearsonr_tolerating_nan(feat_imp,cons)
+    return corr,pval
 
 
 
@@ -111,13 +107,7 @@ def get_bin_df(conservation_file, track_num):
     ism=df_ism.values.reshape(-1,1).squeeze()
     cons=df_cons.values.reshape(-1,1).squeeze()
     assert ism.shape==cons.shape
-    mask_ism_nan = np.isnan(ism)
-    mask_ism_inf = np.isinf(ism)
-    mask_cons_nan = np.isnan(cons)
-    mask_cons_inf = np.isinf(cons)
-    mask_either = mask_ism_nan | mask_ism_inf | mask_cons_nan | mask_cons_inf
-    ism=ism[~mask_either]
-    cons=cons[~mask_either]
+    ism,cons=remove_nan_inf(ism,cons)
     
     # set bins
     bins=[-np.inf,-1,-0.5,-0.2,-0.1,0,0.1,0.2,0.5,1,np.inf]
