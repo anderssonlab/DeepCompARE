@@ -1,6 +1,8 @@
 import pandas as pd
+import numpy as np
 import pyranges as pr
 import sys
+from loguru import logger
 
 sys.path.append("/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from utils import SeqExtractor
@@ -16,6 +18,8 @@ def read_maf_file(chrom_num):
     df_maf["End"]=df_maf["POS"]+1
     df_maf.columns=["Chromosome","Start","ID","REF","ALT","AF","End"]
     df_maf=df_maf[["Chromosome","Start","End","ID","REF","ALT","AF"]]
+    # convert AF to log10
+    df_maf["AF"]=np.log10(df_maf["AF"]+1e-300)
     return df_maf
 
 def subset_maf_by_range(gr_maf):
@@ -32,6 +36,7 @@ def subset_maf_by_range(gr_maf):
 
 if __name__=="__main__":
     for i in list(range(1,23))+["X","Y"]:
+        logger.info(f"Processing chromosome {i}")
         df_maf=read_maf_file(i)
         gr_maf = pr.PyRanges(df_maf)
         df_maf=subset_maf_by_range(gr_maf)
@@ -41,3 +46,4 @@ if __name__=="__main__":
         df_maf=pd.concat([df_maf[["AF"]],df_pred],axis=1)
         df_maf.to_csv(f"/isdata/alab/people/pcr980/DeepCompare/Corr_with_maf/res.csv",mode="a",header=False,index=False)
         
+    logger.info("Done")

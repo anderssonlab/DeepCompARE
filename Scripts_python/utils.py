@@ -1,60 +1,12 @@
-import numpy as np
 import pandas as pd
-import torch
+import numpy as np
 import pynvml
 import re
 
-from pyfaidx import Fasta
-from kipoiseq import Interval
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-
-def generate_random_seq(length):
-    return ''.join(np.random.choice(["A", "C", "G", "T", "N"], length))  
-    
-def generate_random_seqs(num_seqs, length):
-    return [generate_random_seq(length) for _ in range(num_seqs)]    
-    
-
-def encode(my_seq):
-    mapping= { "A": [1, 0, 0, 0], "C": [0, 1, 0, 0],"G": [0, 0, 1, 0],"T": [0, 0, 0, 1],"N": [0, 0, 0, 0]}
-    return np.array([mapping[i] for i in my_seq])
-
-
-def shift_seq(seq,direction,dist):
-    """ 
-    add "N"*dist to object seq from directin 
-    """
-    if direction=="right": # add 0 from left,subset from left
-        return ("N"*dist+seq)[0:600]
-    elif direction=="left": # add 0 from right, subset from right
-        return (seq+"N"*dist)[dist:dist+600]
-    else:
-        raise ValueError("parameter direction not recognized!")
-
-
-
-
-def seq2x(seqs,device=False):
-    """
-    Args:
-        seqs: a list of strings, or a single string
-        device: a torch.device()
-    Returns:
-        numpy array of shape (len(seqs),4,len(seqs[0]))
-    """
-    if isinstance(seqs,str):
-        seqs=[seqs]
-    if hasattr(seqs,"values"):
-        seqs=seqs.values
-    X=np.zeros((len(seqs),len(seqs[0]),4))
-    X=np.array(list(map(encode,seqs))).transpose(0, 2, 1)
-    if not device:
-        return X
-    X=torch.tensor(X,device=device).float()
-    return X
 
 
 
@@ -74,17 +26,15 @@ def find_available_gpu():
     raise ValueError("No available GPU found!")
 
 
+def remove_nan_inf(x,y):
+    assert len(x)==len(y)
+    mask_x_nan = np.isnan(x)
+    mask_x_inf = np.isinf(x)
+    mask_y_nan = np.isnan(y)
+    mask_y_inf = np.isinf(y)
+    mask_either = mask_x_nan | mask_x_inf | mask_y_nan | mask_y_inf
+    return x[~mask_either],y[~mask_either]
 
-class SeqExtractor:
-    """
-    Convert bed regions to fasta sequences
-    copied from enformer_usage.ipynb
-    """
-    def __init__(self):
-        self.fasta = Fasta("/binf-isilon/alab/people/pcr980/Resource/hg38.fa")
-    
-    def get_seq(self,chr,start,end):
-        return str(self.fasta.get_seq(chr,start,end).seq).upper()
 
 
 def extract_numbers(s):

@@ -11,6 +11,10 @@ from scipy.stats import ks_2samp,pearsonr
 from adjustText import adjust_text
 from loguru import logger
 
+import sys
+sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
+from stat_tests import match_by_score
+
 df=pd.read_csv("motif_df.csv")
 tfs=sorted(df[df.chip_evidence==True].protein.unique())
 logger.info(f"Number of TFs with chip evidence: {len(tfs)}")
@@ -21,32 +25,6 @@ logger.info(f"Number of TFs with chip evidence: {len(tfs)}")
 # for each TF, calculate KS D statistics of max_gradxinp distribution and motif score
 # grouped by chip_evidence
 #--------------------------------------------------------
-
-def match_by_score(df, score_col, label_col):
-    """
-    For each positive sample, find a unique negative sample with the most similar score using a vectorized approach.
-    
-    Parameters:
-    - df: DataFrame containing the data.
-    - score_col: Name of the column containing the scores.
-    - label_col: Name of the column containing binary labels (1 for positive, 0 for negative).
-    
-    Returns:
-    - DataFrame containing uniquely matched positive and negative samples.
-    """
-    # Separate positive and negative samples
-    positives = df[df[label_col] == 1]
-    negatives = df[df[label_col] == 0]
-    # Create a KDTree for efficient nearest neighbor search
-    tree = cKDTree(negatives[[score_col]])
-    # Compute the distance to the nearest neighbor for each positive sample
-    _, indices = tree.query(positives[[score_col]], k=1)
-    # Ensure unique matches
-    unique_negatives = negatives.iloc[np.unique(indices)]
-    matched_positives = positives.iloc[np.unique(indices, return_index=True)[1]]
-    # Combine matched positive and negative sampless
-    matched_df = pd.concat([matched_positives, unique_negatives])
-    return matched_df
 
 
 corr, p_val = pearsonr(df.max_gradxinp, df.score)   
