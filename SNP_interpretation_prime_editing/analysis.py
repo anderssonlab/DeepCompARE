@@ -1,6 +1,7 @@
 import pandas as pd
 import sys
 import numpy as np
+import json
 
 sys.path.append("/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from region_ops import resize_df
@@ -75,8 +76,12 @@ delta=pred_alt-pred_ref
 # calculate and plot correlation
 #-------------------------
 
+track_definition=json.load(open("/isdata/alab/people/pcr980/DeepCompare/Scripts_python/track_definition.json"))
+
 promoter_idx=(df["Screen"]=="Promoter")
 enhancer_idx=(df["Screen"]=="Enhancer")
+
+
 
 corrs=[]
 pvals=[]
@@ -88,7 +93,7 @@ for i in range(16):
     corrs.append(corr)
     pvals.append(pval)
     res.append(f"Promoter")
-    tracks.append(i)
+    tracks.append(track_definition[str(i)])
     if i>7:
         models.append("DeepCompare classification")
     else:
@@ -99,7 +104,7 @@ for i in range(16):
     corrs.append(corr)
     pvals.append(pval)
     res.append(f"Enhancer")
-    tracks.append(i)
+    tracks.append(track_definition[str(i)])
     if i>7:
         models.append("DeepCompare classification")
     else:
@@ -107,13 +112,14 @@ for i in range(16):
     
 # get informatin of enformer:
 for idx in [promoter_idx,enhancer_idx]:
-    for col in ["Enformer CAGE TSS","Enformer DNase TSS ", "Enformer CAGE","Enformer DNase"]:
+    for col in ["Enformer CAGE","Enformer DNase"]:
         corr,pval=pearsonr_tolerating_nan(df[col][idx],df["% change to PPIF expression"][idx])
         corrs.append(corr)
         pvals.append(pval)
         res.append(f"Promoter" if idx is promoter_idx else "Enhancer")
-        tracks.append(-1)
-        models.append(col)
+        # track is the word after "Enformer"
+        tracks.append(col.split(" ")[1])
+        models.append("Enformer")
 
 
 

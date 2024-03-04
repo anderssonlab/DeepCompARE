@@ -1,49 +1,17 @@
-from scipy.spatial import cKDTree
-import numpy as np
 import pandas as pd
+import numpy as np
 from loguru import logger
 from scipy.stats import mannwhitneyu
 from utils import remove_nan_inf
 from scipy.stats import pearsonr
 
 
-def match_by_score(df, score_col, label_col):
-    """
-    For each positive sample, find a unique negative sample with the most similar score using a vectorized approach.
-    
-    Parameters:
-    - df: DataFrame containing the data.
-    - score_col: Name of the column containing the scores.
-    - label_col: Name of the column containing binary labels (1 for positive, 0 for negative).
-    
-    Returns:
-    - DataFrame containing uniquely matched positive and negative samples.
-    """
-    # Separate positive and negative samples
-    logger.info(f"Data frame has shape {df.shape}")
-    positives = df[df[label_col] == 1]
-    negatives = df[df[label_col] == 0]
-    logger.info(f"{len(positives)} positive samples and {len(negatives)} negative samples")
-    # Create a KDTree for efficient nearest neighbor search
-    tree = cKDTree(negatives[[score_col]])
-    # Compute the distance to the nearest neighbor for each positive sample
-    _, indices = tree.query(positives[[score_col]], k=1)
-    # Ensure unique matches
-    unique_negatives = negatives.iloc[np.unique(indices)]
-    matched_positives = positives.iloc[np.unique(indices, return_index=True)[1]]
-    # Combine matched positive and negative sampless
-    matched_df = pd.concat([matched_positives, unique_negatives])
-    logger.info(f"Matched data frame has shape {matched_df.shape}")
-    return matched_df
-
-
-
 
 
 def match_by_decile(df,score_col,label_col):
-    logger.info(f"Data frame has shape {df.shape}")
+    logger.info(f"Original data frame has shape {df.shape}")
     df=df.copy()    
-    df['score_decile'] = pd.qcut(df[score_col], 10, labels=False, duplicates='drop')
+    df['score_decile'] = pd.qcut(df[score_col], 20, labels=False, duplicates='drop')
     
     balanced_dfs = []
     for decile in range(10):
@@ -58,7 +26,7 @@ def match_by_decile(df,score_col,label_col):
     scores_false = balanced_df[balanced_df[label_col] == False][score_col]
     if len(scores_true) == 0 or len(scores_false) == 0:
         logger.warning("No positive or negative samples in the balanced data frame")
-        return None
+        return pd.DataFrame()
     
     _, p_value = mannwhitneyu(scores_true, scores_false)
     
@@ -77,3 +45,56 @@ def pearsonr_tolerating_nan(x,y):
     corr,pval=pearsonr(x,y)
     return corr,pval
     
+    
+
+def replace_inf(x):
+    """
+    Replace inf with second maximum unique value of the column * 1.5
+    """
+    return x.replace(np.inf,x.sort_values(ascending=False).unique()[1]*1.5)
+    
+
+
+
+def get_minimum_positive(x):
+    """
+    return the minimum positive value of column x
+    """
+    return x[x>0].sort_values().unique()[0]
+    
+    
+    
+    
+def bin_and_label(df, column_name, bin_edges):
+    bin_edges = sorted(set(bin_edges))
+    labels = [f"{bin_edges[i]}-{bin_edges[i+1]}" for i in range(len(bin_edges)-1)]
+    df['Bin'] = pd.cut(df[column_name], bins=bin_edges, labels=labels, include_lowest=True)
+    return df
+
+
+
+
+
+
+# Odds ratio calculation 2: in/out bin v.s is/isn't in column
+#           colname    non-colname
+# in-bin     A           B
+# out-bin    C           D
+# odds_rare = AD/BC
+# A, B may be 0
+# C, D can never be 0 
+def calc_odds_ratio(df,row_name,col_name):
+    A=df.loc[row_name,col_name]
+    B=df.loc[row_name,:].sum()-A
+    C=df.loc[:,col_name].sum()-A
+    D=df.loc[:,].sum().sum()-A-B-C
+    if A==0 and B==0:
+        # this bin doesn't exist
+        return np.nan
+    elif B==0:
+        return np.inf
+    else:
+        odds_in=A/B
+        odds_out=C/D
+        odds_ratio=odds_in/odds_out
+        return odds_ratio

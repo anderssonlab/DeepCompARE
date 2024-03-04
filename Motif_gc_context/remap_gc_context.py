@@ -21,6 +21,7 @@ def annotate_region(region,tf,chip_evidence):
     """
     try:
         jaspar_info_list = jaspar.entries(region[0], region[1], region[2])
+    # to do: change column names
     except:
         return pd.DataFrame(columns=['start', 'end', 'protein', 'score', 'strand', 'chromosome','chip_evidence', 'motif_seq', 'motif_gc', 'context_gc'])
 

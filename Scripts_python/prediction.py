@@ -36,6 +36,8 @@ def compute_predictions(seqs,
     logger.info(f"Use device {device} to compute predictions")
     if isinstance(seqs,str):
         seqs=[seqs]
+    if isinstance(device,str):
+        device=torch.device(f"cuda:{device}")
     model.to(device)
     model.eval()
     res=np.empty((0, 16))

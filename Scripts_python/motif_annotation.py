@@ -5,25 +5,6 @@ from region_ops import subset_df_by_region
 
 
 
-def add_feat_imp(df_motif,region,gradxinp):
-    """
-    Args:
-        df_motif: A data frame with first 3 colummns as chromosome, start, end of motifs
-        region: A tuple of (chromosome, start, end)
-        gradxinp: A numpy array of feature importance
-    """
-    df_motif["start_rel"]=df_motif["start"]-region[1]
-    df_motif["end_rel"]=df_motif["end"]-region[1]
-    
-    df_motif["max_gradxinp"]=df_motif.apply(lambda row: np.max(gradxinp[row["start_rel"]:row["end_rel"]+1]), axis=1)
-    df_motif["max_abs_gradxinp"]=df_motif.apply(lambda row: np.max(np.abs(gradxinp[row["start_rel"]:row["end_rel"]+1])), axis=1)
-    df_motif["mean_gradxinp"]=df_motif.apply(lambda row: np.mean(gradxinp[row["start_rel"]:row["end_rel"]+1]), axis=1)
-    df_motif["mean_abs_gradxinp"]=df_motif.apply(lambda row: np.mean(np.abs(gradxinp[row["start_rel"]:row["end_rel"]+1])), axis=1)
-    df_motif["min_gradxinp"]=df_motif.apply(lambda row: np.min(gradxinp[row["start_rel"]:row["end_rel"]+1]), axis=1)
-    df_motif["min_abs_gradxinp"]=df_motif.apply(lambda row: np.min(gradxinp[row["start_rel"]:row["end_rel"]+1]), axis=1)
-    return df_motif
-
-
 class JasparAnnotator:
     def __init__(self,jaspar_path="/binf-isilon/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2022_hg38.bb"):
         self.jaspar = pyBigWig.open(jaspar_path)
@@ -38,17 +19,15 @@ class JasparAnnotator:
         """
         tf_info_list = self.jaspar.entries(region[0], region[1], region[2])
         df = pd.DataFrame(tf_info_list, columns=['start', 'end', 'details'])
+        df['chromosome'] = region[0]
+        df=df.loc[:, ['chromosome', 'start', 'end', 'details']]
+        df = subset_df_by_region(df, region, by="contained")
         df[['protein', 'score', 'strand']] = df['details'].str.split('\t', expand=True)
         df.drop(columns='details', inplace=True)
         df['protein'] = df['protein'].str.upper()
-        df['chromosome'] = region[0]
-        df = df.loc[:, ['chromosome', 'start', 'end', 'strand', 'protein', 'score']]
-        # There might be duplicates, so remove them
-        #df = df.drop_duplicates(subset=['chromosome', 'start', 'end', 'strand', 'protein'])
-        df = subset_df_by_region(df, region, by="contained")
+        df['score'] = df['score'].astype(int)
+        df = df.drop_duplicates(subset=['chromosome', 'start', 'end', 'strand', 'protein'])
         return df
-
-
 
 
 

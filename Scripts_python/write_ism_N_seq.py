@@ -13,7 +13,6 @@ import pandas as pd
 import numpy as np
 import argparse
 import torch
-import re
 from loguru import logger
 
 import sys
@@ -83,16 +82,23 @@ def _create_dir_name():
     random_number = random.randint(1, 999999)
     return f"Temp_ism_{random_number}"
 
-
-def write_ism_score(seq_file,seq_colname,out_path, 
-                    device=torch.device("cuda:"+find_available_gpu())):
-
-    # make directory for temp result
+def create_dir():
+    wd=os.getcwd()
     dir_temp=_create_dir_name()
-    while os.path.isdir(dir_temp):
+    while os.path.isdir(os.path.join(wd,dir_temp)):
         dir_temp=_create_dir_name()
     logger.info(f"Create directory {dir_temp}")
-    os.makedirs(dir_temp)
+    os.makedirs(os.path.join(wd,dir_temp))
+    return os.path.join(wd,dir_temp)
+
+
+def write_ism_score(seq_file,seq_colname,out_path, dir_temp=None,
+                    device=torch.device("cuda:"+find_available_gpu())):
+
+    # make directory for temp result, if dir_temp is not provided
+    # if called from write_ism_N_bed, dir_temp is provided
+    if dir_temp is None:
+        dir_temp=create_dir()
 
     # write signal for reference sequence
     write_predictions(seq_file,seq_colname,os.path.join(dir_temp,"pred_ref.csv"),
@@ -128,4 +134,4 @@ if __name__=="__main__":
     args = parser.parse_args()
     
     write_ism_score(args.seq_file,args.seq_colname,args.out_path,
-                    torch.device(f"cuda:{args.gpu}"))
+                    device=torch.device(f"cuda:{args.gpu}"))

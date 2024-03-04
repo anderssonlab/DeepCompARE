@@ -6,7 +6,6 @@ from loguru import logger
 
 def predict_vcf(df_vcf,seq_extractor):
     df_copy=df_vcf.copy()
-    logger.info(f"df_copy.shape={df_copy.shape}")
     df_copy=resize_df(df_copy,600)
     df_copy["seq_ref"]=df_copy.apply(lambda row: seq_extractor.get_seq(row["chromosome"], row["start"], row["end"]-1), axis=1)
     logger.info("Reference sequence extracted!")

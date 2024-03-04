@@ -8,45 +8,50 @@ import sys
 sys.path.append("/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from plotting import scatter_plot_with_annotation
 
-df=pd.read_csv("df_spare_motif_cage_k562.csv")
-df.columns
-df.shape
+df_promoters_k562=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_promoters_k562.csv")
+df_promoters_k562["file_name"]="promoters_k562"
+
+df_promoters_hepg2=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_promoters_hepg2.csv")
+df_promoters_hepg2["file_name"]="promoters_hepg2"
+
+df_enhancers_k562=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_enhancers_k562.csv")
+df_enhancers_k562["file_name"]="enhancers_k562"
+
+df=pd.concat([df_promoters_k562,df_promoters_hepg2,df_enhancers_k562],axis=0)
+
 
 #-------------------------
 # Step 1: clean up weired values
 #-------------------------
-# # 1. negative feat_imp_orig
-# df_neg_feat_imp=df[df["feat_imp_orig"]<0] # 2276
-# sns.scatterplot(data=df_neg_feat_imp,x="feat_imp_orig",y="feat_imp_mut")
-# plt.title("Negative feat_imp_orig")
-# plt.savefig("Negative_feat_imp_orig.png")
-# plt.close()
+# 1. negative feat_imp_orig
+df_neg_feat_imp=df[df["feat_imp_orig"]<0] # 770
+# count occurances of each protein
+df_neg_feat_imp["protein"].value_counts() # No.1 ZNF384 378
+df["protein"].value_counts() # ZNF384 13993
 
-# # 2. negative feat_imp_mut
-# df_neg_feat_imp=df[df["feat_imp_mut"]<0] # 46, seems like noise, not pattern
-# sns.scatterplot(data=df_neg_feat_imp,x="feat_imp_orig",y="feat_imp_mut")
-# plt.title("Negative feat_imp_mut")
-# plt.savefig("Negative_feat_imp_mut.png")
-# plt.close()
+# 2. negative feat_imp_mut
+df_neg_feat_imp_remove_context=df[df["feat_imp_remove_context"]<0] # 46 
+df_neg_feat_imp_remove_context["protein"].value_counts() # No.1 ZNF384 23
 
-df=df[(df["feat_imp_orig"]>=0) & (df["feat_imp_mut"]>=0)] #3448081
+
+
+df=df[(df["feat_imp_orig"]>=0) & (df["feat_imp_remove_context"]>=0)] 
+df["log_ratio"]=np.log2(df["feat_imp_remove_context"]/df["feat_imp_orig"])
 
 
 #-------------------------
-# Step 2: add info
+# Step 2: add tf families
 #-------------------------
 # add TF family information and calculate percentage remain
-df_tf_family=pd.read_csv("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2024_CORE_extracted_tfs.csv",
-                         usecols=["ID","tf_family"])
-df_tf_family["ID"]=df_tf_family["ID"].str.upper()
+# df_tf_family=pd.read_csv("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2024_CORE_extracted_tfs.csv",
+#                          usecols=["ID","tf_family"])
+# df_tf_family["ID"]=df_tf_family["ID"].str.upper()
 
 
-df["protein"].isin(df_tf_family["ID"]).sum() # 3448081
-df.shape # 3448081
-df=df.merge(df_tf_family,left_on="protein",right_on="ID")
-df=df.drop(columns=["ID"])
-
-df["percentage_remain"]=df["feat_imp_mut"]/df["feat_imp_orig"]
+# df["protein"].isin(df_tf_family["ID"]).sum() # 3448081
+# df.shape # 3448081
+# df=df.merge(df_tf_family,left_on="protein",right_on="ID")
+# df=df.drop(columns=["ID"])
 
 
 
@@ -55,7 +60,27 @@ df["percentage_remain"]=df["feat_imp_mut"]/df["feat_imp_orig"]
 #--------------------------------
 
 # group by TF, for each TF, compute the median percentage_remain, and mean feat_imp_orig  and mean feat_imp_mut
-df_protein_percentage_remain=df.groupby("protein").agg({"percentage_remain":"median","feat_imp_orig":"mean","feat_imp_mut":"mean"}).reset_index()
+df_log_ratio=df.groupby("protein").agg({"log_ratio":"mean","feat_imp_orig":"mean","feat_imp_remove_context":"mean"}).reset_index()
+
+
+
+df_ks_promoters_k562=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Motif1_highlight_chip/summary_and_ks_test_promoters_k562.csv")
+df_ks_promoters_k562["file_name"]="promoters_k562"
+
+df_ks_promoters_hepg2=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Motif1_highlight_chip/summary_and_ks_test_promoters_hepg2.csv")
+df_ks_promoters_hepg2["file_name"]="promoters_hepg2"
+
+df_ks_enhancers_k562=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Motif1_highlight_chip/summary_and_ks_test_enhancers_k562.csv")
+df_ks_enhancers_k562["file_name"]="enhancers_k562"
+
+df_ks=pd.concat([df_ks_promoters_k562,df_ks_promoters_hepg2,df_ks_enhancers_k562],axis=0)
+df_ks.reset_index(drop=True,inplace=True)
+
+
+# join df_log_ratio and df_ks by protein
+
+
+
 
 # Spearman correlation with ChIP-Seq KS test
 df_protein_percentage_remain.sort_values(by="protein",ascending=False,inplace=True)
@@ -91,55 +116,3 @@ scatter_plot_with_annotation(df_protein_percentage_remain,
                              xlab="mean_feat_imp_orig", ylab="mean_feat_imp_mut")
 
 
-#--------------------------------
-# Step 4: TF family level analysis
-#--------------------------------
-df_tf_family_percentage_remain=df.groupby("tf_family").agg({"percentage_remain":"median","feat_imp_orig":"mean","feat_imp_mut":"mean"}).reset_index()
-
-scatter_plot_with_annotation(df_tf_family_percentage_remain,
-                             "feat_imp_orig", 
-                             "percentage_remain",
-                             "tf_family", 
-                             "Plots_spare_motif/tf_family_level_featimp_orig_vs_percentage_remain.png",
-                             xlab="mean_feat_imp_orig", ylab="median_percentage_remain")
-scatter_plot_with_annotation(df_tf_family_percentage_remain, 
-                             "feat_imp_mut", 
-                             "percentage_remain",
-                             "tf_family", 
-                             "Plots_spare_motif/tf_family_level_featimp_mut_vs_percentage_remain.png",
-                             xlab="mean_feat_imp_mut", ylab="median_percentage_remain")
-scatter_plot_with_annotation(df_tf_family_percentage_remain,
-                             "feat_imp_orig", 
-                             "feat_imp_mut",
-                             "tf_family", 
-                             "Plots_spare_motif/tf_family_level_featimp_orig_vs_featimp_mut.png",
-                             xlab="mean_feat_imp_orig", ylab="mean_feat_imp_mut")
-
-
-
-#--------------------------------
-# Step 5: ETS family analysis 
-#--------------------------------
-# select tf_family containing "Ets-related"
-df_ets=df[df["tf_family"].str.contains("Ets-related").fillna(False)]
-df_ets_percentage_remain=df_ets.groupby("protein").agg({"percentage_remain":"median","feat_imp_orig":"mean","feat_imp_mut":"mean"}).reset_index()
-scatter_plot_with_annotation(df_ets_percentage_remain,
-                                "feat_imp_orig", 
-                                "percentage_remain",
-                                "protein", 
-                                "Plots_spare_motif/ETS_family_level_featimp_orig_vs_percentage_remain.png",
-                                xlab="mean_feat_imp_orig", ylab="median_percentage_remain")
-
-scatter_plot_with_annotation(df_ets_percentage_remain,
-                                "feat_imp_mut", 
-                                "percentage_remain",
-                                "protein", 
-                                "Plots_spare_motif/ETS_family_level_featimp_mut_vs_percentage_remain.png",
-                                xlab="mean_feat_imp_mut", ylab="median_percentage_remain")
-
-scatter_plot_with_annotation(df_ets_percentage_remain,
-                                "feat_imp_orig", 
-                                "feat_imp_mut",
-                                "protein", 
-                                "Plots_spare_motif/ETS_family_level_featimp_orig_vs_featimp_mut.png",
-                                xlab="mean_feat_imp_orig", ylab="mean_feat_imp_mut")

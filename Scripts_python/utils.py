@@ -53,13 +53,3 @@ def read_featimp(featimp_file,track_num):
     # Given that indices are composed of "SeqX_TrackY", we can subset to contain only "_Track{track_num}"
     featimp_df=featimp_df[featimp_df.index.str.contains(f"_Track{track_num}$")]
     return featimp_df
-
-    
-def write_fasta(out_fname,importance,seqs_ids,seqs): # one number per location
-    with open(out_fname,"a+") as f:
-        for i in range(len(seqs)):
-            seq_rec=SeqRecord(Seq(seqs[i]))
-            seq_rec.id=seqs_ids[i]
-            SeqIO.write(seq_rec,f,"fasta")
-            f.write(' '.join(map(lambda x: f'{float(x):.5f}', importance[i])))
-            f.write("\n")

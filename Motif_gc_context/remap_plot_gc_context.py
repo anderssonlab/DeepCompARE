@@ -10,6 +10,8 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from stat_tests import match_by_decile
 from scipy.stats import mannwhitneyu
 
+# to do: multiple hypothesis correction
+
 def calculate_gc_bias(df,gc_col):
     gc_true = df[df['chip_evidence'] == True][gc_col]
     gc_false = df[df['chip_evidence'] == False][gc_col]
