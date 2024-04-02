@@ -3,7 +3,7 @@ import numpy as np
 from loguru import logger
 from scipy.stats import mannwhitneyu
 from utils import remove_nan_inf
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, fisher_exact
 
 
 
@@ -11,6 +11,16 @@ from scipy.stats import pearsonr
 def match_by_decile(df,score_col,label_col):
     logger.info(f"Original data frame has shape {df.shape}")
     df=df.copy()    
+    # test if the score distribution is different between groups
+    scores_true = df[df[label_col] == True][score_col]
+    scores_false = df[df[label_col] == False][score_col]
+    if len(scores_true) == 0 or len(scores_false) == 0:
+        logger.warning("No positive or negative samples in the data frame")
+        return pd.DataFrame()
+    _, p_value = mannwhitneyu(scores_true, scores_false)
+    if p_value > 0.1:
+        logger.info(f"No significant difference in score distribution between groups, p-value={p_value:.3f}")
+        return df
     df['score_decile'] = pd.qcut(df[score_col], 20, labels=False, duplicates='drop')
     
     balanced_dfs = []
@@ -19,6 +29,7 @@ def match_by_decile(df,score_col,label_col):
         min_size = decile_df[label_col].value_counts().min()
         balanced_df_decile = decile_df.groupby(label_col).apply(lambda x: x.sample(n=min_size)).reset_index(drop=True)
         balanced_dfs.append(balanced_df_decile)
+    
     balanced_df = pd.concat(balanced_dfs).reset_index(drop=True)
     logger.info(f"Balanced data frame has shape {balanced_df.shape}")
     
@@ -29,12 +40,10 @@ def match_by_decile(df,score_col,label_col):
         return pd.DataFrame()
     
     _, p_value = mannwhitneyu(scores_true, scores_false)
-    
-    if p_value > 0.05:
+    if p_value > 0.1:
         logger.info(f"No significant difference in score distribution between groups with chip_evidence=True and False, p-value={p_value:.3f}")
     else:
         logger.warning("There is a significant difference in score distribution between groups.")
-    
     return balanced_df
 
 
@@ -88,13 +97,6 @@ def calc_odds_ratio(df,row_name,col_name):
     B=df.loc[row_name,:].sum()-A
     C=df.loc[:,col_name].sum()-A
     D=df.loc[:,].sum().sum()-A-B-C
-    if A==0 and B==0:
-        # this bin doesn't exist
-        return np.nan
-    elif B==0:
-        return np.inf
-    else:
-        odds_in=A/B
-        odds_out=C/D
-        odds_ratio=odds_in/odds_out
-        return odds_ratio
+    table = np.array([[A, B], [C, D]])
+    odds_ratio, p = fisher_exact(table)
+    return odds_ratio, p

@@ -26,7 +26,7 @@ class JasparAnnotator:
         df.drop(columns='details', inplace=True)
         df['protein'] = df['protein'].str.upper()
         df['score'] = df['score'].astype(int)
-        df = df.drop_duplicates(subset=['chromosome', 'start', 'end', 'strand', 'protein'])
+        df = df.drop_duplicates(subset=['chromosome', 'start', 'end', 'strand', 'protein']).reset_index(drop=True)
         return df
 
 
@@ -59,7 +59,7 @@ class ReMapAnnotator:
                 return True
             else:
                 return False
-        else: # dimer
+        else: # dimer: require only one of the TFs to have ChIP evidence
             tf1=region["protein"].split("::")[0]
             tf2=region["protein"].split("::")[1]
             if tf1 in chip_df['TF'].values or tf2 in chip_df['TF'].values:
