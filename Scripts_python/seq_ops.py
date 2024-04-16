@@ -1,8 +1,9 @@
 
 import numpy as np
+import pandas as pd
 import torch
-
 from pyfaidx import Fasta
+from collections import Counter
 
 
 class SeqExtractor:
@@ -22,12 +23,60 @@ def generate_random_seq(length):
 def generate_random_seqs(num_seqs, length):
     return [generate_random_seq(length) for _ in range(num_seqs)]    
     
-
 def encode(my_seq):
     mapping= { "A": [1, 0, 0, 0], "C": [0, 1, 0, 0],"G": [0, 0, 1, 0],"T": [0, 0, 0, 1],"N": [0, 0, 0, 0]}
     return np.array([mapping[i] for i in my_seq])
 
+def dinucleotide_frequency(seq):
+    """
+    Args:
+        seq: a string of DNA sequence
+    Returns:
+        a dictionary of dinucleotide frequency
+    """
+    dinucleotides = [seq[i:i+2] for i in range(len(seq)-1)]
+    dinucleotide_freq=Counter(dinucleotides)
+    all_dinucleotides = [a+b for a in 'ACGT' for b in 'ACGT']
+    complete_freq = {dn: dinucleotide_freq.get(dn, 0) for dn in all_dinucleotides}
+    df = pd.DataFrame([complete_freq])
+    return df
 
+def dinucleotide_frequencies(seqs):
+    """
+    Args:
+        seqs: a list of strings, or a single string
+    Returns:
+        a dataframe of dinucleotide frequencies
+    """
+    if isinstance(seqs,str):
+        seqs=[seqs]
+    if hasattr(seqs,"values"):
+        seqs=seqs.values
+    dinucleotide_freqs = [dinucleotide_frequency(seq) for seq in seqs]
+    return pd.concat(dinucleotide_freqs, ignore_index=True)
+
+def trinucleotide_frequency(seq):
+    trinucleotides = [seq[i:i+3] for i in range(len(seq)-2)]
+    trinucleotide_freq=Counter(trinucleotides)
+    all_trinucleotides = [a+b+c for a in 'ACGT' for b in 'ACGT' for c in 'ACGT']
+    complete_freq = {tn: trinucleotide_freq.get(tn, 0) for tn in all_trinucleotides}
+    df = pd.DataFrame([complete_freq])
+    return df
+
+def trinucleotide_frequencies(seqs):
+    """
+    Args:
+        seqs: a list of strings, or a single string
+    Returns:
+        a dataframe of trinucleotide frequencies
+    """
+    if isinstance(seqs,str):
+        seqs=[seqs]
+    if hasattr(seqs,"values"):
+        seqs=seqs.values
+    trinucleotide_freqs = [trinucleotide_frequency(seq) for seq in seqs]
+    return pd.concat(trinucleotide_freqs, ignore_index=True)
+    
 def shift_seq(seq,direction,dist):
     """ 
     add "N"*dist to object seq from directin 
@@ -38,7 +87,6 @@ def shift_seq(seq,direction,dist):
         return (seq+"N"*dist)[dist:dist+600]
     else:
         raise ValueError("parameter direction not recognized!")
-
 
 def seq2x(seqs,device=False):
     """

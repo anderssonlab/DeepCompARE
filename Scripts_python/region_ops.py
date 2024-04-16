@@ -1,4 +1,5 @@
 from pybedtools import BedTool
+import pyranges as pr
 
 
 
@@ -18,6 +19,7 @@ def subset_df_by_region(df,region,by):
         return df[(df.iloc[:,0]==region[0]) & (df.iloc[:,1]>=region[1]) & (df.iloc[:,2]<=region[2])].copy().reset_index(drop=True)
     if by=="reverse":
         return df[(df.iloc[:,0]!=region[0]) | (df.iloc[:,2]<region[1]) | (df.iloc[:,1]>region[2])].copy().reset_index(drop=True)
+
 
 
 def resize_region(region,width,fix="center"):
@@ -84,4 +86,6 @@ def merge_intervals(df,
     op_str = ','.join(operations)
     merged = bed.merge(c=col_str, o=op_str).to_dataframe(names=['chromosome', 'start', 'end'] + other_cols)
     return merged
+
+
 

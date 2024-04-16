@@ -1,4 +1,5 @@
 import pandas as pd
+import pyranges as pr
 import pyBigWig
 import numpy as np
 from region_ops import subset_df_by_region
@@ -39,6 +40,7 @@ class ReMapAnnotator:
         self.remap = pd.read_csv(file_path, sep='\t', header=None)
         self.remap.columns = ['chromosome', 'start', 'end', 'detail', 'x', 'strand', 
                               'thick_start', 'thick_end', 'score']
+        self.remap_gr=pr.PyRanges(self.remap.rename(columns={"chromosome":"Chromosome","start":"Start","end":"End"}))
     
     def clean_df(self, df):
         # Extract TF from "detail" column
@@ -77,7 +79,6 @@ class ReMapAnnotator:
         chip_seq = self.clean_df(chip_seq)
         motif_df['chip_evidence'] = motif_df.apply(lambda row: self.find_chip_evidence(chip_seq, row), axis=1)
         return motif_df
-    
     
     
     

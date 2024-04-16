@@ -85,8 +85,8 @@ def bin_and_label(df, column_name, bin_edges):
 
 
 
-# Odds ratio calculation 2: in/out bin v.s is/isn't in column
-#           colname    non-colname
+# Odds ratio calculation: in/out bin v.s is/isn't in column
+#           common    non-common
 # in-bin     A           B
 # out-bin    C           D
 # odds_rare = AD/BC
