@@ -65,6 +65,9 @@ def extract_motif_and_null_info(jaspar_annotator,remap_annotator,region):
     """
     df_motif=jaspar_annotator.annotate(region)
     df_motif=df_motif[df_motif["score"]>500].reset_index(drop=True)
+    if df_motif.shape[0]==0:
+        return df_motif,None
+    
     df_motif.sort_values(by='start',inplace=True)
     
     # calculate null regions: regions non-overlapping putative TFBSs
@@ -75,8 +78,6 @@ def extract_motif_and_null_info(jaspar_annotator,remap_annotator,region):
     gr_null.Start = gr_null.Start + 1
     gr_null=gr_null[gr_null.lengths()>9]
     
-    if df_motif.shape[0]==0:
-        return df_motif
     df_motif=remap_annotator.annotate(df_motif,region)
     df_motif=df_motif[df_motif['chip_evidence']==True].reset_index(drop=True)
     df_motif["start_rel"]=df_motif["start"]-region[1]
@@ -197,7 +198,7 @@ def full_analysis(file_prefix,remap_cell_type,track_num,device):
                                           jaspar_annotator,
                                           remap_annotator,
                                           region,
-                                          f"df_mutate_pair_{file_prefix}_remap_{remap_cell_type},track{track_num}_v2.csv",
+                                          f"df_mutate_pair_{file_prefix}_remap_{remap_cell_type},track{track_num}.csv",
                                           idx,
                                           track_num,
                                           device)

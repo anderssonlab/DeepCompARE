@@ -43,8 +43,12 @@ def compute_gradxinp_from_seq(seqs,targets=list(range(16)),
     """
     if isinstance(seqs,str):
         seqs=[seqs]
+    if hasattr(seqs,"__iter__"):
+        seqs=list(seqs)
     if isinstance(targets,int):
         targets=[targets]
+    if isinstance(device,str):
+        device=torch.device(f"cuda:{device}")
     
     model.to(device)
     interpreter = InputXGradient(model)

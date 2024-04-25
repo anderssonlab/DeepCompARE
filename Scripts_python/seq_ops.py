@@ -13,7 +13,14 @@ class SeqExtractor:
     def __init__(self,fasta_path="/binf-isilon/alab/people/pcr980/Resource/hg38.fa"):
         self.fasta = Fasta(fasta_path)
     
-    def get_seq(self,chr,start,end):
+    def get_seq(self,*args):
+        if len(args) == 1 and isinstance(args[0], (list, tuple)) and len(args[0]) == 3:
+            chr, start, end = args[0]
+        elif len(args) == 3:
+            chr, start, end = args
+        else:
+            raise ValueError("Invalid input: Expected either three separate arguments (chr, start, end) or a single list/tuple with three elements.")
+    
         return str(self.fasta.get_seq(chr,start,end).seq).upper()
 
 
@@ -125,3 +132,14 @@ def resize_seq(seq,padding="both_ends"):
     # when seq is longer than 600"
     start_idx=(len(seq)-600)//2
     return seq[start_idx:start_idx+600]
+
+
+def shuffle_dinucleotides(seq):
+    evens = seq[0::2]
+    odds = seq[1::2]
+    zipped_pairs = zip(odds, evens)
+    shuffled_sequence = ''.join(a + b for a, b in zipped_pairs)
+    # Handle the case where the original sequence length is odd
+    if len(seq) % 2 != 0:
+        shuffled_sequence += seq[-1]
+    return shuffled_sequence
