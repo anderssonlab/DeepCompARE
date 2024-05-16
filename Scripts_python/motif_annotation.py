@@ -1,7 +1,6 @@
 import pandas as pd
 import pyranges as pr
 import pyBigWig
-import numpy as np
 from region_ops import subset_df_by_region
 
 
@@ -11,7 +10,7 @@ class JasparAnnotator:
         self.jaspar = pyBigWig.open(jaspar_path)
         assert self.jaspar.isBigBed()
 
-    def annotate(self, region):
+    def annotate(self, region,by="contained"):
         """Get putative motif information from a genomic region.
         Args:
             region: A tuple of (chromosome, start, end).
@@ -22,7 +21,9 @@ class JasparAnnotator:
         df = pd.DataFrame(tf_info_list, columns=['start', 'end', 'details'])
         df['chromosome'] = region[0]
         df=df.loc[:, ['chromosome', 'start', 'end', 'details']]
-        df = subset_df_by_region(df, region, by="contained")
+        df = subset_df_by_region(df, region, by=by)
+        if df.shape[0]==0:
+            return df
         df[['protein', 'score', 'strand']] = df['details'].str.split('\t', expand=True)
         df.drop(columns='details', inplace=True)
         df['protein'] = df['protein'].str.upper()

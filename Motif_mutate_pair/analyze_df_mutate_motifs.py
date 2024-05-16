@@ -20,9 +20,7 @@ def plot_ism2_vs_ism2_wo_protein1(file_name,file_prefix):
     for tf in df["protein2"].unique():
         df_sub=df[df["protein2"]==tf].copy()
         if df_sub.shape[0]>0:
-            # TODO: LM
             # plot 2 subplots in two columns
-            plt.figure(figsize=(15, 4))
             fig,axs=plt.subplots(1,2)
             # first subplot
             sns.scatterplot(data=df_sub, x='ism2_wo_protein1', y='ism_score_mut2',hue="distance",s=10,palette=custom_cmap,ax=axs[0])
@@ -42,31 +40,31 @@ def plot_ism2_vs_ism2_wo_protein1(file_name,file_prefix):
             plt.close()
             
 
-# TODO: select a distance threshold (or gradient of distance threholds), 
-# use wilcoxon signed rank test to prove that ism2_wo_protein1 is the same as ism2 above the distance threshold 
-
 
 if __name__ == "__main__":
-    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_enhancers_hepg2_remap_Hep-G2,track4.csv",
-                                  "enhancers_hepg2_4")
-    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_enhancers_k562_remap_K-562,track5.csv",
-                                  "enhancers_k562_5")
-    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_promoters_hepg2_remap_Hep-G2,track0.csv",
-                                  "promoters_hepg2_0")
-    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_promoters_k562_remap_K-562,track1.csv",
-                                  "promoters_k562_1")
-    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_promoters_hepg2_remap_Hep-G2,track6.csv",
-                                  "promoters_hepg2_6")
-    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_promoters_k562_remap_K-562,track7.csv",
-                                  "promoters_k562_7")
-    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_enhancers_hepg2_remap_Hep-G2,track6.csv",
-                                  "enhancers_hepg2_6")
-    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_enhancers_k562_remap_K-562,track7.csv",
-                                  "enhancers_k562_7")
+    # to enhancers
+    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_enhancers_hepg2_remap_Hep-G2,track0.csv",
+                                  "enhancers_hepg2_0")
+    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_enhancers_k562_remap_K-562,track1.csv",
+                                  "enhancers_k562_1")
+    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_enhancers_hepg2_remap_Hep-G2,track2.csv",
+                                  "enhancers_hepg2_2")
+    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_enhancers_k562_remap_K-562,track3.csv",
+                                  "enhancers_k562_3")
+    # to promoters
+    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_promoters_hepg2_remap_Hep-G2,track4.csv",
+                                  "promoters_hepg2_4")
+    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_promoters_k562_remap_K-562,track5.csv",
+                                  "promoters_k562_5")
+    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_promoters_hepg2_remap_Hep-G2,track2.csv",
+                                  "promoters_hepg2_2")
+    plot_ism2_vs_ism2_wo_protein1("df_mutate_pair_promoters_k562_remap_K-562,track3.csv",
+                                  "promoters_k562_3")
+    
 
 
 
 
-# nohup python3 analyze_df_mutate_motifs.py &
+# nohup python3 analyze_df_mutate_motifs.py > analyze_df_mutate_motifs.out &
 
 

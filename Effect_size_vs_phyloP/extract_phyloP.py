@@ -14,8 +14,7 @@ def write_conservation_score(bed_path, bw_path, out_path):
 
 
 for conservation_score in ["100way","241way","447way","447wayLRT"]:
-    for file in ["enhancers_hepg2"]:
-    #for file in ["promoters_hepg2","promoters_k562","enhancers_k562"]:
+    for file in ["promoters_hepg2","promoters_k562","enhancers_hepg2","enhancers_k562"]:
         logger.info(f"Processing {conservation_score} {file}")
         bw_path=f"/isdata/alab/people/pcr980/Resource/Conservation/hg38.phyloP{conservation_score}.bw"
         bed_path=f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/{file}.bed"

@@ -61,6 +61,8 @@ def annotate(motif_df,sequence,track_num,func,column_suffix,device):
 # TODO: change threshold here
 def annotate_one_region(region,out_path,idx,seq_extractor,track_num,device,score_thresh=500):
     
+    jaspar_annotator=JasparAnnotator()
+
     motif_df=jaspar_annotator.annotate(region)
     if motif_df.shape[0]==0:
         return
@@ -128,7 +130,7 @@ if __name__ == "__main__":
     df_regions=pr.read_bed(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/{args.file_name}.bed").df
     df_regions.iloc[:,2]=df_regions.iloc[:,2]-1
     seq_extractor = SeqExtractor()
-    jaspar_annotator=JasparAnnotator()
+    
 
     if "k562" in args.file_name:
         remap_annotator = ReMapAnnotator("/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_K-562.bed")
