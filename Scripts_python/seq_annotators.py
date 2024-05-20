@@ -5,6 +5,7 @@ from region_ops import subset_df_by_region
 
 
 
+
 class JasparAnnotator:
     def __init__(self,jaspar_path="/binf-isilon/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2022_hg38.bb"):
         self.jaspar = pyBigWig.open(jaspar_path)
@@ -83,3 +84,27 @@ class ReMapAnnotator:
     
     
     
+def read_maf_file(chrom_num):
+    df_maf=pd.read_csv(f"/isdata/alab/people/pcr980/Resource/Gnomad_vcf/Pd1_MAF/chrom{chrom_num}.csv")
+    df_maf=df_maf[df_maf["REF"].str.len()==1]
+    df_maf=df_maf[df_maf["ALT"].str.len()==1]
+    df_maf=df_maf.reset_index(drop=True)
+    df_maf["End"]=df_maf["POS"]+1
+    df_maf.columns=["Chromosome","Start","ID","REF","ALT","AF","End"]
+    df_maf=df_maf[["Chromosome","Start","End","ID","REF","ALT","AF"]]
+    return df_maf
+    
+
+
+class gnomADSNPAnnotator:
+    def __init__(self):
+        # Read MAF of all chromosomes into one dictionary
+        self.maf_dict = {}
+        for chrom_num in list(range(1, 23))+["X","Y"]:
+            self.maf_dict["chr"+str(chrom_num)] = read_maf_file(chrom_num)
+
+    def annotate(self, region):
+        return subset_df_by_region(self.maf_dict[region[0]],
+                                   region,
+                                   by="contained")
+        

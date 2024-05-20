@@ -4,6 +4,14 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon
 from scipy.stats import ks_2samp
+from matplotlib.colors import LinearSegmentedColormap
+
+# Define a custom color map
+colors = ["blue", "lightgrey", "yellow"]  # blue for negative, lightgray for zero, red for positive
+n_bins = 100  # Increase this number to make the transition smoother
+cmap_name = "custom"
+custom_cmap = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
+
 
 
 #---------------------------------------
@@ -66,8 +74,7 @@ def get_additivity_threshold(df):
     super_thersh=np.percentile(diff_null_pos,95)
     diff_null_neg=df[df["diff_null"]<0]["diff_null"]
     sub_thersh=np.percentile(diff_null_neg,5)
-    return sub_thersh,super_thersh
-        
+    return sub_thersh,super_thersh 
 
 def ks_test(df):
     df_super=df[df["super-additivity"]]
@@ -76,8 +83,6 @@ def ks_test(df):
     sign=df_sub["distance"].median()-df_super["distance"].median()
     d=d*sign
     return d,p,df_sub["distance"].median(),df_super["distance"].median()
-
-
 
 def analyze_one_file(file_name):
 
@@ -107,10 +112,6 @@ def analyze_one_file(file_name):
     return df_ks
 
     
-
-
-
-
 def analyze_one_file(file_name):
     df=read_file(file_name)
     
@@ -157,7 +158,7 @@ def analyze_one_file(file_name):
         sub_thresh,super_thresh=get_additivity_threshold(df_sub)
         sig_super_occurances=df_sub[(df_sub["diff"]>super_thresh)].shape[0]
         sig_sub_occurances=df_sub[(df_sub["diff"]<sub_thresh)].shape[0]
-        super_sub_ratio=np.log((sig_super_occurances+1)/(sig_sub_occurances+1)) # pseudocount
+        super_sub_ratio=np.log2((sig_super_occurances+1)/(sig_sub_occurances+1)) # pseudocount
         
         # KS test for distance
         dstat,pval,distance_median_sub,distance_median_super=ks_test(df_sub)
@@ -220,7 +221,7 @@ for dataset in ["enhancers_k562","promoters_k562"]:
         df_list.append(df)
         
 df_all=pd.concat(df_list)
-df_all.to_csv("df_sup_sub.csv" ,index=False)    
+df_all.to_csv("df_sup_sub2.csv" ,index=False)    
 
 
 
@@ -294,13 +295,15 @@ df_all.to_csv("df_sup_sub.csv" ,index=False)
 #-----------------------------------------------------------------------------
 
 # df=pd.read_csv("df_sup_sub.csv")
-# # remove tfs with inssuficient data: sig_super_count + sig_sub_count < 20
-# df=df[(df.sig_super_count+df.sig_sub_count)>20].reset_index(drop=True)
+# df=df[df.sig_sub_count>10].reset_index(drop=True)
+# df=df[df.sig_super_count>10].reset_index(drop=True)
 
-# (df.super_sub_ratio<0).sum() # 1096/1915
+# (df.super_sub_ratio<0).mean() # 0.58
 
-# df_sig_sup=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: (group['super_sub_ratio'] > 0.5).mean(),colname="sig_super").reset_index()
-# df_sig_sub=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: (group['super_sub_ratio'] < -0.5).mean(),colname="sig_sub").reset_index()
+# threshold=0.5
+
+# df_sig_sup=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: (group['super_sub_ratio'] > threshold).mean(),colname="sig_super").reset_index()
+# df_sig_sub=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: (group['super_sub_ratio'] < -threshold).mean(),colname="sig_sub").reset_index()
 
 # merged_df = pd.merge(df_sig_sub, df_sig_sup, on=['dataset', 'track_num'], how='inner')
 # merged_df['track_num'] = merged_df['track_num'].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
@@ -311,7 +314,7 @@ df_all.to_csv("df_sup_sub.csv" ,index=False)
 # plt.xticks(rotation=45)
 # # make lower margin larger
 # plt.subplots_adjust(bottom=0.28)
-# plt.savefig('Plots/thresholded_sig_sub_0.5.pdf')
+# plt.savefig(f'Plots/thresholded_sig_sub_{threshold}.pdf')
 # plt.close()
 
 # plt.figure(figsize=(8,6))
@@ -320,7 +323,7 @@ df_all.to_csv("df_sup_sub.csv" ,index=False)
 # plt.xticks(rotation=45)
 # # make lower margin larger
 # plt.subplots_adjust(bottom=0.28)
-# plt.savefig('Plots/thresholded_sig_super_0.5.pdf')
+# plt.savefig(f'Plots/thresholded_sig_super_{threshold}.pdf')
 # plt.close()
 
 
@@ -341,30 +344,99 @@ df_all.to_csv("df_sup_sub.csv" ,index=False)
 
 
 
-
 #----------------------------------------------------------------------------------------------------
 # Analysis 5: do superadditivity require closer distance than subadditivity?
 #----------------------------------------------------------------------------------------------------
 
-
-
     
 # df=pd.read_csv("df_sup_sub.csv")
-# (df.median_sub>df.median_super).sum() 1801/2670
+# df=df[df.sig_sub_count>10].reset_index(drop=True)
+# df=df[df.sig_super_count>10].reset_index(drop=True)
+# df["track_num"]=df["track_num"].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
 
+
+# (df.dstat>0 ).mean() # 73%, ignoring dataset and track_num
+# # how many rows have dstat>0 and pval<0.05
+# df[(df.dstat>0) & (df.pval<0.05)].shape[0] # 66%, ignoring dataset and track_num
+
+# df_distance_sub=df[["protein","dataset","track_num","distance_median_sub"]].copy().rename(columns={"distance_median_sub":"distance_median"})
+# df_distance_sub["additivity"]="sub-additive"
+# df_distance_super=df[["protein","dataset","track_num","distance_median_super"]].copy().rename(columns={"distance_median_super":"distance_median"})
+# df_distance_super["additivity"]="super-additive"
+# df_distance=pd.concat([df_distance_sub,df_distance_super])
+
+# # violin plot to show distribution of distance_median, but lose information about pairing 
+# for assay in ["cage","dhs","starr","sure"]:
+#     # violin plot to show distribution of distance_median, but lose information about pairing 
+#     sns.violinplot(x="dataset",y="distance_median",hue="additivity",data=df_distance[df_distance.track_num==assay],split=True,inner="quart")
+#     plt.xticks(rotation=45)
+#     plt.subplots_adjust(bottom=0.28)
+#     plt.title(f"Cooperitivity measured by {assay}")
+#     plt.savefig(f'Plots_sup_sub_distance/distance_median_{assay}.pdf')
+#     plt.close()
+#     # scatter plot to compare distance_median between sub and super
+    
+#     sns.scatterplot(x="distance_median_sub",y="distance_median_super",hue="dataset",data=df[df.track_num==assay])
+#     plt.title(f"Cooperitivity measured by {assay}")
+#     min_val=min(df["distance_median_sub"].min(),df["distance_median_super"].min())
+#     max_val=max(df["distance_median_sub"].max(),df["distance_median_super"].max())
+#     plt.plot([min_val,max_val],[min_val,max_val],color="black",linestyle="--")
+#     plt.savefig(f'Plots_sup_sub_distance/distance_pair_{assay}.pdf')
+#     plt.close()
 
 
 #----------------------------------------------------------------------------------------------------
 # Analysis 6: which TFs are consistently sub-additive, which are consistently super-additive?
 #----------------------------------------------------------------------------------------------------
+from scipy.cluster.hierarchy import linkage, leaves_list
+from scipy.spatial.distance import pdist, squareform
+
+df=pd.read_csv("df_sup_sub.csv")
+df=df[df.sig_sub_count>10].reset_index(drop=True)
+df=df[df.sig_super_count>10].reset_index(drop=True)
+df["track_num"]=df["track_num"].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
+
+
+# 6.1 plot heatmap of log2(#sup/#sub) 
+# for assay in ["cage","dhs","starr","sure"]:
+#     df_ratio=df[df.track_num==assay].pivot(index="dataset", columns="protein", values="super_sub_ratio")
+#     nan_idx=np.isnan(df_ratio)
+#     df_ratio = df_ratio.fillna(0)
+#     # Perform hierarchical clustering on the filled data
+#     row_linkage = linkage(squareform(pdist(df_ratio)), method='average')
+#     col_linkage = linkage(squareform(pdist(df_ratio.T)), method='average')
+#     # Get the leaves order
+#     df_ratio = df_ratio.iloc[leaves_list(row_linkage), :]
+#     df_ratio = df_ratio.iloc[:, leaves_list(col_linkage)]
+#     plt.figure(figsize=(50, 3))
+#     sns.heatmap(df_ratio, cmap=custom_cmap, cbar_kws={'label': 'log2(#sup/#sub)'},xticklabels=True)
+#     plt.subplots_adjust(bottom=0.5)
+#     plt.title(f"Heatmap of log2(#sup/#sub) measured by {assay}")
+#     plt.savefig(f"Plots/heatmap_{assay}.pdf",dpi=300)
+#     plt.close()
+
+
+# 6.2 get consistently subadditive TFs
+# series_tf_counts=df.protein.value_counts()
+# df_sub=df[df["super_sub_ratio"]< -0.5]
+# series_sub_counts=df_sub.protein.value_counts()
+# df_super=df[df["super_sub_ratio"]> 0.5]
+# series_super_counts=df_super.protein.value_counts()
+# df_counts=pd.concat([series_tf_counts,series_sub_counts,series_super_counts],axis=1)
+# df_counts.columns=["total","sub","super"]
+# super_tfs=df_counts[df_counts["super"]>df_counts["total"]*2/3].index
+# sub_tfs=df_counts[df_counts["sub"]>df_counts["total"]*2/3].index
 
 
 
+# 6.3 get cell-type and functional-specific TFs
+df["super_add"]=df["super_sub_ratio"] > 0.5
+df["sub_add"]=df["super_sub_ratio"] < -0.5
+df=df.groupby(["dataset","protein"]).agg({"super_add":"sum","sub_add":"sum"}).reset_index()
+df.rename(columns={"super_add":"super_profile_count","sub_add":"sub_profile_count"},inplace=True)
+df["profile_count_diff"]=df["super_profile_count"]-df["sub_profile_count"]
+df["tf_property"]=np.where(df["profile_count_diff"]>=1,"super",np.where(df["profile_count_diff"]<=-1,"sub","unknown"))
+df=df.pivot(index="protein",columns="dataset",values="tf_property").reset_index()
+df.to_csv("tf_property.csv",index=False)
 
-
-
-
-
-
-
-# nohup python3 define_sub_super.py > define_sub_super.out &
+# nohup python3 sub_super_additivity.py > sub_super_additivity.out &

@@ -89,7 +89,8 @@ def bin_and_label(df, column_name, bin_edges):
 #           common    non-common
 # in-bin     A           B
 # out-bin    C           D
-# odds_rare = AD/BC
+# 
+# odds_common = AD/BC
 # A, B may be 0
 # C, D can never be 0 
 def calc_odds_ratio(df,row_name,col_name):

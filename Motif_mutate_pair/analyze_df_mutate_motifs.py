@@ -4,12 +4,7 @@ import seaborn as sns
 from matplotlib.colors import LinearSegmentedColormap
 
 # Define a custom color map
-colors = ["blue", "lightgrey", "yellow"]  # blue for negative, lightgray for zero, red for positive
-n_bins = 100  # Increase this number to make the transition smoother
-cmap_name = "custom"
-custom_cmap = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
-
-
+x
 
 def plot_ism2_vs_ism2_wo_protein1(file_name,file_prefix):
     df=pd.read_csv(file_name)

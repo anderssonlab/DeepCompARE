@@ -1,5 +1,4 @@
 from pybedtools import BedTool
-import pyranges as pr
 
 
 
