@@ -26,6 +26,8 @@ def find_overlapping_motif(motifs, snp):
 
 def annotate_one_region(region,gnomad_annotator,jaspar_annotator,remap_annotator):
     snps=gnomad_annotator.annotate(region)
+    if snps.shape[0]==0:
+        return None
     motifs=jaspar_annotator.annotate(region)
     motifs=remap_annotator.annotate(motifs,region)
     snps[['motif', 'score',"chip_evidence"]] = snps.apply(lambda snp: find_overlapping_motif(motifs, snp), axis=1).apply(pd.Series)
@@ -46,14 +48,14 @@ def annotate_one_bed_file(file_name,gnomad_annotator):
 
 
     for i in range(df_regions.shape[0]):
-        if i%1000==0:
-            print(f"Processing region {i}")
+        if i%100==0:
+            logger.info(f"Processing region {i}")
         region=df_regions.iloc[i,0:3].tolist()
         snps=annotate_one_region(region,gnomad_annotator,jaspar_annotator,remap_annotator)
-        if os.path.exists(f"tfbs_maf_{file_name}.csv"):
-            snps.to_csv(f"tfbs_maf_{file_name}.csv",mode="a",index=False,header=True)
-        else:
-            snps.to_csv(f"tfbs_maf_{file_name}.csv",mode="w",index=False)
+        if snps is None:
+            continue
+        # column names: Chromosome,Start,End,ID,REF,ALT,AF,motif,score,chip_evidence
+        snps.to_csv(f"/isdata/alab/people/pcr980/DeepCompare/TFBS_of_maf/tfbs_maf_{file_name}.csv",mode="a",index=False,header=False)
         
 
 

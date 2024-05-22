@@ -168,6 +168,8 @@ def whole_analysis(features,file_suffix,track_num,mode):
     plt.title(file_suffix)
     plt.savefig(f"feature_importance_{mode}_{file_suffix}_track{track_num}.pdf")
     plt.close()
+    
+    return np.mean(acc_featimp), np.mean(acc_chip)
 
 
 def get_track_num(file_suffix):
@@ -179,13 +181,31 @@ def get_track_num(file_suffix):
 def main():
     features_basic=['score','cpg_percentage','seq_gc', 'context_gc_2bp','context_gc_10bp', 'context_gc_50bp', 'context_gc_100bp']
     feature_tf_cluster=['count_all_TFs_thresh_500', 'count_TF_thresh_500', 'count_all_TFs_no_thresh', 'count_TF_no_thresh']
-    features=features_basic+feature_tf_cluster
     
+    file_list=[]
+    track_num_list=[]
+    mode_list=[]
+    acc_motif_imp_list=[]
+    acc_chip_list=[]
+
     for file_suffix in ["promoters_hepg2", "enhancers_hepg2", "promoters_k562", "enhancers_k562"]:
         for track_num in get_track_num(file_suffix):
-            for mode in ["di","tri"]:
-                logger.info(f"Running {file_suffix} {track_num} {mode}")
-                whole_analysis(features,file_suffix, track_num, mode)
+            logger.info(f"Running {file_suffix} {track_num} di")
+            acc_motif_imp_di, acc_chip_di=whole_analysis(features_basic+feature_tf_cluster,file_suffix, track_num, "di")
+            logger.info(f"Running {file_suffix} {track_num} tri")
+            acc_motif_imp_tri, acc_chip_tri=whole_analysis(features_basic,file_suffix, track_num, "tri")
+            file_list=file_list+[file_suffix]*2
+            track_num_list=track_num_list+[track_num]*2
+            mode_list=mode_list+["di","tri"]
+            acc_motif_imp_list=acc_motif_imp_list+[acc_motif_imp_di, acc_motif_imp_tri]
+            acc_chip_list=acc_chip_list+[acc_chip_di, acc_chip_tri]
+            
+    df_summary=pd.DataFrame({"file":file_list, 
+                             "track_num":track_num_list, 
+                             "mode":mode_list, 
+                             "acc_motif_imp":acc_motif_imp_list, 
+                             "acc_chip":acc_chip_list})
+    df_summary.to_csv("rf_summary.csv")
         
 
 if __name__ == "__main__":
