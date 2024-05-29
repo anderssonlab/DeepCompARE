@@ -174,9 +174,9 @@ def whole_analysis(features,file_suffix,track_num,mode):
 
 def get_track_num(file_suffix):
     if "hepg2" in file_suffix:
-        return [0,2,4,6]
+        return [8,10,12,14]
     if "k562" in file_suffix:
-        return [1,3,5,7]
+        return [9,11,13,15]
 
 def main():
     features_basic=['score','cpg_percentage','seq_gc', 'context_gc_2bp','context_gc_10bp', 'context_gc_50bp', 'context_gc_100bp']
@@ -205,7 +205,7 @@ def main():
                              "mode":mode_list, 
                              "acc_motif_imp":acc_motif_imp_list, 
                              "acc_chip":acc_chip_list})
-    df_summary.to_csv("rf_summary.csv")
+    df_summary.to_csv("rf_summary_classification.csv")
         
 
 if __name__ == "__main__":

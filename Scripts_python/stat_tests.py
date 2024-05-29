@@ -100,4 +100,7 @@ def calc_odds_ratio(df,row_name,col_name):
     D=df.loc[:,].sum().sum()-A-B-C
     table = np.array([[A, B], [C, D]])
     odds_ratio, p = fisher_exact(table)
-    return odds_ratio, p
+    se_log_or=np.sqrt(1/A+1/B+1/C+1/D)
+    ci_lower=np.exp(np.log(odds_ratio)-1.96*se_log_or)
+    ci_upper=np.exp(np.log(odds_ratio)+1.96*se_log_or)
+    return odds_ratio, p, ci_lower, ci_upper

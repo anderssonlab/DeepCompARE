@@ -1,4 +1,3 @@
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,6 +9,8 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from stat_tests import bin_and_label, calc_odds_ratio
 
 
+# TODO: don't show dots with insufficient power. 
+# TODO: transparancy based on whether enrichment is significantly difrerent from 1, add confidence interval
 
 
 #--------------------------------------------------
@@ -28,9 +29,8 @@ def bin_variant(df,track_name):
 
 def calc_or(df):
     df_res=df.copy()
-    df[['or_rare', 'pval_rare']]=df_res.apply(lambda x: calc_odds_ratio(df_res,x.name,"rare"),axis=1).to_list()
-    df[['or_low', 'pval_low']]=df_res.apply(lambda x: calc_odds_ratio(df_res,x.name,"low"),axis=1).to_list()
-    df[['or_common', 'pval_common']]=df_res.apply(lambda x: calc_odds_ratio(df_res,x.name,"common"),axis=1).to_list()
+    df[['or_rare', 'pval_rare','ci_low_rare','ci_high_rare']]=df_res.apply(lambda x: calc_odds_ratio(df_res,x.name,"rare"),axis=1).to_list()
+    df[['or_common', 'pval_common','ci_low_common','ci_high_common']]=df_res.apply(lambda x: calc_odds_ratio(df_res,x.name,"common"),axis=1).to_list()
     return df
 
 
@@ -38,28 +38,36 @@ def calc_or(df):
 def plot_or(df_plot,title,out_name):
     df_plot["Predicted_effect_size"]=df_plot.index
     df_plot=df_plot.reset_index()
-    df_or=pd.melt(df_plot,id_vars=["Predicted_effect_size"],value_vars=["or_rare","or_low","or_common"],var_name="variant_type",value_name="odds_ratio")
-    df_pval=pd.melt(df_plot,id_vars=["Predicted_effect_size"],value_vars=["pval_rare","pval_low","pval_common"],var_name="variant_type",value_name="pval")
+    # melt data frames
+    df_or=pd.melt(df_plot,id_vars=["Predicted_effect_size"],value_vars=["or_rare","or_common"],var_name="variant_type",value_name="odds_ratio")
+    df_pval=pd.melt(df_plot,id_vars=["Predicted_effect_size"],value_vars=["pval_rare","pval_common"],var_name="variant_type",value_name="pval")
+    df_ci_low=pd.melt(df_plot,id_vars=["Predicted_effect_size"],value_vars=["ci_low_rare","ci_low_common"],var_name="variant_type",value_name="ci_low")
+    df_ci_high=pd.melt(df_plot,id_vars=["Predicted_effect_size"],value_vars=["ci_high_rare","ci_high_common"],var_name="variant_type",value_name="ci_high")
+    # rename columns
     df_or["variant_type"]=df_or["variant_type"].str.replace("or_","")
     df_pval["variant_type"]=df_pval["variant_type"].str.replace("pval_","")
+    df_ci_low["variant_type"]=df_ci_low["variant_type"].str.replace("ci_low_","")
+    df_ci_high["variant_type"]=df_ci_high["variant_type"].str.replace("ci_high_","")
+    # merge data frames
     df_plot=pd.merge(df_or,df_pval,on=["Predicted_effect_size","variant_type"])
+    df_plot=pd.merge(df_plot,df_ci_low,on=["Predicted_effect_size","variant_type"])
+    df_plot=pd.merge(df_plot,df_ci_high,on=["Predicted_effect_size","variant_type"])
+    # determine transparency
     df_plot["alphas"]=df_plot["pval"].apply(lambda x: 1.0 if x < 0.001 else (0.1 if x > 0.05 else 0.5))
 
     plt.figure(figsize=(4, 4))
-    color_mapping = {'rare': "#1f77b4", 'low': '#ff7f0e', 'common': '#2ca02c'}
-
-    # Plot each point individually
+    color_mapping = {'rare': "#1f77b4", 'common': '#ff7f0e'}
     for variant, df_subset in df_plot.groupby('variant_type'):
-        # TODO: choose whether to plot low
-        if variant == 'low':
-            continue
-    # Sort the subset for consistent plotting
-        # Plotting the lines
         plt.plot(df_subset['Predicted_effect_size'], df_subset['odds_ratio'], '--', color=color_mapping[variant], label=variant)
-        # Plotting the dots
         plt.scatter(df_subset['Predicted_effect_size'], df_subset['odds_ratio'], color=color_mapping[variant], alpha=df_subset['alphas'])
-        
+        # plot error bar using ci_low and ci_high
+        plt.errorbar(df_subset['Predicted_effect_size'], 
+                    df_subset['odds_ratio'], 
+                    yerr=[df_subset['odds_ratio']-df_subset['ci_low'],df_subset['ci_high']-df_subset['odds_ratio']],
+                    color=color_mapping[variant],
+                    capsize=3, markeredgewidth=1)
     plt.title(title)
+    plt.axhline(y=1, color='black', linestyle=':')
     plt.xlabel("Predicted effect size")
     plt.ylabel("Odds ratio")
     plt.xticks(rotation=45)
@@ -101,7 +109,7 @@ for file in ["enhancers_k562","enhancers_hepg2","promoters_k562","promoters_hepg
         # TODO: change directory whether to plot low
         plot_or(df,
                 f"Odds ratio ({file}, track {track_num})",
-                f"Plots_wo_low/or_{file}_track{track_num}.pdf")
+                f"Plots_or/or_{file}_track{track_num}.pdf")
         logger.info(f"Done {file}, track {track_num}")
 
-# nohup python3 plot_res.py > plot_res.out &
+# nohup python3 plot_or.py > plot_or.out &

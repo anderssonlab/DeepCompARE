@@ -67,12 +67,19 @@ if __name__=="__main__":
     
     logger.info("Annotating promoters hepg2")
     annotate_one_bed_file("promoters_hepg2",gnomad_annotator)
+    logger.info("Done annotating promoters hepg2")
+    
     logger.info("Annotating promoters k562")
     annotate_one_bed_file("promoters_k562",gnomad_annotator)
+    logger.info("Done annotating promoters k562")
+    
     logger.info("Annotating enhancers hepg2")
     annotate_one_bed_file("enhancers_hepg2",gnomad_annotator)
+    logger.info("Done annotating enhancers hepg2")
+    
     logger.info("Annotating enhancers k562")
     annotate_one_bed_file("enhancers_k562",gnomad_annotator)
+    logger.info("Done annotating enhancers k562")
     
     
 # nohup python3 get_TFBS_of_SNP.py > get_TFBS_of_SNP.out &
