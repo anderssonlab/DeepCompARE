@@ -386,7 +386,7 @@ df_all.to_csv("df_sup_sub2.csv" ,index=False)
 
 
 #----------------------------------------------------------------------------------------------------
-# Analysis 6: which TFs are consistently sub-additive, which are consistently super-additive?
+# Analysis 6: plot heatmap of log2(#sup/#sub) 
 #----------------------------------------------------------------------------------------------------
 from scipy.cluster.hierarchy import linkage, leaves_list
 from scipy.spatial.distance import pdist, squareform
@@ -397,46 +397,22 @@ df=df[df.sig_super_count>10].reset_index(drop=True)
 df["track_num"]=df["track_num"].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
 
 
-# 6.1 plot heatmap of log2(#sup/#sub) 
-# for assay in ["cage","dhs","starr","sure"]:
-#     df_ratio=df[df.track_num==assay].pivot(index="dataset", columns="protein", values="super_sub_ratio")
-#     nan_idx=np.isnan(df_ratio)
-#     df_ratio = df_ratio.fillna(0)
-#     # Perform hierarchical clustering on the filled data
-#     row_linkage = linkage(squareform(pdist(df_ratio)), method='average')
-#     col_linkage = linkage(squareform(pdist(df_ratio.T)), method='average')
-#     # Get the leaves order
-#     df_ratio = df_ratio.iloc[leaves_list(row_linkage), :]
-#     df_ratio = df_ratio.iloc[:, leaves_list(col_linkage)]
-#     plt.figure(figsize=(50, 3))
-#     sns.heatmap(df_ratio, cmap=custom_cmap, cbar_kws={'label': 'log2(#sup/#sub)'},xticklabels=True)
-#     plt.subplots_adjust(bottom=0.5)
-#     plt.title(f"Heatmap of log2(#sup/#sub) measured by {assay}")
-#     plt.savefig(f"Plots/heatmap_{assay}.pdf",dpi=300)
-#     plt.close()
+for assay in ["cage","dhs","starr","sure"]:
+    df_ratio=df[df.track_num==assay].pivot(index="dataset", columns="protein", values="super_sub_ratio")
+    nan_idx=np.isnan(df_ratio)
+    df_ratio = df_ratio.fillna(0)
+    # Perform hierarchical clustering on the filled data
+    row_linkage = linkage(squareform(pdist(df_ratio)), method='average')
+    col_linkage = linkage(squareform(pdist(df_ratio.T)), method='average')
+    # Get the leaves order
+    df_ratio = df_ratio.iloc[leaves_list(row_linkage), :]
+    df_ratio = df_ratio.iloc[:, leaves_list(col_linkage)]
+    plt.figure(figsize=(50, 3))
+    sns.heatmap(df_ratio, cmap=custom_cmap, cbar_kws={'label': 'log2(#sup/#sub)'},xticklabels=True)
+    plt.subplots_adjust(bottom=0.5)
+    plt.title(f"Heatmap of log2(#sup/#sub) measured by {assay}")
+    plt.savefig(f"Plots/heatmap_{assay}.pdf",dpi=300)
+    plt.close()
 
-
-# 6.2 get consistently subadditive TFs
-# series_tf_counts=df.protein.value_counts()
-# df_sub=df[df["super_sub_ratio"]< -0.5]
-# series_sub_counts=df_sub.protein.value_counts()
-# df_super=df[df["super_sub_ratio"]> 0.5]
-# series_super_counts=df_super.protein.value_counts()
-# df_counts=pd.concat([series_tf_counts,series_sub_counts,series_super_counts],axis=1)
-# df_counts.columns=["total","sub","super"]
-# super_tfs=df_counts[df_counts["super"]>df_counts["total"]*2/3].index
-# sub_tfs=df_counts[df_counts["sub"]>df_counts["total"]*2/3].index
-
-
-
-# 6.3 get cell-type and functional-specific TFs
-df["super_add"]=df["super_sub_ratio"] > 0.5
-df["sub_add"]=df["super_sub_ratio"] < -0.5
-df=df.groupby(["dataset","protein"]).agg({"super_add":"sum","sub_add":"sum"}).reset_index()
-df.rename(columns={"super_add":"super_profile_count","sub_add":"sub_profile_count"},inplace=True)
-df["profile_count_diff"]=df["super_profile_count"]-df["sub_profile_count"]
-df["tf_property"]=np.where(df["profile_count_diff"]>=1,"super",np.where(df["profile_count_diff"]<=-1,"sub","unknown"))
-df=df.pivot(index="protein",columns="dataset",values="tf_property").reset_index()
-df.to_csv("tf_property.csv",index=False)
 
 # nohup python3 sub_super_additivity.py > sub_super_additivity.out &

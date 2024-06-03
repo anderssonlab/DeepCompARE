@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from loguru import logger
@@ -16,25 +17,29 @@ def get_track_num(file_suffix):
         return {"cage":1,"dhs":3,"starr":5,"sure":7}
 
 
-def read_file(file_suffix,rare_thresh=0.00001,common_thresh=0.001):
-    df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Effect_size_vs_maf/maf_with_effect_size_{file_suffix}.csv")
-    df.columns=["AF"]+["track_"+str(i) for i in range(16)]
-    # TODO: change definition of rare and common (probably to 0.01) variant here
-    df=bin_and_label(df, "AF", [0,rare_thresh,common_thresh,1])
-    df["variant_type"]=["rare" if i==f"0-{rare_thresh}" else "low" if i==f"{rare_thresh}-{common_thresh}" else "common" for i in df["Bin"]]
+def read_file(file_suffix):
+    df=pd.read_csv(f"maf_with_effect_size_{file_suffix}.csv",header=None,index_col=0)
+    df.reset_index(drop=True,inplace=True)
+    df.columns=["chromosome","start","end","ID","REF","ALT","AF",'Name','Score','Strand']+ ["track_"+str(i) for i in range(16)]
+    df["log10_AF"]=np.log10(df["AF"])
+    return df
+
+def bin_file(df,track_num):
+    df=bin_and_label(df, f"track_{track_num}", [-np.inf,-0.2,0.2,np.inf])
+    df["variant_type"]=["large_negative" if i=="-inf - -0.2" else "small" if i=="-0.2 - 0.2" else "large_positive" for i in df["Bin"]]
     df.drop(columns=["Bin"],inplace=True)
-    df=df[df["variant_type"]!="low"].reset_index(drop=True)
     return df
 
 
 def plot_file(file_suffix):
     df=read_file(file_suffix)
     fig, axs = plt.subplots(2, 2, figsize=(7.5,7.5))
-    fig.suptitle(f"SNV effect size in {file_suffix}",fontsize=20)
+    fig.suptitle(f"File {file_suffix}",fontsize=20)
     for i,track in enumerate(["cage","dhs","starr","sure"]):
+        df_binned=bin_file(df,get_track_num(file_suffix)[track])
         row=int(i/2)
         col=i%2
-        sns.histplot(x=f"track_{get_track_num(file_suffix)[track]}",hue="variant_type", bins=50, data=df,ax=axs[row,col])
+        sns.histplot(x=f"log10_AF",hue="variant_type", bins=50, data=df_binned,ax=axs[row,col])
         axs[row,col].set_yscale("log")
         # make title smaller
         axs[row,col].set_title(f"Track: {track}",fontsize=10)
@@ -43,12 +48,10 @@ def plot_file(file_suffix):
         else:
             axs[row,col].set_ylabel("")
         if i in [2,3]:
-            axs[row,col].set_xlabel("Predicted effect size")
+            axs[row,col].set_xlabel("log10(Allele frequency)")
         else:
             axs[row,col].set_xlabel("")    
-        
-
-    fig.savefig(f"/isdata/alab/people/pcr980/DeepCompare/Effect_size_vs_maf/Plots/effect_size_distribution_{file_suffix}.pdf")
+    fig.savefig(f"/isdata/alab/people/pcr980/DeepCompare/Effect_size_vs_maf/Plots/effect_size_reverse_distribution_{file_suffix}.pdf")
     plt.close(fig)
     
     
@@ -59,10 +62,7 @@ for file_suffix in ["promoters_hepg2","promoters_k562","enhancers_hepg2","enhanc
     logger.info(f"Plotted {file_suffix}")
 
 
-# read_file("promoters_k562").groupby("variant_type").size()
 
 
 
-
-
-# nohup python3 eda.py > eda.out &
+# nohup python3 eda_reverse.py > eda_reverse.out &

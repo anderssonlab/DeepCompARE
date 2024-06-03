@@ -1,5 +1,3 @@
-# TODO: test if this works
-
 import pandas as pd
 import pyranges as pr
 import sys
@@ -23,16 +21,6 @@ def subset_maf_by_range(range_bed_file, gr_maf):
 
 
 
-# def annotate_one_row(row,jaspar_annotator,remap_annotator):
-#     region=(row[0],row[1],row[2])
-#     df_motif=jaspar_annotator.annotate(region,by="1bp")
-#     if df_motif.shape[0]==0:
-#         return None, None
-#     df_motif = remap_annotator.annotate(df_motif,region)
-#     return get_top_score_tf(df_motif)
-
-
-
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Correlation analysis")
     parser.add_argument("--range_bed_file",type=str,help="bed file for range")
@@ -52,24 +40,10 @@ if __name__=="__main__":
         gr_maf = pr.PyRanges(df_maf)
         df_maf=subset_maf_by_range(args.range_bed_file,gr_maf)
         
-        # tfbs_list=[]
-        # motif_score_list=[]
-        # for i,row in df_maf.iterrows():
-        #     if i%1000==0:
-        #         logger.info(f"Processing {i}th row")
-        #     tfbs,motif_score=annotate_one_row(row,jaspar_annotator,remap_annotator)
-        #     tfbs_list.append(tfbs)
-        #     motif_score_list.append(motif_score)
-        # df_maf["TFBS"]=tfbs_list
-        # df_maf["motif_score"]=motif_score_list
-        
         # get variant effect prediction using deepCompare
         seq_extractor = SeqExtractor()
         df_pred=pd.DataFrame(predict_vcf(df_maf,seq_extractor,args.gpu))
-        df_res=pd.concat([df_maf[["AF"]],df_pred],axis=1)
-        if os.path.exists(f"maf_with_effect_size_{args.range_bed_file}.csv"):
-            df_res.to_csv(f"maf_with_effect_size_{args.range_bed_file}.csv",mode="a",header=False)
-        else:
-            df_res.to_csv(f"maf_with_effect_size_{args.range_bed_file}.csv",mode="w",header=True)
-         
+        df_res=pd.concat([df_maf,df_pred],axis=1)
+        df_res.to_csv(f"maf_with_effect_size_{args.range_bed_file}.csv",mode="a",header=False,index=False)
+        
     logger.info(f"Done with {args.range_bed_file}")

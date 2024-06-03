@@ -9,17 +9,16 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from stat_tests import bin_and_label, calc_odds_ratio
 
 
-# TODO: don't show dots with insufficient power. 
-# TODO: transparancy based on whether enrichment is significantly difrerent from 1, add confidence interval
-
 
 #--------------------------------------------------
 # Functions
 #--------------------------------------------------
 
-def bin_variant(df,track_name):
-    df=bin_and_label(df, "AF", [0,0.01,0.05,1])
-    df["variant_type"]=["rare" if i=="0-0.01" else "low" if i=="0.01-0.05" else "common" for i in df["Bin"]]
+def bin_variant(df,track_name,rare_thresh=0.00001,common_thresh=0.001):
+    # TODO: change definition of rare adn common variant here
+    df=bin_and_label(df, "AF", [0,rare_thresh,common_thresh,1])
+    df["variant_type"]=["rare" if i==f"0-{rare_thresh}" else "low" if i==f"{rare_thresh}-{common_thresh}" else "common" for i in df["Bin"]]
+    df=df[df["variant_type"]!="low"].reset_index(drop=True)
     df.drop(columns=["Bin"],inplace=True)
     df=bin_and_label(df, track_name, [-np.inf,-0.5,-0.2,-0.1,0,0.1,0.2,0.5,np.inf])
     df=df.loc[:,["variant_type","Bin"]].copy()
@@ -84,8 +83,7 @@ def plot_or(df_plot,title,out_name):
 #--------------------------------------------------
 
 # Definition:
-# Rare: AF<0.01
-# Low: 0.01<=AF<0.05
+# Rare: AF<0.001
 # Common: AF>0.05
 
 
@@ -104,12 +102,13 @@ for file in ["enhancers_k562","enhancers_hepg2","promoters_k562","promoters_hepg
         df.columns=["AF"]+["track_"+str(i) for i in range(16)]
         df=bin_variant(df,f"track_{track_num}")
         df=df[df.sum(axis=1)>10]
+        # remove rows with any count < 3
+        df=df[(df["common"]>=3) & (df["rare"]>=3)]
         df=calc_or(df)
         df.to_csv("Or_pval_tables/"+f"{file}_track{track_num}.csv",index=False)
-        # TODO: change directory whether to plot low
         plot_or(df,
                 f"Odds ratio ({file}, track {track_num})",
-                f"Plots_or/or_{file}_track{track_num}.pdf")
+                f"Plots/or_{file}_track{track_num}.pdf")
         logger.info(f"Done {file}, track {track_num}")
 
 # nohup python3 plot_or.py > plot_or.out &

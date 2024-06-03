@@ -9,7 +9,7 @@ import os
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from seq_ops import SeqExtractor
 from prediction import compute_predictions
-from motif_annotation import JasparAnnotator, ReMapAnnotator
+from seq_annotators import JasparAnnotator, ReMapAnnotator
 from loguru import logger
 #-----------------------
 # Functions

@@ -76,7 +76,7 @@ def get_minimum_positive(x):
     
 def bin_and_label(df, column_name, bin_edges):
     bin_edges = sorted(set(bin_edges))
-    labels = [f"{bin_edges[i]}-{bin_edges[i+1]}" for i in range(len(bin_edges)-1)]
+    labels = [f"{bin_edges[i]} - {bin_edges[i+1]}" for i in range(len(bin_edges)-1)]
     df['Bin'] = pd.cut(df[column_name], bins=bin_edges, labels=labels, include_lowest=True)
     return df
 
