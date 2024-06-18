@@ -15,7 +15,7 @@ custom_cmap = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
 
 
 #---------------------------------------
-# Functions for downstreeam analysis
+# Functions for downstream analysis
 #---------------------------------------
 def get_condition_percentage(group, condition, colname):
     condition_rows = condition(group)
@@ -24,6 +24,7 @@ def get_condition_percentage(group, condition, colname):
 
 def read_file(file_name):
     df=pd.read_csv(file_name)
+    df=df[(df["ism_score_mut1"]>0) & (df["ism_score_mut2"]>0)].reset_index(drop=True)
     df["ism2_wo_protein1"]=df['pred_mut1']-df['pred_mut_both']
     df["ism2_wo_protein1_null"]=df['pred_mut1_null']-df['pred_mut_both_null']
     df["diff"]=df["ism_score_mut2"]-df["ism2_wo_protein1"]
@@ -68,12 +69,18 @@ def get_threshold_distance(df_input,diff_thresh=1e-4):
     return max(dist_thresh1,dist_thresh2)
 
 def get_additivity_threshold(df):
-    # get 95 percentile of posivite values in diff_null as sup threshold
-    # get 5 percentile of negative values in diff_null as sub threshold
-    diff_null_pos=df[df["diff_null"]>0]["diff_null"]
-    super_thersh=np.percentile(diff_null_pos,95)
-    diff_null_neg=df[df["diff_null"]<0]["diff_null"]
-    sub_thersh=np.percentile(diff_null_neg,5)
+    # get 99 percentile of posivite values in diff_null as sup threshold
+    # get 1 percentile of negative values in diff_null as sub threshold
+    if df["diff_null"].max()<=0:
+        super_thersh=0
+    else:    
+        diff_null_pos=df[df["diff_null"]>0]["diff_null"]
+        super_thersh=np.percentile(diff_null_pos,99)
+    if df["diff_null"].min()>=0:
+        sub_thersh=0
+    else:
+        diff_null_neg=df[df["diff_null"]<0]["diff_null"]
+        sub_thersh=np.percentile(diff_null_neg,1)
     return sub_thersh,super_thersh 
 
 def ks_test(df):
@@ -83,33 +90,6 @@ def ks_test(df):
     sign=df_sub["distance"].median()-df_super["distance"].median()
     d=d*sign
     return d,p,df_sub["distance"].median(),df_super["distance"].median()
-
-def analyze_one_file(file_name):
-
-
-    tf_list=[]
-    dstat_list=[]
-    pval_list=[]
-    median_sub_list=[]
-    median_super_list=[]
-    
-    for tf in df["protein2"].unique():
-        df_sub=df[df["protein2"]==tf]
-    
-        dstat,pval,median_sub,median_super=ks_test(df_sub)
-        tf_list.append(tf)
-        dstat_list.append(dstat)
-        pval_list.append(pval)
-        median_sub_list.append(median_sub)
-        median_super_list.append(median_super)
-        
-    df_ks=pd.DataFrame({"tf":tf_list,
-                        "dstat":dstat_list,
-                        "pval":pval_list,
-                        "median_sub":median_sub_list,
-                        "median_super":median_super_list})
-    
-    return df_ks
 
     
 def analyze_one_file(file_name):
@@ -221,7 +201,7 @@ for dataset in ["enhancers_k562","promoters_k562"]:
         df_list.append(df)
         
 df_all=pd.concat(df_list)
-df_all.to_csv("df_sup_sub2.csv" ,index=False)    
+df_all.to_csv("df_sup_sub.csv" ,index=False)    
 
 
 
@@ -232,61 +212,61 @@ df_all.to_csv("df_sup_sub2.csv" ,index=False)
 # analysis 2: plot wilcoxon (median) test results for null and non-null
 # median < 0: ism_score_mut2 < ism2_wo_protein1: subadditivity
 #---------------------------------------
-# df=pd.read_csv("df_sup_sub.csv")
+df=pd.read_csv("df_sup_sub.csv")
 
-# (df["median"]<0).sum() # 1704/2637
-# (df["median_null"]<0).sum() # 1668/2637
-# (df.p>0.05).sum() # 775
-# (df.p_null>0.05).sum() # 1125
+(df["median"]<0).sum() # 900/2637
+(df["median_null"]<0).sum() # 1441/2637
+(df.p>0.05).sum() # 583
+(df.p_null>0.05).sum() # 1112
 
-# df_sig_sup_null = df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: ((group['median_null'] > 0) & (group['p_null'] < 0.05)).mean(),colname="sig_super_null").reset_index()
-# df_sig_sub_null = df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: ((group['median_null'] < 0) & (group['p_null'] < 0.05)).mean(),colname="sig_sub_null").reset_index()
-# df_sig_sup=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: ((group['median'] > 0) & (group['p'] < 0.05)).mean(),colname="sig_super").reset_index()
-# df_sig_sub=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: ((group['median'] < 0) & (group['p'] < 0.05)).mean(),colname="sig_sub").reset_index()
+df_sig_sup_null = df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: ((group['median_null'] > 0) & (group['p_null'] < 0.05)).mean(),colname="sig_super_null").reset_index()
+df_sig_sub_null = df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: ((group['median_null'] < 0) & (group['p_null'] < 0.05)).mean(),colname="sig_sub_null").reset_index()
+df_sig_sup=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: ((group['median'] > 0) & (group['p'] < 0.05)).mean(),colname="sig_super").reset_index()
+df_sig_sub=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: ((group['median'] < 0) & (group['p'] < 0.05)).mean(),colname="sig_sub").reset_index()
 
-# # merge 4 dfs by dataset and track number
-# merged_df = pd.merge(df_sig_sub, df_sig_sup, on=['dataset', 'track_num'], how='inner')
-# merged_df = pd.merge(merged_df, df_sig_sub_null, on=['dataset', 'track_num'], how='inner')
-# merged_df = pd.merge(merged_df, df_sig_sup_null, on=['dataset', 'track_num'], how='inner')
+# merge 4 dfs by dataset and track number
+merged_df = pd.merge(df_sig_sub, df_sig_sup, on=['dataset', 'track_num'], how='inner')
+merged_df = pd.merge(merged_df, df_sig_sub_null, on=['dataset', 'track_num'], how='inner')
+merged_df = pd.merge(merged_df, df_sig_sup_null, on=['dataset', 'track_num'], how='inner')
 
-# merged_df['track_num'] = merged_df['track_num'].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
+merged_df['track_num'] = merged_df['track_num'].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
 
-# # is any track biased?
-# plt.figure(figsize=(8,6))
-# sns.catplot(x='dataset', y='sig_sub', hue='track_num', data=merged_df)
-# # rotate x labels by 45 degrees
-# plt.xticks(rotation=45)
-# # make lower margin larger
-# plt.subplots_adjust(bottom=0.28)
-# plt.savefig('Plots/wilcoxon_sig_sub.pdf')
-# plt.close()
+# is any track biased?
+plt.figure(figsize=(8,6))
+sns.catplot(x='dataset', y='sig_sub', hue='track_num', data=merged_df)
+# rotate x labels by 45 degrees
+plt.xticks(rotation=45)
+# make lower margin larger
+plt.subplots_adjust(bottom=0.28)
+plt.savefig('Plots/wilcoxon_sig_sub.pdf')
+plt.close()
 
-# plt.figure(figsize=(8,6))
-# sns.catplot(x='dataset', y='sig_sub_null', hue='track_num', data=merged_df)
-# # rotate x labels by 45 degrees
-# plt.xticks(rotation=45)
-# # make lower margin larger
-# plt.subplots_adjust(bottom=0.28)
-# plt.savefig('Plots/wilcoxon_sig_sub_null.pdf')
-# plt.close()
+plt.figure(figsize=(8,6))
+sns.catplot(x='dataset', y='sig_sub_null', hue='track_num', data=merged_df)
+# rotate x labels by 45 degrees
+plt.xticks(rotation=45)
+# make lower margin larger
+plt.subplots_adjust(bottom=0.28)
+plt.savefig('Plots/wilcoxon_sig_sub_null.pdf')
+plt.close()
 
-# plt.figure(figsize=(8,6))
-# sns.catplot(x='dataset', y='sig_super', hue='track_num', data=merged_df)
-# # rotate x labels by 45 degrees
-# plt.xticks(rotation=45)
-# # make lower margin larger
-# plt.subplots_adjust(bottom=0.28)
-# plt.savefig('Plots/wilcoxon_sig_super.pdf')
-# plt.close()
+plt.figure(figsize=(8,6))
+sns.catplot(x='dataset', y='sig_super', hue='track_num', data=merged_df)
+# rotate x labels by 45 degrees
+plt.xticks(rotation=45)
+# make lower margin larger
+plt.subplots_adjust(bottom=0.28)
+plt.savefig('Plots/wilcoxon_sig_super.pdf')
+plt.close()
 
-# plt.figure(figsize=(8,6))
-# sns.catplot(x='dataset', y='sig_super_null', hue='track_num', data=merged_df)
-# # rotate x labels by 45 degrees
-# plt.xticks(rotation=45)
-# # make lower margin larger
-# plt.subplots_adjust(bottom=0.28)
-# plt.savefig('Plots/wilcoxon_sig_super_null.pdf')
-# plt.close()
+plt.figure(figsize=(8,6))
+sns.catplot(x='dataset', y='sig_super_null', hue='track_num', data=merged_df)
+# rotate x labels by 45 degrees
+plt.xticks(rotation=45)
+# make lower margin larger
+plt.subplots_adjust(bottom=0.28)
+plt.savefig('Plots/wilcoxon_sig_super_null.pdf')
+plt.close()
 
 
 #-----------------------------------------------------------------------------
@@ -294,52 +274,51 @@ df_all.to_csv("df_sup_sub2.csv" ,index=False)
 # reproduce file (x)-sub/superpercentage(y)-track(hue) plot using super_sub_ratio
 #-----------------------------------------------------------------------------
 
-# df=pd.read_csv("df_sup_sub.csv")
-# df=df[df.sig_sub_count>10].reset_index(drop=True)
-# df=df[df.sig_super_count>10].reset_index(drop=True)
+df=pd.read_csv("df_sup_sub.csv")
+df=df[(df["sig_super_count"]+df["sig_sub_count"])>10].reset_index(drop=True)
 
-# (df.super_sub_ratio<0).mean() # 0.58
+(df.super_sub_ratio<0).mean() # 0.37
 
-# threshold=0.5
+threshold=0
 
-# df_sig_sup=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: (group['super_sub_ratio'] > threshold).mean(),colname="sig_super").reset_index()
-# df_sig_sub=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: (group['super_sub_ratio'] < -threshold).mean(),colname="sig_sub").reset_index()
+df_sig_sup=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: (group['super_sub_ratio'] > threshold).mean(),colname="sig_super").reset_index()
+df_sig_sub=df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: (group['super_sub_ratio'] < -threshold).mean(),colname="sig_sub").reset_index()
 
-# merged_df = pd.merge(df_sig_sub, df_sig_sup, on=['dataset', 'track_num'], how='inner')
-# merged_df['track_num'] = merged_df['track_num'].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
+merged_df = pd.merge(df_sig_sub, df_sig_sup, on=['dataset', 'track_num'], how='inner')
+merged_df['track_num'] = merged_df['track_num'].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
 
-# plt.figure(figsize=(8,6))
-# sns.catplot(x='dataset', y='sig_sub', hue='track_num', data=merged_df)
-# # rotate x labels by 45 degrees
-# plt.xticks(rotation=45)
-# # make lower margin larger
-# plt.subplots_adjust(bottom=0.28)
-# plt.savefig(f'Plots/thresholded_sig_sub_{threshold}.pdf')
-# plt.close()
+plt.figure(figsize=(8,6))
+sns.catplot(x='dataset', y='sig_sub', hue='track_num', data=merged_df)
+# rotate x labels by 45 degrees
+plt.xticks(rotation=45)
+# make lower margin larger
+plt.subplots_adjust(bottom=0.28)
+plt.savefig(f'Plots/thresholded_sig_sub_{threshold}.pdf')
+plt.close()
 
-# plt.figure(figsize=(8,6))
-# sns.catplot(x='dataset', y='sig_super', hue='track_num', data=merged_df)
-# # rotate x labels by 45 degrees
-# plt.xticks(rotation=45)
-# # make lower margin larger
-# plt.subplots_adjust(bottom=0.28)
-# plt.savefig(f'Plots/thresholded_sig_super_{threshold}.pdf')
-# plt.close()
+plt.figure(figsize=(8,6))
+sns.catplot(x='dataset', y='sig_super', hue='track_num', data=merged_df)
+# rotate x labels by 45 degrees
+plt.xticks(rotation=45)
+# make lower margin larger
+plt.subplots_adjust(bottom=0.28)
+plt.savefig(f'Plots/thresholded_sig_super_{threshold}.pdf')
+plt.close()
 
 
 #-----------------------------------------------------
 # Analysis 4: do tracks show difference in threshold distance
 #-----------------------------------------------------
 
-# df=pd.read_csv("df_sup_sub.csv")
-# df['track_num'] = df['track_num'].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
+df=pd.read_csv("df_sup_sub.csv")
+df['track_num'] = df['track_num'].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
 
-# # seaborn violin plot to show distribuion of threshold_distance
-# sns.boxplot(x='dataset', y='threshold_distance', hue='track_num', data=df)
-# plt.xticks(rotation=45)
-# plt.subplots_adjust(bottom=0.28)
-# plt.savefig('Plots/distribution_of_threshold_distance.pdf')
-# plt.close()
+# seaborn violin plot to show distribuion of threshold_distance
+sns.boxplot(x='dataset', y='threshold_distance', hue='track_num', data=df)
+plt.xticks(rotation=45)
+plt.subplots_adjust(bottom=0.28)
+plt.savefig('Plots/distribution_of_threshold_distance.pdf')
+plt.close()
 
 
 
@@ -349,40 +328,37 @@ df_all.to_csv("df_sup_sub2.csv" ,index=False)
 #----------------------------------------------------------------------------------------------------
 
     
-# df=pd.read_csv("df_sup_sub.csv")
-# df=df[df.sig_sub_count>10].reset_index(drop=True)
-# df=df[df.sig_super_count>10].reset_index(drop=True)
-# df["track_num"]=df["track_num"].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
+df=pd.read_csv("df_sup_sub.csv")
+df=df[(df["sig_super_count"]+df["sig_sub_count"])>10].reset_index(drop=True)
+df["track_num"]=df["track_num"].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
 
 
-# (df.dstat>0 ).mean() # 73%, ignoring dataset and track_num
-# # how many rows have dstat>0 and pval<0.05
-# df[(df.dstat>0) & (df.pval<0.05)].shape[0] # 66%, ignoring dataset and track_num
+(df.dstat>0).mean() # 82%, ignoring dataset and track_num
+# how many rows have dstat>0 and pval<0.05
+((df.dstat>0) & (df.pval<0.05)).mean()# 75%, ignoring dataset and track_num
 
-# df_distance_sub=df[["protein","dataset","track_num","distance_median_sub"]].copy().rename(columns={"distance_median_sub":"distance_median"})
-# df_distance_sub["additivity"]="sub-additive"
-# df_distance_super=df[["protein","dataset","track_num","distance_median_super"]].copy().rename(columns={"distance_median_super":"distance_median"})
-# df_distance_super["additivity"]="super-additive"
-# df_distance=pd.concat([df_distance_sub,df_distance_super])
+df_distance_sub=df[["protein","dataset","track_num","distance_median_sub"]].copy().rename(columns={"distance_median_sub":"distance_median"})
+df_distance_sub["additivity"]="sub-additive"
+df_distance_super=df[["protein","dataset","track_num","distance_median_super"]].copy().rename(columns={"distance_median_super":"distance_median"})
+df_distance_super["additivity"]="super-additive"
+df_distance=pd.concat([df_distance_sub,df_distance_super])
 
-# # violin plot to show distribution of distance_median, but lose information about pairing 
-# for assay in ["cage","dhs","starr","sure"]:
-#     # violin plot to show distribution of distance_median, but lose information about pairing 
-#     sns.violinplot(x="dataset",y="distance_median",hue="additivity",data=df_distance[df_distance.track_num==assay],split=True,inner="quart")
-#     plt.xticks(rotation=45)
-#     plt.subplots_adjust(bottom=0.28)
-#     plt.title(f"Cooperitivity measured by {assay}")
-#     plt.savefig(f'Plots_sup_sub_distance/distance_median_{assay}.pdf')
-#     plt.close()
-#     # scatter plot to compare distance_median between sub and super
-    
-#     sns.scatterplot(x="distance_median_sub",y="distance_median_super",hue="dataset",data=df[df.track_num==assay])
-#     plt.title(f"Cooperitivity measured by {assay}")
-#     min_val=min(df["distance_median_sub"].min(),df["distance_median_super"].min())
-#     max_val=max(df["distance_median_sub"].max(),df["distance_median_super"].max())
-#     plt.plot([min_val,max_val],[min_val,max_val],color="black",linestyle="--")
-#     plt.savefig(f'Plots_sup_sub_distance/distance_pair_{assay}.pdf')
-#     plt.close()
+# violin plot to show distribution of distance_median, but lose information about pairing 
+for assay in ["cage","dhs","starr","sure"]:
+    # violin plot to show distribution of distance_median, but lose information about pairing 
+    sns.violinplot(x="dataset",y="distance_median",hue="additivity",data=df_distance[df_distance.track_num==assay],split=True,inner="quart")
+    plt.xticks(rotation=45)
+    plt.subplots_adjust(bottom=0.28)
+    plt.title(f"Cooperitivity measured by {assay}")
+    plt.savefig(f'Plots_sup_sub_distance/distance_median_{assay}.pdf')
+    plt.close()
+    sns.scatterplot(x="distance_median_sub",y="distance_median_super",hue="dataset",data=df[df.track_num==assay])
+    plt.title(f"Cooperitivity measured by {assay}")
+    min_val=min(df["distance_median_sub"].min(),df["distance_median_super"].min())
+    max_val=max(df["distance_median_sub"].max(),df["distance_median_super"].max())
+    plt.plot([min_val,max_val],[min_val,max_val],color="black",linestyle="--")
+    plt.savefig(f'Plots_sup_sub_distance/distance_pair_{assay}.pdf')
+    plt.close()
 
 
 #----------------------------------------------------------------------------------------------------
@@ -392,6 +368,7 @@ from scipy.cluster.hierarchy import linkage, leaves_list
 from scipy.spatial.distance import pdist, squareform
 
 df=pd.read_csv("df_sup_sub.csv")
+df=df[(df["sig_super_count"]+df["sig_sub_count"])>10].reset_index(drop=True)
 df=df[df.sig_sub_count>10].reset_index(drop=True)
 df=df[df.sig_super_count>10].reset_index(drop=True)
 df["track_num"]=df["track_num"].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
@@ -415,4 +392,4 @@ for assay in ["cage","dhs","starr","sure"]:
     plt.close()
 
 
-# nohup python3 sub_super_additivity.py > sub_super_additivity.out &
+# nohup python3 get_df_sub_super.py > get_df_sub_super.out &

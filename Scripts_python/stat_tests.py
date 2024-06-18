@@ -4,7 +4,7 @@ from loguru import logger
 from scipy.stats import mannwhitneyu
 from utils import remove_nan_inf
 from scipy.stats import pearsonr, fisher_exact
-
+import matplotlib.pyplot as plt
 
 
 
@@ -72,17 +72,43 @@ def get_minimum_positive(x):
     return x[x>0].sort_values().unique()[0]
     
     
-    
-    
-def bin_and_label(df, column_name, bin_edges):
+
+
+
+
+
+
+
+
+
+
+
+
+
+#------------------------------------------
+# Functions for gnomAD enrichment analysis
+#------------------------------------------
+def bin_and_label(df, column_name, bin_edges, new_column_name="Bin"):
     bin_edges = sorted(set(bin_edges))
     labels = [f"{bin_edges[i]} - {bin_edges[i+1]}" for i in range(len(bin_edges)-1)]
-    df['Bin'] = pd.cut(df[column_name], bins=bin_edges, labels=labels, include_lowest=True)
+    df[new_column_name] = pd.cut(df[column_name], bins=bin_edges, labels=labels, include_lowest=True)
     return df
 
 
-
-
+def bin_variants(df,
+                x_bin_colname,x_bins,
+                hue_bin_colname,
+                hue_bin_item_name_dict,
+                hue_bins,
+                hue_alias):
+    """
+    Bin two columns in order to calculate odds ratio
+    """
+    df=bin_and_label(df, x_bin_colname, x_bins)
+    df=bin_and_label(df, hue_bin_colname, hue_bins, hue_alias)
+    df[hue_alias]=df[hue_alias].apply(lambda x: hue_bin_item_name_dict[x])
+    df=df.loc[:,["Bin",hue_alias]].copy().groupby(["Bin",hue_alias]).size().unstack()
+    return df
 
 
 # Odds ratio calculation: in/out bin v.s is/isn't in column
@@ -104,3 +130,131 @@ def calc_odds_ratio(df,row_name,col_name):
     ci_lower=np.exp(np.log(odds_ratio)-1.96*se_log_or)
     ci_upper=np.exp(np.log(odds_ratio)+1.96*se_log_or)
     return odds_ratio, p, ci_lower, ci_upper
+
+
+def calc_or(df):
+    """
+    df: each row is a bin for x axis, each column is a category
+    For each grid of df, calculate odds ratio, p-value, confidence interval lower and upper bounds
+    """
+    categories=df.columns.tolist()
+    for category in categories:
+        or_list = []
+        pval_list = []
+        ci_low_list = []
+        ci_high_list = []
+        for index, _ in df.iterrows():
+            or_value, pval_value, ci_low_value, ci_high_value = calc_odds_ratio(df, index, category)
+            or_list.append(or_value)
+            pval_list.append(pval_value)
+            ci_low_list.append(ci_low_value)
+            ci_high_list.append(ci_high_value)
+        df[f'or_{category}'] = or_list
+        df[f'pval_{category}'] = pval_list
+        df[f'ci_low_{category}'] = ci_low_list
+        df[f'ci_high_{category}'] = ci_high_list
+    return df
+
+
+
+def transform_data_for_plotting(df,x_var):
+    df[x_var]=df.index
+    df=df.reset_index(drop=True)
+    # melt columns
+    or_columns=[i for i in df.columns if i.startswith("or")]
+    pval_columns=[i for i in df.columns if i.startswith("pval")]
+    ci_low_columns=[i for i in df.columns if i.startswith("ci_low")]
+    ci_high_columns=[i for i in df.columns if i.startswith("ci_high")]
+    df_or=pd.melt(df,id_vars=[x_var],value_vars=or_columns,var_name="variant_type",value_name="odds_ratio")
+    df_pval=pd.melt(df,id_vars=[x_var],value_vars=pval_columns,var_name="variant_type",value_name="pval")
+    df_ci_low=pd.melt(df,id_vars=[x_var],value_vars=ci_low_columns,var_name="variant_type",value_name="ci_low")
+    df_ci_high=pd.melt(df,id_vars=[x_var],value_vars=ci_high_columns,var_name="variant_type",value_name="ci_high")
+    # rename columns
+    df_or["variant_type"]=df_or["variant_type"].str.replace("or_","")
+    df_pval["variant_type"]=df_pval["variant_type"].str.replace("pval_","")
+    df_ci_low["variant_type"]=df_ci_low["variant_type"].str.replace("ci_low_","")
+    df_ci_high["variant_type"]=df_ci_high["variant_type"].str.replace("ci_high_","")
+    # merge data frames
+    df=pd.merge(df_or,df_pval,on=[x_var,"variant_type"])
+    df=pd.merge(df,df_ci_low,on=[x_var,"variant_type"])
+    df=pd.merge(df,df_ci_high,on=[x_var,"variant_type"])
+    return df
+
+
+
+def plot_or(df_plot, x_colname, y_colname, title, color_mapping, out_name=None, ax=None):
+    # determine transparency
+    df_plot["alphas"] = df_plot["pval"].apply(lambda x: 1.0 if x < 0.001 else (0.1 if x > 0.05 else 0.5))
+    if ax is None:
+        plt.figure(figsize=(5, 5))
+        ax = plt.gca()
+    for variant, df_subset in df_plot.groupby('variant_type'):
+        if variant not in color_mapping.keys():
+            continue
+        ax.plot(df_subset[x_colname], df_subset[y_colname], '--', color=color_mapping[variant], label=variant)
+        ax.scatter(df_subset[x_colname], df_subset[y_colname], color=color_mapping[variant], alpha=df_subset['alphas'])
+        ax.errorbar(df_subset[x_colname], 
+                    df_subset[y_colname], 
+                    yerr=[df_subset[y_colname]-df_subset['ci_low'],df_subset['ci_high']-df_subset['odds_ratio']],
+                    color=color_mapping[variant],
+                    capsize=3, markeredgewidth=1)
+    ax.set_title(title)
+    ax.axhline(y=1, color='black', linestyle=':')
+    ax.legend()
+    ax.label_outer()  # Only show outer labels to share axis labels
+    if out_name is not None:
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(out_name)
+        plt.close()
+
+
+
+
+def _convert_interval_to_midpoint(interval_str):
+    start, end = map(float, interval_str.split(' - '))
+    midpoint = (start + end) / 2
+    return midpoint
+
+def plot_or_jitter(df_plot,x_colname,y_colname,title,out_name,color_mapping, jitter_strength=0.08):
+    # determine transparency
+    df_plot["alphas"]=df_plot["pval"].apply(lambda x: 1.0 if x < 0.001 else (0.1 if x > 0.05 else 0.5))
+    plt.figure(figsize=(5, 5)) 
+    original_x_labels = {}
+    for variant, df_subset in df_plot.groupby('variant_type'):
+        if variant not in color_mapping.keys():
+            continue
+        x_values = df_subset[x_colname]
+        y_values = df_subset[y_colname]
+        x_values_numeric = np.float_(x_values.apply(_convert_interval_to_midpoint))
+        # replace infinity
+        diff=x_values_numeric[2]-x_values_numeric[1]
+        if np.isinf(x_values_numeric[0]):
+            x_values_numeric[0] = x_values_numeric[1]-diff
+        if np.isinf(x_values_numeric[-1]):
+            x_values_numeric[-1] = x_values_numeric[-2]+diff
+        logger.info(x_values_numeric)
+        for original_label, midpoint in zip(x_values, x_values_numeric):
+            original_x_labels[midpoint] = original_label
+        jittered_x_values = x_values_numeric + jitter_strength 
+        jitter_strength+=0.08
+        
+        plt.plot(jittered_x_values, y_values, '--', color=color_mapping[variant], label=variant)
+        plt.scatter(jittered_x_values, y_values, color=color_mapping[variant], alpha=df_subset['alphas'])
+        plt.errorbar(jittered_x_values, 
+                    y_values, 
+                    yerr=[y_values - df_subset['ci_low'], df_subset['ci_high'] - y_values],
+                    fmt='none', 
+                    color=color_mapping[variant],
+                    capsize=3, markeredgewidth=1)
+    plt.title(title)
+    plt.axhline(y=1, color='black', linestyle=':')
+    plt.xlabel(x_colname)
+    plt.ylabel(y_colname)
+    midpoints = sorted(original_x_labels.keys())
+    original_labels = [original_x_labels[midpoint] for midpoint in midpoints]
+    plt.xticks(midpoints, original_labels, rotation=45)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(out_name)
+    plt.close()

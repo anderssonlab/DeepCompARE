@@ -1,114 +1,125 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from loguru import logger
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
-from stat_tests import bin_and_label, calc_odds_ratio
+from stat_tests import bin_variants, calc_or, transform_data_for_plotting, plot_or
+from utils import get_track_num_list_from_file_name
 
 
-
-#--------------------------------------------------
-# Functions
-#--------------------------------------------------
-
-def bin_variant(df,track_name,rare_thresh=0.00001,common_thresh=0.001):
-    # TODO: change definition of rare adn common variant here
-    df=bin_and_label(df, "AF", [0,rare_thresh,common_thresh,1])
-    df["variant_type"]=["rare" if i==f"0-{rare_thresh}" else "low" if i==f"{rare_thresh}-{common_thresh}" else "common" for i in df["Bin"]]
-    df=df[df["variant_type"]!="low"].reset_index(drop=True)
-    df.drop(columns=["Bin"],inplace=True)
-    df=bin_and_label(df, track_name, [-np.inf,-0.5,-0.2,-0.1,0,0.1,0.2,0.5,np.inf])
-    df=df.loc[:,["variant_type","Bin"]].copy()
-    df=df.groupby(["Bin","variant_type"]).size().unstack()
-    return df
-
-
-def calc_or(df):
-    df_res=df.copy()
-    df[['or_rare', 'pval_rare','ci_low_rare','ci_high_rare']]=df_res.apply(lambda x: calc_odds_ratio(df_res,x.name,"rare"),axis=1).to_list()
-    df[['or_common', 'pval_common','ci_low_common','ci_high_common']]=df_res.apply(lambda x: calc_odds_ratio(df_res,x.name,"common"),axis=1).to_list()
-    return df
-
-
-
-def plot_or(df_plot,title,out_name):
-    df_plot["Predicted_effect_size"]=df_plot.index
-    df_plot=df_plot.reset_index()
-    # melt data frames
-    df_or=pd.melt(df_plot,id_vars=["Predicted_effect_size"],value_vars=["or_rare","or_common"],var_name="variant_type",value_name="odds_ratio")
-    df_pval=pd.melt(df_plot,id_vars=["Predicted_effect_size"],value_vars=["pval_rare","pval_common"],var_name="variant_type",value_name="pval")
-    df_ci_low=pd.melt(df_plot,id_vars=["Predicted_effect_size"],value_vars=["ci_low_rare","ci_low_common"],var_name="variant_type",value_name="ci_low")
-    df_ci_high=pd.melt(df_plot,id_vars=["Predicted_effect_size"],value_vars=["ci_high_rare","ci_high_common"],var_name="variant_type",value_name="ci_high")
-    # rename columns
-    df_or["variant_type"]=df_or["variant_type"].str.replace("or_","")
-    df_pval["variant_type"]=df_pval["variant_type"].str.replace("pval_","")
-    df_ci_low["variant_type"]=df_ci_low["variant_type"].str.replace("ci_low_","")
-    df_ci_high["variant_type"]=df_ci_high["variant_type"].str.replace("ci_high_","")
-    # merge data frames
-    df_plot=pd.merge(df_or,df_pval,on=["Predicted_effect_size","variant_type"])
-    df_plot=pd.merge(df_plot,df_ci_low,on=["Predicted_effect_size","variant_type"])
-    df_plot=pd.merge(df_plot,df_ci_high,on=["Predicted_effect_size","variant_type"])
-    # determine transparency
-    df_plot["alphas"]=df_plot["pval"].apply(lambda x: 1.0 if x < 0.001 else (0.1 if x > 0.05 else 0.5))
-
-    plt.figure(figsize=(4, 4))
-    color_mapping = {'rare': "#1f77b4", 'common': '#ff7f0e'}
-    for variant, df_subset in df_plot.groupby('variant_type'):
-        plt.plot(df_subset['Predicted_effect_size'], df_subset['odds_ratio'], '--', color=color_mapping[variant], label=variant)
-        plt.scatter(df_subset['Predicted_effect_size'], df_subset['odds_ratio'], color=color_mapping[variant], alpha=df_subset['alphas'])
-        # plot error bar using ci_low and ci_high
-        plt.errorbar(df_subset['Predicted_effect_size'], 
-                    df_subset['odds_ratio'], 
-                    yerr=[df_subset['odds_ratio']-df_subset['ci_low'],df_subset['ci_high']-df_subset['odds_ratio']],
-                    color=color_mapping[variant],
-                    capsize=3, markeredgewidth=1)
-    plt.title(title)
-    plt.axhline(y=1, color='black', linestyle=':')
-    plt.xlabel("Predicted effect size")
-    plt.ylabel("Odds ratio")
-    plt.xticks(rotation=45)
-    plt.legend(title='Variant Type')
-    plt.tight_layout()
-    plt.savefig(out_name)
-    plt.close()
-
-
-
-
-#--------------------------------------------------
-# Analysis 
-#--------------------------------------------------
-
-# Definition:
-# Rare: AF<0.001
-# Common: AF>0.05
-
-
-def get_track_num(file):
-    if "k562" in file:
-        return list(range(1,16,2))
-    elif "hepg2" in file:
-        return list(range(0,16,2))
-    return None
-
-
+#----------------------
+# x axis: effect size
+#----------------------
+# for file in ["enhancers_k562"]:
+#     for track_num in [1]:
 for file in ["enhancers_k562","enhancers_hepg2","promoters_k562","promoters_hepg2"]:
-    for track_num in get_track_num(file):
+    for track_num in get_track_num_list_from_file_name(file):
         logger.info(f"Processing {file}, track {track_num}")
-        df=pd.read_csv(f"maf_with_effect_size_{file}.csv",header=None)
-        df.columns=["AF"]+["track_"+str(i) for i in range(16)]
-        df=bin_variant(df,f"track_{track_num}")
+        df=pd.read_csv(f"maf_with_effect_size_{file}.csv",header=None,index_col=0)
+        df.reset_index(drop=True,inplace=True)
+        df.columns=["chromosome","start","end","ID","REF","ALT","AF",'Name','Score','Strand']+ ["track_"+str(i) for i in range(16)]
+        df["log10_AF"]=np.log10(df["AF"])
+        df=bin_variants(df,
+                f"track_{track_num}",
+                [-np.inf,-0.2,-0.1,0,0.1,0.2,np.inf],
+                "log10_AF",
+                {"-inf - -3": "rare", "-3 - -2": "low", "-2 - 0":"common"},
+                [-np.inf,-3,-2,0],
+                "variant_type")
         df=df[df.sum(axis=1)>10]
         # remove rows with any count < 3
         df=df[(df["common"]>=3) & (df["rare"]>=3)]
         df=calc_or(df)
-        df.to_csv("Or_pval_tables/"+f"{file}_track{track_num}.csv",index=False)
-        plot_or(df,
+        df_plot=transform_data_for_plotting(df,"Predicted_effect_size")
+        plot_or(df_plot, 'Predicted_effect_size', 'odds_ratio',
                 f"Odds ratio ({file}, track {track_num})",
+                {'rare': "#1f77b4", 'common': '#ff7f0e'},
                 f"Plots/or_{file}_track{track_num}.pdf")
         logger.info(f"Done {file}, track {track_num}")
 
+
+
+
+
+
+#---------------------------
+# x axis: allele frequency
+#---------------------------
+
+
+# for file in ["enhancers_k562","enhancers_hepg2","promoters_k562","promoters_hepg2"]:
+#     for track_num in get_track_num_list_from_file_name(file):
+#         logger.info(f"Processing {file}, track {track_num}")
+#         df=pd.read_csv(f"maf_with_effect_size_{file}.csv",header=None,index_col=0)
+#         df.reset_index(drop=True,inplace=True)
+#         df.columns=["chromosome","start","end","ID","REF","ALT","AF",'Name','Score','Strand']+ ["track_"+str(i) for i in range(16)]
+#         df["log10_AF"]=np.log10(df["AF"])
+#         df=bin_variants(df,
+#             "log10_AF",
+#             [-np.inf,-4,-2,0],
+#             f"track_{track_num}",
+#             {"-inf - -0.2":"large_negative","-0.2 - 0.2":"small","0.2 - inf":"large_positive"},
+#             [-np.inf,-0.2,0.2,np.inf],
+#             "variant_type")
+#         df=df[df.sum(axis=1)>10]
+#         df=df.loc[:, (df != 0).all(axis=0)]
+#         df=calc_or(df)
+#         df.to_csv("Or_pval_tables/"+f"{file}_track{track_num}.csv",index=False)
+#         df_plot = transform_data_for_plotting(df_plot,'log10(Allele frequency)')
+#         plot_or_jitter(df_plot,'log10(Allele frequency)', 'odds_ratio',
+#                        f"Odds ratio ({file}, track {track_num})",
+#                        f"Plot_or_reverse/or_{file}_track{track_num}.pdf",
+#                        {"large_negative": "#1f77b4","small": "#2ca02c","large_positive": "#9467bd"}
+#                        )
+#         logger.info(f"Done {file}, track {track_num}")
+
+
+
+
+
+
+
+
+
 # nohup python3 plot_or.py > plot_or.out &
+
+# for debugging
+# file="enhancers_k562"
+# track_num=1
+# df=pd.read_csv(f"maf_with_effect_size_{file}.csv",header=None,index_col=0)
+# df.reset_index(drop=True,inplace=True)
+# df.columns=["chromosome","start","end","ID","REF","ALT","AF",'Name','Score','Strand']+ ["track_"+str(i) for i in range(16)]
+# df["log10_AF"]=np.log10(df["AF"])
+# df=bin_variants(df,
+#         f"track_1",
+#         [-np.inf,-0.5,-0.2,0.2,0.5,np.inf],
+#         "log10_AF",
+#         {"-inf - -4": "rare", "-4 - -2": "low", "-2 - 0":"common"},
+#         [-np.inf,-4,-2,0],
+#         "variant_type")
+# df=bin_variants(df,
+#             "log10_AF",
+#             [-np.inf,-4,-2,0],
+#             f"track_{1}",
+#             {"-inf - -0.2":"large_negative","-0.2 - 0.2":"small","0.2 - inf":"large_positive"},
+#             [-np.inf,-0.2,0.2,np.inf],
+#             "variant_type")
+# df=df[df.sum(axis=1)>10]
+# # remove column if any value in the column is zero
+# df=df.loc[:, (df != 0).all(axis=0)]
+# df=calc_or(df)
+# plot_or(df,f"Odds ratio ({file}, track {track_num})",f"Plot_or_reverse/or_{file}_track{track_num}.pdf")
+
+
+
+# df=df[df.sum(axis=1)>10]
+# # remove rows with any count < 3
+# df=df[(df["common"]>=3) & (df["rare"]>=3)]
+# df=calc_or(df)
+
+# df_plot=transform_data_for_plotting(df,"Predicted_effect_size")
+# plot_or(df_plot, 'Predicted_effect_size', 'odds_ratio',
+#                 f"Odds ratio ({file}, track {track_num})",
+#                 f"Plots/or_{file}_track{track_num}.pdf",
+#                 {'rare': "#1f77b4", 'common': '#ff7f0e'})

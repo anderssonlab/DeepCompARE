@@ -30,9 +30,13 @@ def classification_loss_MT(val_pred,truth):
     truth[truth==-1]=0
 
     loss_fun=nn.BCEWithLogitsLoss(reduction='none')
+    # calculate loss for each prediction
     unreduced_loss=loss_fun(val_pred,truth)
+    # find the term with max error(loss)
     loss_max,_=unreduced_loss.max(axis=1)
+    # count number of predictions where all the items are correct
     pred_all_correct= (loss_max<0.693).int()
+    # final loss is the sum of max loss and mean loss
     final_loss=loss_max.mean()+unreduced_loss.mean()
     return final_loss,pred_all_correct
 

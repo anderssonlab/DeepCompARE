@@ -16,14 +16,15 @@ def get_track_num(file_suffix):
         return {"cage":1,"dhs":3,"starr":5,"sure":7}
 
 
-def read_file(file_suffix,rare_thresh=0.00001,common_thresh=0.001):
-    df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Effect_size_vs_maf/maf_with_effect_size_{file_suffix}.csv")
-    df.columns=["AF"]+["track_"+str(i) for i in range(16)]
-    # TODO: change definition of rare and common (probably to 0.01) variant here
+def read_file(file_suffix,rare_thresh=1e-3,common_thresh=1e-2):
+    df=pd.read_csv(f"maf_with_effect_size_{file_suffix}.csv",header=None,index_col=0)
+    df.reset_index(drop=True,inplace=True)
+    df.columns=["chromosome","start","end","ID","REF","ALT","AF",'Name','Score','Strand']+ ["track_"+str(i) for i in range(16)]
     df=bin_and_label(df, "AF", [0,rare_thresh,common_thresh,1])
-    df["variant_type"]=["rare" if i==f"0-{rare_thresh}" else "low" if i==f"{rare_thresh}-{common_thresh}" else "common" for i in df["Bin"]]
+    df["variant_type"]=["rare" if i==f"0 - {rare_thresh}" else "low" if i==f"{rare_thresh} - {common_thresh}" else "common" for i in df["Bin"]]
     df.drop(columns=["Bin"],inplace=True)
     df=df[df["variant_type"]!="low"].reset_index(drop=True)
+    df["variant_type"]=pd.Categorical(df["variant_type"],categories=["rare","common"],ordered=True)
     return df
 
 
@@ -57,11 +58,6 @@ def plot_file(file_suffix):
 for file_suffix in ["promoters_hepg2","promoters_k562","enhancers_hepg2","enhancers_k562"]:
     plot_file(file_suffix)
     logger.info(f"Plotted {file_suffix}")
-
-
-# read_file("promoters_k562").groupby("variant_type").size()
-
-
 
 
 

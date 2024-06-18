@@ -3,10 +3,6 @@ import numpy as np
 import pynvml
 import re
 
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-
 
 
 
@@ -53,3 +49,12 @@ def read_featimp(featimp_file,track_num):
     # Given that indices are composed of "SeqX_TrackY", we can subset to contain only "_Track{track_num}"
     featimp_df=featimp_df[featimp_df.index.str.contains(f"_Track{track_num}$")]
     return featimp_df
+
+
+
+def get_track_num_list_from_file_name(file):
+    if "k562" in file:
+        return list(range(1,8,2))
+    elif "hepg2" in file:
+        return list(range(0,8,2))
+    return None
