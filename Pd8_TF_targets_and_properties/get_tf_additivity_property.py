@@ -27,11 +27,11 @@ df=df[(df["sig_super_count"]+df["sig_sub_count"])>10].reset_index(drop=True)
 df["track_num"]=df["track_num"].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
 
 # write TF property for promoters/enhancers hepg2/k562
-df["super_add"]=df["super_sub_ratio"] > 0.5
-df["sub_add"]=df["super_sub_ratio"] < -0.5
+df["super_add"]=df["super_sub_ratio"] > 0
+df["sub_add"]=df["super_sub_ratio"] < 0
 df=df.groupby(["dataset","protein"]).agg({"super_add":"sum","sub_add":"sum"}).reset_index()
 df.rename(columns={"super_add":"super_profile_count","sub_add":"sub_profile_count"},inplace=True)
-df["tf_property"]=np.where(df["super_profile_count"]==4,"super",np.where(df["sub_profile_count"]>=3,"sub","unknown"))
+df["tf_property"]=np.where(df["super_profile_count"]>=3,"super",np.where(df["sub_profile_count"]>=3,"sub","unknown"))
 df_additivity=df.pivot(index="protein",columns="dataset",values="tf_property").reset_index()
 df_additivity.to_csv("tf_additivity_property.csv",index=False)
 
@@ -53,3 +53,5 @@ super_tfs=set(split_dimer(super_tfs))
 write()
 
 
+
+# python3 get_tf_additivity_property.py 

@@ -88,26 +88,26 @@ def get_minimum_positive(x):
 #------------------------------------------
 # Functions for gnomAD enrichment analysis
 #------------------------------------------
-def bin_and_label(df, column_name, bin_edges, new_column_name="Bin"):
+def bin_and_label(df, 
+                  column_name, 
+                  bin_edges, 
+                  new_column_name="Bin"):
     bin_edges = sorted(set(bin_edges))
     labels = [f"{bin_edges[i]} - {bin_edges[i+1]}" for i in range(len(bin_edges)-1)]
     df[new_column_name] = pd.cut(df[column_name], bins=bin_edges, labels=labels, include_lowest=True)
     return df
 
 
-def bin_variants(df,
-                x_bin_colname,x_bins,
-                hue_bin_colname,
-                hue_bin_item_name_dict,
-                hue_bins,
-                hue_alias):
+def bin_two_columns(df,x_bin_colname,x_bins,
+                      hue_bin_colname,hue_bin_item_name_dict,hue_bins,hue_alias):
     """
     Bin two columns in order to calculate odds ratio
     """
-    df=bin_and_label(df, x_bin_colname, x_bins)
+    df=bin_and_label(df, x_bin_colname, x_bins, "X_Bin")
     df=bin_and_label(df, hue_bin_colname, hue_bins, hue_alias)
     df[hue_alias]=df[hue_alias].apply(lambda x: hue_bin_item_name_dict[x])
-    df=df.loc[:,["Bin",hue_alias]].copy().groupby(["Bin",hue_alias]).size().unstack()
+    df=df.loc[:,["X_Bin",hue_alias]].copy().groupby(["X_Bin",hue_alias]).size().unstack()
+    df.fillna(0,inplace=True)
     return df
 
 
@@ -132,32 +132,8 @@ def calc_odds_ratio(df,row_name,col_name):
     return odds_ratio, p, ci_lower, ci_upper
 
 
-def calc_or(df):
-    """
-    df: each row is a bin for x axis, each column is a category
-    For each grid of df, calculate odds ratio, p-value, confidence interval lower and upper bounds
-    """
-    categories=df.columns.tolist()
-    for category in categories:
-        or_list = []
-        pval_list = []
-        ci_low_list = []
-        ci_high_list = []
-        for index, _ in df.iterrows():
-            or_value, pval_value, ci_low_value, ci_high_value = calc_odds_ratio(df, index, category)
-            or_list.append(or_value)
-            pval_list.append(pval_value)
-            ci_low_list.append(ci_low_value)
-            ci_high_list.append(ci_high_value)
-        df[f'or_{category}'] = or_list
-        df[f'pval_{category}'] = pval_list
-        df[f'ci_low_{category}'] = ci_low_list
-        df[f'ci_high_{category}'] = ci_high_list
-    return df
 
-
-
-def transform_data_for_plotting(df,x_var):
+def transform_data(df,x_var,hue_var):
     df[x_var]=df.index
     df=df.reset_index(drop=True)
     # melt columns
@@ -165,30 +141,60 @@ def transform_data_for_plotting(df,x_var):
     pval_columns=[i for i in df.columns if i.startswith("pval")]
     ci_low_columns=[i for i in df.columns if i.startswith("ci_low")]
     ci_high_columns=[i for i in df.columns if i.startswith("ci_high")]
-    df_or=pd.melt(df,id_vars=[x_var],value_vars=or_columns,var_name="variant_type",value_name="odds_ratio")
-    df_pval=pd.melt(df,id_vars=[x_var],value_vars=pval_columns,var_name="variant_type",value_name="pval")
-    df_ci_low=pd.melt(df,id_vars=[x_var],value_vars=ci_low_columns,var_name="variant_type",value_name="ci_low")
-    df_ci_high=pd.melt(df,id_vars=[x_var],value_vars=ci_high_columns,var_name="variant_type",value_name="ci_high")
+    df_or=pd.melt(df,id_vars=[x_var],value_vars=or_columns,var_name=hue_var,value_name="odds_ratio")
+    df_pval=pd.melt(df,id_vars=[x_var],value_vars=pval_columns,var_name=hue_var,value_name="pval")
+    df_ci_low=pd.melt(df,id_vars=[x_var],value_vars=ci_low_columns,var_name=hue_var,value_name="ci_low")
+    df_ci_high=pd.melt(df,id_vars=[x_var],value_vars=ci_high_columns,var_name=hue_var,value_name="ci_high")
     # rename columns
-    df_or["variant_type"]=df_or["variant_type"].str.replace("or_","")
-    df_pval["variant_type"]=df_pval["variant_type"].str.replace("pval_","")
-    df_ci_low["variant_type"]=df_ci_low["variant_type"].str.replace("ci_low_","")
-    df_ci_high["variant_type"]=df_ci_high["variant_type"].str.replace("ci_high_","")
+    df_or[hue_var]=df_or[hue_var].str.replace("or_","")
+    df_pval[hue_var]=df_pval[hue_var].str.replace("pval_","")
+    df_ci_low[hue_var]=df_ci_low[hue_var].str.replace("ci_low_","")
+    df_ci_high[hue_var]=df_ci_high[hue_var].str.replace("ci_high_","")
     # merge data frames
-    df=pd.merge(df_or,df_pval,on=[x_var,"variant_type"])
-    df=pd.merge(df,df_ci_low,on=[x_var,"variant_type"])
-    df=pd.merge(df,df_ci_high,on=[x_var,"variant_type"])
+    df=pd.merge(df_or,df_pval,on=[x_var,hue_var])
+    df=pd.merge(df,df_ci_low,on=[x_var,hue_var])
+    df=pd.merge(df,df_ci_high,on=[x_var,hue_var])
     return df
 
 
 
-def plot_or(df_plot, x_colname, y_colname, title, color_mapping, out_name=None, ax=None):
+def calc_or(df_orig,x_var,hue_var,out_group=None):
+    """
+    df: each row is a bin for x axis, each column is a category
+    For each grid of df, calculate odds ratio, p-value, confidence interval lower and upper bounds
+    """
+    # remove rows with any zero
+    df=df_orig.loc[(df_orig!=0).all(axis=1),:].copy()    
+    categories=df.columns.tolist()
+    if out_group is not None and out_group in categories:
+        categories.remove(out_group)
+    for category in categories:
+        or_list = []
+        pval_list = []
+        ci_low_list = []
+        ci_high_list = []
+        for index, _ in df.iterrows():
+            or_value, pval_value, ci_low_value, ci_high_value = calc_odds_ratio(df_orig, index, category)
+            or_list.append(or_value)
+            pval_list.append(pval_value)
+            ci_low_list.append(ci_low_value)
+            ci_high_list.append(ci_high_value)
+        df.loc[:,f'or_{category}'] = or_list
+        df.loc[:,f'pval_{category}'] = pval_list
+        df.loc[:,f'ci_low_{category}'] = ci_low_list
+        df.loc[:,f'ci_high_{category}'] = ci_high_list
+    df=transform_data(df,x_var,hue_var)
+    return df
+
+
+
+def plot_or(df_plot, x_colname, y_colname, hue_colname, title, color_mapping, out_name=None, ax=None):
     # determine transparency
     df_plot["alphas"] = df_plot["pval"].apply(lambda x: 1.0 if x < 0.001 else (0.1 if x > 0.05 else 0.5))
     if ax is None:
         plt.figure(figsize=(5, 5))
         ax = plt.gca()
-    for variant, df_subset in df_plot.groupby('variant_type'):
+    for variant, df_subset in df_plot.groupby(hue_colname):
         if variant not in color_mapping.keys():
             continue
         ax.plot(df_subset[x_colname], df_subset[y_colname], '--', color=color_mapping[variant], label=variant)

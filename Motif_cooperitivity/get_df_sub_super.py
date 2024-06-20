@@ -75,12 +75,12 @@ def get_additivity_threshold(df):
         super_thersh=0
     else:    
         diff_null_pos=df[df["diff_null"]>0]["diff_null"]
-        super_thersh=np.percentile(diff_null_pos,99)
+        super_thersh=np.percentile(diff_null_pos,95)
     if df["diff_null"].min()>=0:
         sub_thersh=0
     else:
         diff_null_neg=df[df["diff_null"]<0]["diff_null"]
-        sub_thersh=np.percentile(diff_null_neg,1)
+        sub_thersh=np.percentile(diff_null_neg,5)
     return sub_thersh,super_thersh 
 
 def ks_test(df):

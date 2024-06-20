@@ -19,7 +19,7 @@ def sub_sup_gini(rank="gini_rank"):
     df_tf_dispersion=pd.concat([df_tf_dispersion_hepg2,df_tf_dispersion_k562],axis=0).reset_index(drop=True)
     df_tf_dispersion=df_tf_dispersion.drop_duplicates().reset_index(drop=True)
     # get ranks
-    df_tf_dispersion[rank]=df_tf_dispersion["gini"].rank(ascending=False)
+    df_tf_dispersion["gini_rank"]=df_tf_dispersion["gini"].rank(ascending=False)
     df_tf_dispersion["adjusted_dispersion_rank"]=df_tf_dispersion["adjusted_dispersion"].rank(ascending=False)
     # add tf type: sub or super
     df_tf_dispersion["tf_type"]=np.where(df_tf_dispersion["gene"].isin(sub_tfs),"sub",np.where(df_tf_dispersion["gene"].isin(super_tfs),"super","other"))

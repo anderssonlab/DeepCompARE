@@ -105,18 +105,18 @@ def compare_RE(df,cell_type,ism,threshold1, threshold2):
     for i, txt in enumerate(df_wide.index):
         diff=df_wide[f"promoters_{cell_type}"][i] - df_wide[f"enhancers_{cell_type}"][i]
         if diff > threshold1 or diff < threshold2:
-            texts.append(plt.text(df_wide[f"promoters_{cell_type}"][i], df_wide[f"enhancers_{cell_type}"][i], txt, fontsize=7))
+            texts.append(plt.text(df_wide[f"promoters_{cell_type}"][i], df_wide[f"enhancers_{cell_type}"][i], txt, fontsize=5))
     adjust_text(texts, arrowprops=dict(arrowstyle='-', color='black'))
     plt.plot([min_val,max_val],[min_val,max_val],color="black",linestyle="--")
     plt.title(f"promoters vs enhancers {cell_type}: {ism}")
-    plt.savefig(f"scatter_promoters_vs_enhancers_{cell_type}_{ism}.pdf")
+    plt.savefig(f"Plots/scatter_promoters_vs_enhancers_{cell_type}_{ism}.pdf")
     plt.close()
 
-threshold1_dict={"ism_cage":0.2,"ism_dhs":0.05,"ism_starr":0.03,"ism_sure":0.3}
-threshold2_dict={"ism_cage":-0.05,"ism_dhs":-0.03,"ism_starr":-0.10,"ism_sure":-0.05}
+threshold1_dict={"ism_cage":0.3,"ism_dhs":0.05,"ism_starr":0.03,"ism_sure":0.2}
+threshold2_dict={"ism_cage":-0.05,"ism_dhs":-0.03,"ism_starr":-0.10,"ism_sure":-0.2}
 
 for cell_type in ["hepg2","k562"]:
-    for ism in ["ism_cage","ism_dhs","ism_starr","ism_sure"]:
+    for ism in ["ism_sure"]:
         compare_RE(df,cell_type,ism,threshold1_dict[ism],threshold2_dict[ism])
 
 
