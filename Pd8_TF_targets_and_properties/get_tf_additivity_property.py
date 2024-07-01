@@ -6,16 +6,11 @@ get name list of sub and super TFs
 import pandas as pd
 import numpy as np
 
-def split_dimer(tf_list):
-    res_list=[]
-    for tf in tf_list:
-        if "::" not in tf:
-            res_list.append(tf)
-        else:
-            res_list.extend(tf.split("::"))
-    return res_list
+import sys
+sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
+from utils import split_dimer
 
-def write():
+def write(sub_tfs,super_tfs):
     with open("sub_tfs.txt","w") as f:
         f.write("\n".join(sub_tfs))
     with open("super_tfs.txt","w") as f:
@@ -23,7 +18,6 @@ def write():
 
 # read in additivity profile
 df=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Motif_cooperitivity/df_sup_sub.csv")
-df=df[(df["sig_super_count"]+df["sig_sub_count"])>10].reset_index(drop=True)
 df["track_num"]=df["track_num"].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
 
 # write TF property for promoters/enhancers hepg2/k562
@@ -37,20 +31,27 @@ df_additivity.to_csv("tf_additivity_property.csv",index=False)
 
 
 # classify tf as sub, super
-# define column "TF_type": 
-# sub: count_sub>1, count_super==0
+# sub: count_sub>0, count_super==0
 # super: count_super>0, count_sub==0
 
 df_additivity["count_sub"]=df_additivity.apply(lambda x: x.isin(["sub"]).sum(),axis=1)
 df_additivity["count_super"]=df_additivity.apply(lambda x: x.isin(["super"]).sum(),axis=1)
 df_additivity["TF_type"]="unknown"
-df_additivity.loc[(df_additivity["count_sub"]>1) & (df_additivity["count_super"]==0),"TF_type"]="sub"
+df_additivity.loc[(df_additivity["count_sub"]>0) & (df_additivity["count_super"]==0),"TF_type"]="sub"
 df_additivity.loc[(df_additivity["count_super"]>0) & (df_additivity["count_sub"]==0),"TF_type"]="super"
 
 sub_tfs=df_additivity[df_additivity["TF_type"]=="sub"]["protein"].to_list()
+sub_tfs=set(split_dimer(sub_tfs))
 super_tfs=df_additivity[df_additivity["TF_type"]=="super"]["protein"].to_list()
 super_tfs=set(split_dimer(super_tfs))
-write()
+
+intersection=sub_tfs.intersection(super_tfs)
+sub_tfs=sub_tfs.difference(intersection)
+super_tfs=super_tfs.difference(intersection)
+sub_tfs=list(sub_tfs)
+super_tfs=list(super_tfs)
+
+write(sub_tfs,super_tfs)
 
 
 

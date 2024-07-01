@@ -91,9 +91,17 @@ def get_minimum_positive(x):
 def bin_and_label(df, 
                   column_name, 
                   bin_edges, 
+                  bin_names="range",
                   new_column_name="Bin"):
     bin_edges = sorted(set(bin_edges))
-    labels = [f"{bin_edges[i]} - {bin_edges[i+1]}" for i in range(len(bin_edges)-1)]
+    if bin_names == "range":
+        labels = [f"{bin_edges[i]} - {bin_edges[i+1]}" for i in range(len(bin_edges)-1)]
+    elif bin_names == "midpoint":
+        labels = [(bin_edges[i] + bin_edges[i+1])/2 for i in range(len(bin_edges)-1)]
+    elif bin_names == "left":
+        labels = bin_edges[:-1]
+    elif bin_names == "right":
+        labels = bin_edges[1:]
     df[new_column_name] = pd.cut(df[column_name], bins=bin_edges, labels=labels, include_lowest=True)
     return df
 
@@ -164,7 +172,8 @@ def calc_or(df_orig,x_var,hue_var,out_group=None):
     For each grid of df, calculate odds ratio, p-value, confidence interval lower and upper bounds
     """
     # remove rows with any zero
-    df=df_orig.loc[(df_orig!=0).all(axis=1),:].copy()    
+    # df=df_orig.loc[(df_orig!=0).all(axis=1),:].copy()   
+    df=df_orig.copy() 
     categories=df.columns.tolist()
     if out_group is not None and out_group in categories:
         categories.remove(out_group)
@@ -204,10 +213,12 @@ def plot_or(df_plot, x_colname, y_colname, hue_colname, title, color_mapping, ou
                     yerr=[df_subset[y_colname]-df_subset['ci_low'],df_subset['ci_high']-df_subset['odds_ratio']],
                     color=color_mapping[variant],
                     capsize=3, markeredgewidth=1)
+        ax.set_xlabel(x_colname)
+        ax.set_ylabel(y_colname)
     ax.set_title(title)
     ax.axhline(y=1, color='black', linestyle=':')
     ax.legend()
-    ax.label_outer()  # Only show outer labels to share axis labels
+    # ax.label_outer()  # Only show outer labels to share axis labels
     if out_name is not None:
         plt.xticks(rotation=45)
         plt.tight_layout()

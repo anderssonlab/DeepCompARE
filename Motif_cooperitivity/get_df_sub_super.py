@@ -57,31 +57,31 @@ def calculate_threshold(df,colname,thresh):
     else:
         return df.index[-1]
 
-def get_threshold_distance(df_input,diff_thresh=1e-4):
-    df=df_input.copy()
-    df["diff_abs"]=np.abs(df["diff"])
-    df["diff_null_abs"]=np.abs(df["diff_null"])
-    df_distance=df.groupby(["distance"]).agg({"diff_abs":"mean"})
-    df_distance_null=df.groupby(["distance_null"]).agg({"diff_null_abs":"mean"})
-    # find the distance where smooth diff drop below 1e-4
-    dist_thresh1=calculate_threshold(df_distance,"diff_abs",diff_thresh)
-    dist_thresh2=calculate_threshold(df_distance_null,"diff_null_abs",diff_thresh)
-    return max(dist_thresh1,dist_thresh2)
+# def get_threshold_distance(df_input,diff_thresh=1e-4):
+#     df=df_input.copy()
+#     df["diff_abs"]=np.abs(df["diff"])
+#     df["diff_null_abs"]=np.abs(df["diff_null"])
+#     df_distance=df.groupby(["distance"]).agg({"diff_abs":"mean"})
+#     df_distance_null=df.groupby(["distance_null"]).agg({"diff_null_abs":"mean"})
+#     # find the distance where smooth diff drop below 1e-4
+#     dist_thresh1=calculate_threshold(df_distance,"diff_abs",diff_thresh)
+#     dist_thresh2=calculate_threshold(df_distance_null,"diff_null_abs",diff_thresh)
+#     return max(dist_thresh1,dist_thresh2)
 
-def get_additivity_threshold(df):
-    # get 99 percentile of posivite values in diff_null as sup threshold
-    # get 1 percentile of negative values in diff_null as sub threshold
-    if df["diff_null"].max()<=0:
-        super_thersh=0
-    else:    
-        diff_null_pos=df[df["diff_null"]>0]["diff_null"]
-        super_thersh=np.percentile(diff_null_pos,95)
-    if df["diff_null"].min()>=0:
-        sub_thersh=0
-    else:
-        diff_null_neg=df[df["diff_null"]<0]["diff_null"]
-        sub_thersh=np.percentile(diff_null_neg,5)
-    return sub_thersh,super_thersh 
+# def get_additivity_threshold(df):
+#     # get 99 percentile of posivite values in diff_null as sup threshold
+#     # get 1 percentile of negative values in diff_null as sub threshold
+#     if df["diff_null"].max()<=0:
+#         super_thersh=0
+#     else:    
+#         diff_null_pos=df[df["diff_null"]>=0]["diff_null"]
+#         super_thersh=np.percentile(diff_null_pos,95)
+#     if df["diff_null"].min()>=0:
+#         sub_thersh=0
+#     else:
+#         diff_null_neg=df[df["diff_null"]<=0]["diff_null"]
+#         sub_thersh=np.percentile(diff_null_neg,5)
+#     return sub_thersh,super_thersh 
 
 def ks_test(df):
     df_super=df[df["super-additivity"]]
@@ -102,13 +102,13 @@ def analyze_one_file(file_name):
     median_null_list=[]
     median_list=[]
     threshold_distance_list=[]
-    sub_thresh_list=[]
-    super_thresh_list=[]
+    # sub_thresh_list=[]
+    # super_thresh_list=[]
     total_count_list=[] # record the number of counts within distance threshold
     total_pos_count_list=[] # record the number of counts within distance threshold and diff>0
     total_neg_count_list=[] # record the number of counts within distance threshold and diff<0
-    sig_super_count_list=[] # record the number of counts with significant superadditivity
-    sig_sub_count_list=[] # record the number of counts with significant subadditivity
+    #sig_super_count_list=[] # record the number of counts with significant superadditivity
+    #sig_sub_count_list=[] # record the number of counts with significant subadditivity
     super_sub_ratio_list=[] # record the ratio of significant superadditivity to significant subadditivity
     
     dstat_list=[]
@@ -121,10 +121,10 @@ def analyze_one_file(file_name):
         df_sub=df[df["protein2"]==protein].reset_index(drop=True)
         if df_sub.shape[0]<10:
             continue
-        threshold_distance=get_threshold_distance(df_sub)
-        df_sub=df_sub[df_sub["distance"]<threshold_distance].reset_index(drop=True)
-        if df_sub.shape[0]<10:
-            continue
+        # threshold_distance=get_threshold_distance(df_sub)
+        # df_sub=df_sub[df_sub["distance"]<threshold_distance].reset_index(drop=True)
+        # if df_sub.shape[0]<10:
+        #     continue
         
         df_sub["super-additivity"]=(df_sub["diff"]>0)
         if df_sub["super-additivity"].nunique()==1:
@@ -135,10 +135,15 @@ def analyze_one_file(file_name):
         _,p_null=wilcoxon(df_sub["diff_null"])
         
         # get sub/super additivity threshold 
-        sub_thresh,super_thresh=get_additivity_threshold(df_sub)
-        sig_super_occurances=df_sub[(df_sub["diff"]>super_thresh)].shape[0]
-        sig_sub_occurances=df_sub[(df_sub["diff"]<sub_thresh)].shape[0]
-        super_sub_ratio=np.log2((sig_super_occurances+1)/(sig_sub_occurances+1)) # pseudocount
+        # sub_thresh,super_thresh=get_additivity_threshold(df_sub)
+        # sig_super_occurances=df_sub[(df_sub["diff"]>super_thresh)].shape[0]
+        # sig_sub_occurances=df_sub[(df_sub["diff"]<sub_thresh)].shape[0]
+        # super_sub_ratio=np.log2((sig_super_occurances+1)/(sig_sub_occurances+1)) # pseudocount
+        
+        # don't use null
+        sub_counts=df_sub[(df_sub["diff"]<0)].shape[0]
+        super_counts=df_sub[(df_sub["diff"]>0)].shape[0]
+        super_sub_ratio=np.log2((super_counts+1)/(sub_counts+1)) # pseudocount
         
         # KS test for distance
         dstat,pval,distance_median_sub,distance_median_super=ks_test(df_sub)
@@ -153,14 +158,14 @@ def analyze_one_file(file_name):
         wilcoxon_list.append(p)
         median_null_list.append(df_sub["diff_null"].median())
         median_list.append(df_sub["diff"].median())
-        threshold_distance_list.append(threshold_distance)
-        sub_thresh_list.append(sub_thresh)
-        super_thresh_list.append(super_thresh)
+        threshold_distance_list.append(0)
+        # sub_thresh_list.append(sub_thresh)
+        # super_thresh_list.append(super_thresh)
         total_count_list.append(df_sub.shape[0])
         total_pos_count_list.append(df_sub[df_sub["diff"]>0].shape[0])
         total_neg_count_list.append(df_sub[df_sub["diff"]<0].shape[0])
-        sig_super_count_list.append(sig_super_occurances)
-        sig_sub_count_list.append(sig_sub_occurances)
+        # sig_super_count_list.append(sig_super_occurances)
+        # sig_sub_count_list.append(sig_sub_occurances)
         super_sub_ratio_list.append(super_sub_ratio)
 
     df_res=pd.DataFrame({"protein":tf_list,
@@ -169,13 +174,13 @@ def analyze_one_file(file_name):
                               "median_null":median_null_list,
                               "p_null":wilcoxon_null_list,
                               "threshold_distance":threshold_distance_list,
-                              "sub_thresh":sub_thresh_list,
-                              "super_thresh":super_thresh_list,
+                              # "sub_thresh":sub_thresh_list,
+                              # "super_thresh":super_thresh_list,
                               "total_count":total_count_list,
                               "total_pos_count":total_pos_count_list,
                               "total_neg_count":total_neg_count_list,
-                              "sig_super_count":sig_super_count_list,
-                              "sig_sub_count":sig_sub_count_list,
+                              # "sig_super_count":sig_super_count_list,
+                              # "sig_sub_count":sig_sub_count_list,
                               "super_sub_ratio":super_sub_ratio_list,
                               "dstat":dstat_list,
                               "pval":pval_list,
@@ -209,15 +214,15 @@ df_all.to_csv("df_sup_sub.csv" ,index=False)
 
 
 #---------------------------------------
-# analysis 2: plot wilcoxon (median) test results for null and non-null
+# analysis 2: wilcoxon (median) test results for null and non-null
 # median < 0: ism_score_mut2 < ism2_wo_protein1: subadditivity
 #---------------------------------------
 df=pd.read_csv("df_sup_sub.csv")
 
-(df["median"]<0).sum() # 900/2637
-(df["median_null"]<0).sum() # 1441/2637
-(df.p>0.05).sum() # 583
-(df.p_null>0.05).sum() # 1112
+(df["median"]<0).sum() # 1105/2579
+(df["median_null"]<0).sum() # 1534/2579
+(df.p>0.05).sum() # 630
+(df.p_null>0.05).sum() # 1068
 
 df_sig_sup_null = df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: ((group['median_null'] > 0) & (group['p_null'] < 0.05)).mean(),colname="sig_super_null").reset_index()
 df_sig_sub_null = df.groupby(['dataset', 'track_num']).apply(get_condition_percentage, condition=lambda group: ((group['median_null'] < 0) & (group['p_null'] < 0.05)).mean(),colname="sig_sub_null").reset_index()
@@ -277,7 +282,7 @@ plt.close()
 df=pd.read_csv("df_sup_sub.csv")
 df=df[(df["sig_super_count"]+df["sig_sub_count"])>10].reset_index(drop=True)
 
-(df.super_sub_ratio<0).mean() # 0.37
+(df.super_sub_ratio<0).mean() # 0.44
 
 threshold=0
 
@@ -306,22 +311,6 @@ plt.savefig(f'Plots/thresholded_sig_super_{threshold}.pdf')
 plt.close()
 
 
-#-----------------------------------------------------
-# Analysis 4: do tracks show difference in threshold distance
-#-----------------------------------------------------
-
-df=pd.read_csv("df_sup_sub.csv")
-df['track_num'] = df['track_num'].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
-
-# seaborn violin plot to show distribuion of threshold_distance
-sns.boxplot(x='dataset', y='threshold_distance', hue='track_num', data=df)
-plt.xticks(rotation=45)
-plt.subplots_adjust(bottom=0.28)
-plt.savefig('Plots/distribution_of_threshold_distance.pdf')
-plt.close()
-
-
-
 
 #----------------------------------------------------------------------------------------------------
 # Analysis 5: do superadditivity require closer distance than subadditivity?
@@ -333,9 +322,9 @@ df=df[(df["sig_super_count"]+df["sig_sub_count"])>10].reset_index(drop=True)
 df["track_num"]=df["track_num"].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
 
 
-(df.dstat>0).mean() # 82%, ignoring dataset and track_num
+(df.dstat>0).mean() # 86%, ignoring dataset and track_num
 # how many rows have dstat>0 and pval<0.05
-((df.dstat>0) & (df.pval<0.05)).mean()# 75%, ignoring dataset and track_num
+((df.dstat>0) & (df.pval<0.05)).mean()# 78%, ignoring dataset and track_num
 
 df_distance_sub=df[["protein","dataset","track_num","distance_median_sub"]].copy().rename(columns={"distance_median_sub":"distance_median"})
 df_distance_sub["additivity"]="sub-additive"
@@ -368,9 +357,7 @@ from scipy.cluster.hierarchy import linkage, leaves_list
 from scipy.spatial.distance import pdist, squareform
 
 df=pd.read_csv("df_sup_sub.csv")
-df=df[(df["sig_super_count"]+df["sig_sub_count"])>10].reset_index(drop=True)
-df=df[df.sig_sub_count>10].reset_index(drop=True)
-df=df[df.sig_super_count>10].reset_index(drop=True)
+df=df[(df["total_pos_count"]+df["total_neg_count"])>10].reset_index(drop=True)
 df["track_num"]=df["track_num"].map({0: 'cage', 1: 'cage', 2: 'dhs', 3: 'dhs', 4: 'starr', 5: 'starr', 6: 'sure', 7: 'sure'})
 
 

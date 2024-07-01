@@ -58,3 +58,13 @@ def get_track_num_list_from_file_name(file):
     elif "hepg2" in file:
         return list(range(0,8,2))
     return None
+
+
+def split_dimer(tf_list):
+    res_list=[]
+    for tf in tf_list:
+        if "::" not in tf:
+            res_list.append(tf)
+        else:
+            res_list.extend(tf.split("::"))
+    return list(set(res_list))
