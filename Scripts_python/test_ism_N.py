@@ -3,8 +3,8 @@ import unittest
 import pandas as pd
 import numpy as np
 import shutil
-from ism_N import compute_ism_score, write_ism_score
-from utils import generate_random_seq, generate_random_seqs
+from write_ism_N_seq import compute_ism_score, write_ism_score
+from seq_ops import generate_random_seq, generate_random_seqs
 from gradxinp import compute_gradxinp_from_seq
 
 

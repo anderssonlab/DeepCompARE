@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 from adjustText import adjust_text
-from scipy.cluster.hierarchy import linkage, dendrogram
+from scipy.cluster.hierarchy import linkage
 
 
 def scatter_plot_with_annotation(df, x, y, text_col, file_name, xlab, ylab):

@@ -5,21 +5,20 @@ from pybedtools import BedTool
 def subset_df_by_region(df,region,by):
     """
     Args:
-        df: A data frame of bed file, containing short regions
+        df: A data frame of bed file, first 3 columns should be chrom,start,end
         region: A tuple of (chromosome, start, end)
     Returns:
         if by=="1bp": return data frame of bed file with only the rows that overlap (at least 1bp) with the region 
+        if by=="contained": return the rows that are completely contained in the region
         if by=="reverse": return the rows that do not overlap with the region
     """
     if by=="1bp":
-        try:
-            return df[(df['chromosome']==region[0]) & (df['end']>=region[1]) & (df['start']<=region[2])].copy()
-        except:
-            return df[(df['Chromosome']==region[0]) & (df['End']>=region[1]) & (df['Start']<=region[2])].copy()
+        return df[(df.iloc[:,0]==region[0]) & (df.iloc[:,2]>=region[1]) & (df.iloc[:,1]<=region[2])].copy().reset_index(drop=True)
     if by=="contained":
-        return df[(df['chromosome']==region[0]) & (df['start']>=region[1]) & (df['end']<=region[2])].copy()
+        return df[(df.iloc[:,0]==region[0]) & (df.iloc[:,1]>=region[1]) & (df.iloc[:,2]<=region[2])].copy().reset_index(drop=True)
     if by=="reverse":
-        return df[(df['chromosome']!=region[0]) | (df['end']<region[1]) | (df['start']>region[2])].copy()
+        return df[(df.iloc[:,0]!=region[0]) | (df.iloc[:,2]<region[1]) | (df.iloc[:,1]>region[2])].copy().reset_index(drop=True)
+
 
 
 def resize_region(region,width,fix="center"):
@@ -86,3 +85,6 @@ def merge_intervals(df,
     op_str = ','.join(operations)
     merged = bed.merge(c=col_str, o=op_str).to_dataframe(names=['chromosome', 'start', 'end'] + other_cols)
     return merged
+
+
+

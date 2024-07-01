@@ -3,10 +3,6 @@ import numpy as np
 import pynvml
 import re
 
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-
 
 
 
@@ -54,12 +50,21 @@ def read_featimp(featimp_file,track_num):
     featimp_df=featimp_df[featimp_df.index.str.contains(f"_Track{track_num}$")]
     return featimp_df
 
-    
-def write_fasta(out_fname,importance,seqs_ids,seqs): # one number per location
-    with open(out_fname,"a+") as f:
-        for i in range(len(seqs)):
-            seq_rec=SeqRecord(Seq(seqs[i]))
-            seq_rec.id=seqs_ids[i]
-            SeqIO.write(seq_rec,f,"fasta")
-            f.write(' '.join(map(lambda x: f'{float(x):.5f}', importance[i])))
-            f.write("\n")
+
+
+def get_track_num_list_from_file_name(file):
+    if "k562" in file:
+        return list(range(1,8,2))
+    elif "hepg2" in file:
+        return list(range(0,8,2))
+    return None
+
+
+def split_dimer(tf_list):
+    res_list=[]
+    for tf in tf_list:
+        if "::" not in tf:
+            res_list.append(tf)
+        else:
+            res_list.extend(tf.split("::"))
+    return list(set(res_list))

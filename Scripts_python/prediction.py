@@ -23,7 +23,8 @@ BATCH_SIZE=8192
 
 def compute_predictions(seqs,
                         model=torch.load("/isdata/alab/people/pcr980/DeepCompare/DeepCompare_model/model.h5"),
-                        device=torch.device("cuda:"+find_available_gpu())):
+                        device=torch.device("cuda:"+find_available_gpu()),
+                        verbose=False):
     """
     Aimed to be used in other python scripts, as a part of bigger analyses
     Args:
@@ -33,9 +34,14 @@ def compute_predictions(seqs,
     Output: 
         numpy array of model output of all tracks, shape (len(seqs), 16)
     """
-    logger.info(f"Use device {device} to compute predictions")
+    if verbose:
+        logger.info(f"Use device {device} to compute predictions")
     if isinstance(seqs,str):
         seqs=[seqs]
+    if hasattr(seqs,"__iter__"):
+        seqs=list(seqs)
+    if isinstance(device,str):
+        device=torch.device(f"cuda:{device}")
     model.to(device)
     model.eval()
     res=np.empty((0, 16))

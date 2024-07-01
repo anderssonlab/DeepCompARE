@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the base paths for easier maintenance and readability
-script_path="/isdata/alab/people/pcr980/DeepCompare/Scripts_python/ism_N.py"
+script_path="/isdata/alab/people/pcr980/DeepCompare/Scripts_python/write_ism_A_seq.py"
 seq_base_path="/isdata/alab/people/pcr980/DeepCompare/Pd2_sequences"
 out_base_path="/isdata/alab/people/pcr980/DeepCompare/Pd3_metadata_and_featimp"
 
