@@ -331,8 +331,7 @@ for cell_type in ["hepg2","k562"]:
 # -----------
 # plot PCA
 # -----------
-def plot_pca(df,file,method):
-    df=df[df["dataset"]==file]
+def plot_pca(df):
     features=["cage","dhs","starr","sure"]
     features_prefixed=[f"{method}_{x}" for x in features]
     x = df.loc[:,features_prefixed].values
@@ -355,7 +354,12 @@ def plot_pca(df,file,method):
     plt.savefig(f"pca_{file}_{method}.pdf")
     plt.close()
 
-df=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_targets_and_properties/tf_individual_effect_by_file.csv")
+
+
+
+
+
+df=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tf_pca_coord_hepg2_chip_true.csv")
 plot_pca(df,"promoters_hepg2","avg_ism")
 plot_pca(df,"promoters_hepg2","dstat_ism")
 plot_pca(df,"enhancers_hepg2","avg_ism")

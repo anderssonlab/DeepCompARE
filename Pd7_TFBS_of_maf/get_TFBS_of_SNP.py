@@ -1,9 +1,9 @@
-import sys
 import pyranges as pr
 import pandas as pd
 import os
 from loguru import logger
 
+import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from seq_annotators import JasparAnnotator, ReMapAnnotator, gnomADSNPAnnotator
 from region_ops import subset_df_by_region
