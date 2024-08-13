@@ -8,7 +8,7 @@ from scipy.stats import pearsonr, spearmanr
 
 
 import sys
-sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 
 #-------------------------------
 # calculate cell type specificity

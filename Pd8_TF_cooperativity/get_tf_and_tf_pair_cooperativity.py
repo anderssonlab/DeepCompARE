@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 from scipy.stats import pearsonr,spearmanr
 from adjustText import adjust_text
 import sys
-sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from utils import split_dimer, bin_and_label
-from tf_cooperativity import read_cooperativity
+from tf_cooperativity import read_cooperativity, calculate_tf_pair_cooperativity_ratio
 
 
 
@@ -29,35 +29,11 @@ def read_all_files():
 
 
 
-
-
-
-def calculate_tf_pair_ccooperativity_ratio(df,suffix=""):
-    """
-    df should be the ci of various tf pairs
-    For each tf pair,
-    summarize the ci into redundancy and codependency,
-    calculate cooperativity_ratio
-    """
-    df=df.groupby(["protein1","protein2","codependency"]).agg({"ci":"sum"}).reset_index()
-    df["tf_pair"]=df["protein1"]+"_"+df["protein2"]
-    df_pivot=df.pivot(index="tf_pair",columns="codependency",values="ci").reset_index()
-    df_pivot.columns=["tf_pair",f"redundancy_ci{suffix}",f"codependency_ci{suffix}"]
-    df_pivot["protein1"]=df_pivot["tf_pair"].apply(lambda x: x.split("_")[0])
-    df_pivot["protein2"]=df_pivot["tf_pair"].apply(lambda x: x.split("_")[1])
-    df_pivot.drop("tf_pair",axis=1,inplace=True)
-    df_pivot=df_pivot[["protein1","protein2",f"redundancy_ci{suffix}",f"codependency_ci{suffix}"]]
-    df_pivot.fillna(0,inplace=True)
-    df_pivot[f"sum_ci{suffix}"]=df_pivot[f"redundancy_ci{suffix}"].abs()+df_pivot[f"codependency_ci{suffix}"]
-    df_pivot[f"cooperativity_ratio{suffix}"]=df_pivot[f"codependency_ci{suffix}"].abs()/(df_pivot[f"redundancy_ci{suffix}"].abs()+df_pivot[f"codependency_ci{suffix}"])
-    return df_pivot
-
-
 # ----------------------------------------------------
 # 1. Get TF pair cooperativity ratio
 # ----------------------------------------------------
 df=read_all_files()
-df=calculate_tf_pair_ccooperativity_ratio(df)
+df=calculate_tf_pair_cooperativity_ratio(df)
 df.to_csv("tf_pair_cooperativity_ratio_pre_filter.csv",index=False)
 
 # select sum_ci>1
@@ -187,10 +163,10 @@ plt.close()
 # ----------------------------------------------------
 df=read_all_files()
 
-df_promoters_hepg2=calculate_tf_pair_ccooperativity_ratio(df[df["dataset"]=="promoter_hepg2"].reset_index(drop=True),"_promoters_hepg2")
-df_promoters_k562=calculate_tf_pair_ccooperativity_ratio(df[df["dataset"]=="promoter_k562"].reset_index(drop=True),"_promoters_k562")
-df_enhancers_hepg2=calculate_tf_pair_ccooperativity_ratio(df[df["dataset"]=="enhancer_hepg2"].reset_index(drop=True),"_enhancers_hepg2")
-df_enhancers_k562=calculate_tf_pair_ccooperativity_ratio(df[df["dataset"]=="enhancer_k562"].reset_index(drop=True),"_enhancers_k562")
+df_promoters_hepg2=calculate_tf_pair_cooperativity_ratio(df[df["dataset"]=="promoter_hepg2"].reset_index(drop=True),"_promoters_hepg2")
+df_promoters_k562=calculate_tf_pair_cooperativity_ratio(df[df["dataset"]=="promoter_k562"].reset_index(drop=True),"_promoters_k562")
+df_enhancers_hepg2=calculate_tf_pair_cooperativity_ratio(df[df["dataset"]=="enhancer_hepg2"].reset_index(drop=True),"_enhancers_hepg2")
+df_enhancers_k562=calculate_tf_pair_cooperativity_ratio(df[df["dataset"]=="enhancer_k562"].reset_index(drop=True),"_enhancers_k562")
 
 # retain rows with sum_ci>0.5
 df_promoters_hepg2=df_promoters_hepg2[df_promoters_hepg2["sum_ci_promoters_hepg2"]>0.5].reset_index(drop=True)
@@ -263,8 +239,8 @@ df_confusing[(df_confusing["cr_promoters"]>0.5) & (df_confusing["cr_enhancers"]<
 df=read_all_files()
 df["re"]=["promoter" if "promoter" in x else "enhancer" for x in df["dataset"]]
 
-df_promoters=calculate_tf_pair_ccooperativity_ratio(df[df["re"]=="promoter"].reset_index(drop=True))
-df_enhancers=calculate_tf_pair_ccooperativity_ratio(df[df["re"]=="enhancer"].reset_index(drop=True))
+df_promoters=calculate_tf_pair_cooperativity_ratio(df[df["re"]=="promoter"].reset_index(drop=True))
+df_enhancers=calculate_tf_pair_cooperativity_ratio(df[df["re"]=="enhancer"].reset_index(drop=True))
 
 # group by protein2, sum redundancy_ci, codependency_ci, sum_ci
 

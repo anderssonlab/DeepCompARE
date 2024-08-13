@@ -1,38 +1,5 @@
-import pandas as pd
-from communities.algorithms import louvain_method
 
-
-# convert tf_pair to redundancy graph and codependent graph
-df=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tf_pair_cooperativity_ratio_post_filter.csv")
-# how many TF pairs have cooperativity_ratio between 0.3 and 0.7
-df[(df["cooperativity_ratio"]>0.3) & (df["cooperativity_ratio"]<0.7)].shape[0] 
-
-df=df.pivot(index="protein1",columns="protein2",values="cooperativity_ratio")
-protein_names=df.index.tolist()
-mat=(df>0.9).astype(int)
-community_idx, _ = louvain_method(mat.values)
-# convert protein name accordingt to protein_names
-res=[]
-for this_set in community_idx:
-    this_set=list(this_set)
-    res_set=[]
-    for i in range(len(this_set)):
-        res_set.append(protein_names[this_set[i]])
-    res.append(res_set)
-
-# retain only list with more than 1 element
-res=[x for x in res if len(x)>1]
-
-res[0]
-
-
-
-
-
-
-#------------------------------------------------
 # Do TF pair coming from same family have lower cooperativity ratio?
-#------------------------------------------------
 
 df=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tf_pair_cooperativity_ratio_post_filter.csv")
 df_family=pd.read_csv("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2024_CORE_tf_family.csv")

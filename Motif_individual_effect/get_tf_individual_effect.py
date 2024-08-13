@@ -8,6 +8,7 @@ prefix="/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mot
 #------------------
 # Heloer functions
 #------------------
+# TODO: remove everything about feat_imp
 
 def read_data(re_type):
     df_list=[]
@@ -20,11 +21,14 @@ def read_data(re_type):
         df["track"]=f"track{track}"
         df_list.append(df)
     df_res=pd.concat(df_list).reset_index(drop=True)
-    df_res=df_res[df_res["chip_evidence"]==True].reset_index(drop=True)
+    # df_res=df_res[df_res["chip_evidence"]==True].reset_index(drop=True)
     return df_res
 
 
 def calc_avg(df,column,new_col_prefix,dataset_annotation):
+    """
+    new_col_prefix can be either ism_motif or feat_imp_orig
+    """
     df_res=df.groupby(["track","protein"])[column].mean().reset_index()
     df_res=df_res.pivot(index='protein', columns='track', values=column).reset_index()
     df_res.columns=["protein", f"avg_{new_col_prefix}_cage",f"avg_{new_col_prefix}_dhs",f"avg_{new_col_prefix}_starr",f"avg_{new_col_prefix}_sure"]
@@ -66,32 +70,21 @@ def merge_multiple_files(df_list,on,how):
 
 def calc_tf_importances(df,dataset):
     df_avg_ism = calc_avg(df, "ism_motif", "ism", dataset)
-    df_avg_gradxinp = calc_avg(df, "feat_imp_orig", "gradxinp", dataset)
     df_dstat_ism = calc_ks_stat(df, "ism_motif", "ism", dataset)  
-    df_dstat_gradxinp = calc_ks_stat(df, "feat_imp_orig", "gradxinp", dataset)
-    return df_avg_ism,df_avg_gradxinp,df_dstat_ism,df_dstat_gradxinp
+    return df_avg_ism,df_dstat_ism
 
 
 def whole_analysis(df,subsetting_column,out_name):
     df_avg_ism_list = []
-    df_avg_gradxinp_list = []
     df_dstat_ism_list = []
-    df_dstat_gradxinp_list = []
     for subsetting_value in df[subsetting_column].unique():
         logger.info(f"Processing {subsetting_value}")
         df_subset = df[df[subsetting_column]==subsetting_value].reset_index(drop=True)  
-        df_avg_ism,df_avg_gradxinp,df_dstat_ism,df_dstat_gradxinp = calc_tf_importances(df_subset,subsetting_value)
+        df_avg_ism,df_dstat_ism = calc_tf_importances(df_subset,subsetting_value)
         df_avg_ism_list.append(df_avg_ism)
-        df_avg_gradxinp_list.append(df_avg_gradxinp)
         df_dstat_ism_list.append(df_dstat_ism)
-        df_dstat_gradxinp_list.append(df_dstat_gradxinp)
     df_avg_ism = pd.concat(df_avg_ism_list)
-    #df_avg_gradxinp = pd.concat(df_avg_gradxinp_list)
     df_dstat_ism = pd.concat(df_dstat_ism_list)
-    #df_dstat_gradxinp = pd.concat(df_dstat_gradxinp_list)
-    # df=merge_multiple_files([df_avg_ism,df_avg_gradxinp,df_dstat_ism,df_dstat_gradxinp],
-    #             on=["protein","dataset"],
-    #             how="inner")
     df=merge_multiple_files([df_avg_ism,df_dstat_ism],
                 on=["protein","dataset"],
                 how="outer")
@@ -104,9 +97,13 @@ def whole_analysis(df,subsetting_column,out_name):
 #---------------
 
 df_promoters_hepg2=read_data("promoters_hepg2")
+logger.info("promoters_hepg2 read")
 df_promoters_k562=read_data("promoters_k562")
+logger.info("promoters_k562 read")
 df_enhancers_hepg2=read_data("enhancers_hepg2")
+logger.info("enhancers_hepg2 read")
 df_enhancers_k562=read_data("enhancers_k562")
+logger.info("enhancers_k562 read")
 
 df_combined = pd.concat([
     df_promoters_hepg2.assign(dataset="promoters_hepg2"),
@@ -118,9 +115,12 @@ df_combined = pd.concat([
 df_combined["cell_type"]=df_combined["dataset"].apply(lambda x: x.split("_")[1])
 df_combined["re"]=df_combined["dataset"].apply(lambda x: x.split("_")[0])
 
-whole_analysis(df_combined,"dataset","tf_individual_effect_by_file_chip_true.csv")
-# whole_analysis(df_combined,"cell_type","tf_individual_effect_by_cell_type.csv")
+whole_analysis(df_combined,"dataset","tf_individual_effect_by_file.csv")
+logger.info("aggregation by file done")
+whole_analysis(df_combined,"cell_type","tf_individual_effect_by_cell_type.csv")
+logger.info("aggregation by cell type done")
 # whole_analysis(df_combined,"re","tf_individual_effect_by_re.csv")
+# logger.info("aggregation by re done")
 
 
 

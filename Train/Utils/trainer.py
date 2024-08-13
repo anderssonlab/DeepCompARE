@@ -128,7 +128,7 @@ class Trainer(ABC):
     
     def train(self):
         for epoch in range(self.n_epochs):
-            self.train_epoch()
+            self._train_epoch()
             if epoch % 2 == 0:
                 self.val()
 

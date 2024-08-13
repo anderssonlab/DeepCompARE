@@ -12,44 +12,48 @@ from scipy.stats import chi2_contingency
 from loguru import logger
 
 import sys
-sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 
 
-df_enhancers_k562=pd.read_csv("summary_and_ks_test_enhancers_k562.csv")
-df_enhancers_k562["fdr"]=multipletests(df_enhancers_k562.feat_imp_p_val, method="fdr_bh")[1]
-df_enhancers_k562["file_name"]="enhancers_k562"
-
-df_enhancers_hepg2=pd.read_csv("summary_and_ks_test_enhancers_hepg2.csv")
-df_enhancers_hepg2["fdr"]=multipletests(df_enhancers_hepg2.feat_imp_p_val, method="fdr_bh")[1]
-df_enhancers_hepg2["file_name"]="enhancers_hepg2"
-
-df_promoters_hepg2=pd.read_csv("summary_and_ks_test_promoters_hepg2.csv")
-df_promoters_hepg2["fdr"]=multipletests(df_promoters_hepg2.feat_imp_p_val, method="fdr_bh")[1]
-df_promoters_hepg2["file_name"]="promoters_hepg2"
-
-df_promoters_k562=pd.read_csv("summary_and_ks_test_promoters_k562.csv")
-df_promoters_k562["fdr"]=multipletests(df_promoters_k562.feat_imp_p_val, method="fdr_bh")[1]
-df_promoters_k562["file_name"]="promoters_k562"
+df_cage=pd.read_csv("Pd1_ks_tests/summary_ks_test_cage.csv")
+df_cage["fdr"]=multipletests(df_cage.ism_motif_p_val, method="fdr_bh")[1]
+df_cage=df_cage[df_cage.fdr<0.05].reset_index(drop=True)
+df_cage["file_name"]="cage"
+np.sum(df_cage.ism_motif_d_stat<0) # 19/245
 
 
-df=pd.concat([df_promoters_k562,df_enhancers_k562,df_promoters_hepg2,df_enhancers_hepg2]).reset_index(drop=True)
+df_dhs=pd.read_csv("Pd1_ks_tests/summary_ks_test_dhs.csv")
+df_dhs["fdr"]=multipletests(df_dhs.ism_motif_p_val, method="fdr_bh")[1]
+df_dhs=df_dhs[df_dhs.fdr<0.05].reset_index(drop=True)
+df_dhs["file_name"]="dhs"
+np.sum(df_dhs.ism_motif_d_stat<0) # 61/250
+
+df_starr=pd.read_csv("Pd1_ks_tests/summary_ks_test_starr.csv")
+df_starr["fdr"]=multipletests(df_starr.ism_motif_p_val, method="fdr_bh")[1]
+df_starr=df_starr[df_starr.fdr<0.05].reset_index(drop=True)
+df_starr["file_name"]="starr"
+np.sum(df_starr.ism_motif_d_stat<0) # 118/232
+
+df_sure=pd.read_csv("Pd1_ks_tests/summary_ks_test_sure.csv")
+df_sure["fdr"]=multipletests(df_sure.ism_motif_p_val, method="fdr_bh")[1]
+df_sure=df_sure[df_sure.fdr<0.05].reset_index(drop=True)
+df_sure["file_name"]="sure"
+np.sum(df_sure.ism_motif_d_stat<0) # 49/231
+
+
+df=pd.concat([df_cage,df_dhs,df_starr,df_sure]).reset_index(drop=True)
 df=df[df.motif_score_p_val>0.05]
 
-df["fdr"]=multipletests(df.feat_imp_p_val, method="fdr_bh")[1]
+df["fdr"]=multipletests(df.ism_motif_p_val, method="fdr_bh")[1]
 
 np.sum(df.motif_score_p_val<0.05) # 56/660, ignore-able
 np.sum(df.fdr<0.05) # 239/660 TF with fdr<0.05
 np.sum(df.feat_imp_d_stat>0) # 508/660
-pearsonr(df_enhancers_hepg2.feat_imp_d_stat, df_enhancers_hepg2.conditional_occupancy) # 0.23, 0.004
-pearsonr(df_promoters_hepg2.feat_imp_d_stat, df_promoters_hepg2.conditional_occupancy) # 0.31, 9e-5
-pearsonr(df_enhancers_k562.feat_imp_d_stat, df_enhancers_k562.conditional_occupancy) # 0.14, 0.05
-pearsonr(df_promoters_k562.feat_imp_d_stat, df_promoters_k562.conditional_occupancy) # 0.36,9e-7
+pearsonr(df_cage.ism_motif_d_stat, df_cage.occupancy) # 0.19, 0.002
+pearsonr(df_dhs.ism_motif_d_stat, df_dhs.occupancy) # 0.04, 0.45
+pearsonr(df_starr.ism_motif_d_stat, df_starr.occupancy) # -0.08, 0.19
+pearsonr(df_sure.ism_motif_d_stat, df_sure.occupancy) # 0.05, 0.40
 
-
-# df=df[df.fdr<0.05]
-
-corr, p_val = pearsonr(df.feat_imp_d_stat, df.conditional_occupancy) # 0.26, 3e-11
-logger.info(f"Correlation between KS d statistics of feat_imp and conditional occupancy: {corr:.3f}, p-value: {p_val:.2e}")
 
 
 #---------------------------------
@@ -99,7 +103,7 @@ plt.close()
 # seaborn heatmap
 # convert df to wide format, with file_name as rows, protein as columns, and feat_imp_d_stat as values
 df_dstat=df.pivot(index="file_name", columns="protein", values="feat_imp_d_stat")
-df_pval=df.pivot(index="file_name", columns="protein", values="feat_imp_p_val")
+df_pval=df.pivot(index="file_name", columns="protein", values="ism_motif_p_val")
 df_fdr=df.pivot(index="file_name", columns="protein", values="fdr")
 
 df_dstat_filled = df_dstat.fillna(-1)
@@ -150,15 +154,15 @@ plt.close()
 # K562 biased: ELK1::SREBF2
 
 #------------------------------------------------------------------
-# Analysis3: correspondance between feat_imp_p_val and remove_context_p_val
+# Analysis3: correspondance between ism_motif_p_val and remove_context_p_val
 #------------------------------------------------------------------
 
 pearsonr(df.feat_imp_d_stat, df.remove_context_d_stat) # 0.17, 3e-5
     
 # get contingincy table for the two p-values
-df["feat_imp_p_val_bin"]=pd.cut(df.feat_imp_p_val, bins=[0,0.05,1], labels=["significant","non-significant"])
+df["ism_motif_p_val_bin"]=pd.cut(df.ism_motif_p_val, bins=[0,0.05,1], labels=["significant","non-significant"])
 df["remove_context_p_val_bin"]=pd.cut(df.remove_context_p_val, bins=[0,0.05,1], labels=["significant","non-significant"])
-contingency_table=pd.crosstab(df.feat_imp_p_val_bin, df.remove_context_p_val_bin)
+contingency_table=pd.crosstab(df.ism_motif_p_val_bin, df.remove_context_p_val_bin)
 
 # chi2 test
 

@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 
 
 
+
+
 def read_tf_individual_effect(by):
     df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tf_individual_effect_by_{by}.csv")
     columns=[col for col in df.columns if "dstat_ism" in col]
