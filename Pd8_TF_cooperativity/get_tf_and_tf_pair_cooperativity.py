@@ -16,10 +16,11 @@ from tf_cooperativity import read_cooperativity, calculate_tf_pair_cooperativity
 
 def read_all_files():
     # read cooperativity
-    df_promoter_hepg2=read_cooperativity("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_promoters_hepg2.csv")
-    df_promoter_k562=read_cooperativity("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_promoters_k562.csv")
-    df_enhancer_hepg2=read_cooperativity("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_enhancers_hepg2.csv")
-    df_enhancer_k562=read_cooperativity("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_enhancers_k562.csv")
+    # TODO: choose whether to use lenient or strict
+    df_promoter_hepg2=read_cooperativity("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_promoters_hepg2.csv",track_nums=[0,2,4,6])
+    df_promoter_k562=read_cooperativity("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_promoters_k562.csv",track_nums=[1,3,5,7])
+    df_enhancer_hepg2=read_cooperativity("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_enhancers_hepg2.csv",track_nums=[0,2,4,6])
+    df_enhancer_k562=read_cooperativity("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_enhancers_k562.csv",track_nums=[1,3,5,7])
     df_promoter_hepg2["dataset"]="promoter_hepg2"
     df_promoter_k562["dataset"]="promoter_k562"
     df_enhancer_hepg2["dataset"]="enhancer_hepg2"
@@ -34,18 +35,19 @@ def read_all_files():
 # ----------------------------------------------------
 df=read_all_files()
 df=calculate_tf_pair_cooperativity_ratio(df)
-df.to_csv("tf_pair_cooperativity_ratio_pre_filter.csv",index=False)
+df.to_csv("tf_pair_cooperativity_ratio_pre_filter_lenient.csv",index=False)
 
 # select sum_ci>1
+df["sum_ci"].describe()
 df=df[df["sum_ci"]>1].reset_index(drop=True)
-df.to_csv("tf_pair_cooperativity_ratio_post_filter.csv",index=False)
+df.to_csv("tf_pair_cooperativity_ratio_post_filter_lenient.csv",index=False)
 
 
 # ----------------------------------------------------
 # 2. Plot TF pair cooperativity ratio and show extreme pairs
 # ----------------------------------------------------
 # use post_filter for plotting
-df=pd.read_csv("tf_pair_cooperativity_ratio_post_filter.csv")
+df=pd.read_csv("tf_pair_cooperativity_ratio_post_filter_lenient.csv")
 # how many TF pairs have cooperativity_ratio between 0.3 and 0.7
 df[(df["cooperativity_ratio"]>0.3) & (df["cooperativity_ratio"]<0.7)].shape[0] 
 
@@ -57,7 +59,7 @@ pearsonr(df["sum_ci"],df["cooperativity_ratio"])
 # plot histogram
 sns.histplot(df["cooperativity_ratio"],kde=True)
 plt.title("TF pair cooperativity atio distribution")
-plt.savefig("tf_pair_cooperativity_ratio_distribution.png")
+plt.savefig("Plots/tf_pair_cooperativity_ratio_distribution_lenient.png")
 plt.close()
 
 # plot heatmap
@@ -66,7 +68,7 @@ sns.heatmap(df,cmap="coolwarm",vmin=0,vmax=1)
 plt.title("TF pair cooperativity ratio")
 plt.subplots_adjust(bottom=0.3)
 plt.subplots_adjust(left=0.3)
-plt.savefig("tf_pair_cooperativity_ratio_heatmap.png")
+plt.savefig("Plots/tf_pair_cooperativity_ratio_heatmap_lenient.png")
 plt.close()# plot heatmap
 
 
@@ -74,7 +76,7 @@ plt.close()# plot heatmap
 # 3. Get TF cooperativity ratio and histogran
 # ----------------------------------------------------
 # use pre_filter for TF level aggregation
-df=pd.read_csv("tf_pair_cooperativity_ratio_pre_filter.csv")
+df=pd.read_csv("tf_pair_cooperativity_ratio_pre_filter_lenient.csv")
 df_tf=df.groupby("protein2").agg({"redundancy_ci":"sum",
                                   "codependency_ci":"sum",
                                   "cooperativity_ratio":"std"}).reset_index()
@@ -83,11 +85,11 @@ df_tf=df_tf[df_tf["sum_ci"]>5].reset_index(drop=True)
 df_tf.rename(columns={"cooperativity_ratio":"std"},inplace=True)
 df_tf["cooperativity_ratio"]=df_tf["codependency_ci"]/(df_tf["redundancy_ci"].abs()+df_tf["codependency_ci"])
 df_tf.sort_values("cooperativity_ratio",ascending=False,inplace=True)
-df_tf.to_csv("tf_cooperativity_ratio.csv",index=False)
+df_tf.to_csv("tf_cooperativity_ratio_lenient.csv",index=False)
 
 sns.histplot(df_tf["cooperativity_ratio"],kde=True)
 plt.title("TF cooperativity ratio distribution")
-plt.savefig("tf_cooperativity_ratio_distribution.png")
+plt.savefig("Plots/tf_cooperativity_ratio_distribution_lenient.png")
 plt.close()
 
 
@@ -97,7 +99,7 @@ plt.close()
 
 # group by protein2 calculate entropy of cooperativity_ratio
 from scipy.stats import entropy
-df=pd.read_csv("tf_pair_cooperativity_ratio_post_filter.csv")
+df=pd.read_csv("tf_pair_cooperativity_ratio_post_filter_lenient.csv")
 # group by protein2, calculate entropy of cooperativity_ratio, and count size of each group
 df=df.groupby("protein2").agg({"cooperativity_ratio":entropy,"protein1":"count"}).reset_index()
 
@@ -115,17 +117,17 @@ spearmanr(df["partner_count"],df["cooperativity_ratio"])
 # ----------------------------------------------------
 # 4. Get tfs_redundant and tfs_codependent
 # ----------------------------------------------------
-df_tf=pd.read_csv("tf_cooperativity_ratio.csv")
+df_tf=pd.read_csv("tf_cooperativity_ratio_lenient.csv")
 
-# redundant_tfs have cooperativity_ratio<0.3
-redundant_tfs=df_tf[df_tf["cooperativity_ratio"]<0.3]["protein2"].to_list()
+# redundant_tfs have cooperativity_ratio<0.25
+redundant_tfs=df_tf[df_tf["cooperativity_ratio"]<0.25]["protein2"].to_list()
 redundant_tfs=[tf for tf in redundant_tfs if "::" not in tf]
-with open("tfs_redundant.txt","w") as f:
+with open("tfs_redundant_lenient.txt","w") as f:
     f.write("\n".join(redundant_tfs))
 
 
-codependent_tfs=df_tf[df_tf["cooperativity_ratio"]>0.7]["protein2"].to_list()
-with open("tfs_codependent.txt","w") as f:
+codependent_tfs=df_tf[df_tf["cooperativity_ratio"]>0.75]["protein2"].to_list()
+with open("tfs_codependent_lenient.txt","w") as f:
     f.write("\n".join(split_dimer(codependent_tfs)))
 
 
@@ -134,9 +136,9 @@ with open("tfs_codependent.txt","w") as f:
 # ----------------------------------------------------
 # 5. Redundant TFs have more versatile behavior in tf pairs
 # ----------------------------------------------------
-df_tf=pd.read_csv("tf_cooperativity_ratio.csv")
+df_tf=pd.read_csv("tf_cooperativity_ratio_lenient.csv")
 df_tf.rename(columns={"cooperativity_ratio":"cr_tf"},inplace=True)
-df=pd.read_csv("tf_pair_cooperativity_ratio_post_filter.csv")
+df=pd.read_csv("tf_pair_cooperativity_ratio_post_filter_lenient.csv")
 pearsonr(df_tf["cr_tf"],df_tf["std"]) # (-0.32,0)
 
 # merge df_tf with df by protein2
@@ -150,7 +152,7 @@ plt.ylabel("TF pair cooperativity ratio")
 # rotate x-axis labels by 45 degrees
 plt.xticks(rotation=45)
 plt.subplots_adjust(bottom=0.3)
-plt.savefig("tf_pair_cooperativity_ratio_by_tf_cooperativity_ratio.png")
+plt.savefig("Plots/tf_pair_cooperativity_ratio_by_tf_cooperativity_ratio_lenient.png")
 plt.close()
 
 
@@ -257,15 +259,15 @@ df_enhancers["cooperativity_ratio"]=df_enhancers["codependency_ci"].abs()/(df_en
 df_promoters=df_promoters[["protein2","cooperativity_ratio"]].rename(columns={"cooperativity_ratio":"cr_promoters"})
 df_enhancers=df_enhancers[["protein2","cooperativity_ratio"]].rename(columns={"cooperativity_ratio":"cr_enhancers"})
 df_tf=pd.merge(df_promoters,df_enhancers,on=["protein2"],how="outer")
-df_tf.to_csv("tf_cooperativity_ratio_promoters_vs_enhancers.csv",index=False)
+df_tf.to_csv("tf_cooperativity_ratio_promoters_vs_enhancers_lenient.csv",index=False)
 
 # select rows with at least one Nan
 df_tf[df_tf.isna().any(axis=1)] # 0
 # remove rows with Nan
 df_tf.dropna(inplace=True)
 # add tf_type
-tfs_redundant=pd.read_csv("tfs_redundant.txt",header=None)[0].to_list()
-tfs_codependent=pd.read_csv("tfs_codependent.txt",header=None)[0].to_list()
+tfs_redundant=pd.read_csv("tfs_redundant_lenient.txt",header=None)[0].to_list()
+tfs_codependent=pd.read_csv("tfs_codependent_lenient.txt",header=None)[0].to_list()
 df_tf["tf_type"]="undetermined"
 df_tf.loc[df_tf["protein2"].isin(tfs_redundant),"tf_type"]="redundant"
 df_tf.loc[df_tf["protein2"].isin(tfs_codependent),"tf_type"]="codependent"
@@ -291,9 +293,6 @@ for i in range(df_tf.shape[0]):
 adjust_text(texts,arrowprops=dict(arrowstyle="-",color='black'))
 # make legend at bottom right
 plt.legend(loc='lower right')
-plt.savefig("tf_cooperativity_ratio_promoters_vs_enhancers.png")
+plt.savefig("Plots/tf_cooperativity_ratio_promoters_vs_enhancers_lenient.png")
 plt.close()
 
-
-
-df_bimodal=df_tf[(df_tf["cr_promoters"]<0.4) & (df_tf["cr_enhancers"]>0.6)] 

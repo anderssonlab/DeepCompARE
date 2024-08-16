@@ -122,11 +122,12 @@ for cell_type in ["hepg2","k562"]:
         for j in range(i+1,4):
             x_colname=f"dstat_ism_{assays[i]}"
             y_colname=f"dstat_ism_{assays[j]}"
-        condition1 = (df_sub[x_colname] * df_sub[y_colname] < 0) & (abs(df_sub[x_colname] - df_sub[y_colname]) > 0.2)
-        condition2 = (df_sub[x_colname]>0.5) & (df_sub[y_colname] > 0.5)
-        condition3 = (df_sub[x_colname]<-0.5) & (df_sub[y_colname] < -0.5)
-        df_sub["annotate"]=condition1 | condition2 | condition3
-        scatter_plot_alpha_by_diff(df_sub,x_colname,y_colname,cell_type)
+            logger.info(f"Plotting {x_colname} vs {y_colname} for {cell_type}")
+            condition1 = (abs(df_sub[x_colname] - df_sub[y_colname]) > 0.15)
+            condition2 = (df_sub[x_colname]>0.5) & (df_sub[y_colname] > 0.5)
+            condition3 = (df_sub[x_colname]<-0.5) & (df_sub[y_colname] < -0.5)
+            df_sub["annotate"]=condition1 | condition2 | condition3
+            scatter_plot_alpha_by_diff(df_sub,x_colname,y_colname,cell_type)
 
 
 
@@ -152,7 +153,7 @@ def compare_RE(df,cell_type,ism):
     df_wide["protein"]=df_wide.index
     df_wide.fillna(0,inplace=True)
     # calculate whether to annotate the row
-    condition1 = (df_wide[x_colname] * df_wide[y_colname] < 0) & (abs(df_wide[x_colname] - df_wide[y_colname]) > 0.4)
+    condition1 = (abs(df_wide[x_colname] - df_wide[y_colname]) > 0.2)
     condition2 = (df_wide[x_colname]>0.5) & (df_wide[y_colname] > 0.5)
     condition3 = (df_wide[x_colname]<-0.5) & (df_wide[y_colname] < -0.5)
     df_wide["annotate"]= condition1 | condition2 | condition3
@@ -160,7 +161,7 @@ def compare_RE(df,cell_type,ism):
     
 
 
-df=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_targets_and_properties/tf_individual_effect_by_file.csv")
+df=pd.read_csv("tf_individual_effect_by_file.csv")
 df["cell_type"]=df["dataset"].apply(lambda x: x.split("_")[1])
 df["RE"]=df["dataset"].apply(lambda x: x.split("_")[0])
 for cell_type in ["hepg2","k562"]:

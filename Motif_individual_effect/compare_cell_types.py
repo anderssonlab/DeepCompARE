@@ -25,19 +25,6 @@ def get_protein_list(df, ism):
        return proteins_hepg2_highlight, proteins_k562_highlight, proteins_both_highlight
 
 
-
-dict_hepg2_highlight = {"cage": [], "dhs": [], "starr": [], "sure": []}
-dict_k562_highlight = {"cage": [], "dhs": [], "starr": [], "sure": []}
-dict_both_highlight = {"cage": [], "dhs": [], "starr": [], "sure": []}
-
-for ism in ["cage","dhs","starr","sure"]:
-       proteins_hepg2_highlight, proteins_k562_highlight, proteins_both_highlight = get_protein_list(df, ism)
-       dict_hepg2_highlight[ism] = proteins_hepg2_highlight
-       dict_k562_highlight[ism] = proteins_k562_highlight
-       dict_both_highlight[ism] = proteins_both_highlight
-
-
-
 def dict2df(this_dict):
        unique_tfs = sorted(list(set(sum(this_dict.values(), []))))
        df = pd.DataFrame(index=unique_tfs, columns=this_dict.keys())
@@ -46,10 +33,25 @@ def dict2df(this_dict):
        return df
 
 
+dict_hepg2_highlight = {"cage": [], "dhs": [], "starr": [], "sure": []}
+dict_k562_highlight = {"cage": [], "dhs": [], "starr": [], "sure": []}
+dict_both_highlight = {"cage": [], "dhs": [], "starr": [], "sure": []}
+
+
+for ism in ["cage","dhs","starr","sure"]:
+       proteins_hepg2_highlight, proteins_k562_highlight, proteins_both_highlight = get_protein_list(df, ism)
+       dict_hepg2_highlight[ism] = proteins_hepg2_highlight
+       dict_k562_highlight[ism] = proteins_k562_highlight
+       dict_both_highlight[ism] = proteins_both_highlight
+
+
 df_hepg2_highlight = dict2df(dict_hepg2_highlight)
 df_k562_highlight = dict2df(dict_k562_highlight)
 df_both_highlight = dict2df(dict_both_highlight)
 
+df_hepg2_highlight.to_csv("tfs_hepg2_highlight.csv")
+df_k562_highlight.to_csv("tfs_k562_highlight.csv")
+df_both_highlight.to_csv("tfs_both_cells_highlight.csv")
 
 # for df_hepg2_highlight
 df_hepg2_highlight.sum(axis=1).value_counts() # 12
@@ -65,12 +67,9 @@ df_both_highlight.shape # 54
 
 
 
-# for dict_hepg2_highlight
-# how many "cage" are in "dhs"
-len(set(dict_hepg2_highlight["cage"]))
-len(set(dict_hepg2_highlight["cage"]).intersection(dict_hepg2_highlight["dhs"]))
-len(set(dict_hepg2_highlight["cage"]).intersection(dict_hepg2_highlight["starr"]))
-len(set(dict_hepg2_highlight["cage"]).intersection(dict_hepg2_highlight["sure"]))
+
+
+
 
 
 

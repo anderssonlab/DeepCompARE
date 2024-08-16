@@ -64,7 +64,7 @@ def annotate_one_region(region,out_path,idx,seq_extractor,track_num,device,score
     motif_df=jaspar_annotator.annotate(region,by="contained")
     if motif_df.shape[0]==0:
         return
-    #motif_df=annotate_homotypic_clusters(motif_df,"no_thresh")
+    # motif_df=annotate_homotypic_clusters(motif_df,"no_thresh")
     if score_thresh:
         motif_df=motif_df[motif_df["score"]>score_thresh].reset_index(drop=True)
         if motif_df.shape[0]==0:

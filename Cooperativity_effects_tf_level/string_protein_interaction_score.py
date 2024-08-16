@@ -7,7 +7,7 @@ from scipy.stats import mannwhitneyu
 from scipy.stats import spearmanr,pearsonr
 
 import sys
-sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from utils import split_dimer
 
 
@@ -38,11 +38,11 @@ def tf_analysis(network, protein, threshold):
 # all columns should be string
 aliases = pd.read_csv('/isdata/alab/people/pcr980/Resource/STRING/9606.protein.aliases.v12.0.txt', sep='\t', dtype=str)
 
-df_tf_pair=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tf_pair_cooperativity_ratio_pre_filter.csv")
+df_tf_pair=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tf_pair_cooperativity_ratio_pre_filter_lenient.csv")
 all_tfs=set(list(df_tf_pair['protein2'].unique())+list(df_tf_pair['protein2'].unique()))
 all_tfs=split_dimer(all_tfs)
 df_mapper=aliases[aliases['alias'].isin(all_tfs)].iloc[:,:2].drop_duplicates().reset_index(drop=True)
-"CEBPA" in df_mapper.alias.values
+
 
 
 
@@ -77,9 +77,9 @@ df_results.to_csv('string_protein_interaction_scores_all_tfs.csv',index=False)
 #--------------------------------------------
 # Analysis 2. analyze redundant v.s. codependent interaction score
 #--------------------------------------------
-tfs_codependent = "/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tfs_codependent.txt"
+tfs_codependent = "/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_codependent_lenient.txt"
 tfs_codependent = open(tfs_codependent).read().strip().split('\n')
-tfs_redundant = "/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tfs_redundant.txt"
+tfs_redundant = "/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_redundant_lenient.txt"
 tfs_redundant = open(tfs_redundant).read().strip().split('\n')
 
 df_results=pd.read_csv('string_protein_interaction_scores_all_tfs.csv')
@@ -95,12 +95,12 @@ df_redundant['tf_type']='redundant'
 tfs=pd.concat([df_codependent,df_redundant])
 sns.kdeplot(data=tfs,x='score_physical',hue='tf_type',common_norm=False)
 plt.title("STRING Protein interaction score (physical interaction)")
-plt.savefig('Plots/string_score_physical.pdf')
+plt.savefig('Plots/string_score_physical_lenient.pdf')
 plt.close()
 
 sns.kdeplot(data=tfs,x='score_all_links',hue='tf_type',common_norm=False)
 plt.title("STRING Protein interaction score (all links)")
-plt.savefig('Plots/string_score_all_links.pdf')
+plt.savefig('Plots/string_score_all_links_lenient.pdf')
 plt.close()
 
 # mannwhitneyu test
@@ -117,7 +117,7 @@ df_redundant['score_all_links'].median()
 #------------------------------------------------------------
 # spearman correlation between cooperativity ratio and protein interaction
 #------------------------------------------------------------
-df_cooperativity_ratio=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tf_cooperativity_ratio.csv")
+df_cooperativity_ratio=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tf_cooperativity_ratio_lenient.csv")
 # merge with df_results
 df_results=df_results.merge(df_cooperativity_ratio,left_on='alias',right_on='protein2',how='inner')
 spearmanr(df_results['cooperativity_ratio'],df_results['score_physical'])
@@ -131,7 +131,7 @@ spearmanr(df_results['cooperativity_ratio'],df_results['score_all_links'])
 
 # create mapper
 aliases = pd.read_csv('/isdata/alab/people/pcr980/Resource/STRING/9606.protein.aliases.v12.0.txt', sep='\t', dtype=str)
-df_tf_pair=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tf_pair_cooperativity_ratio_post_filter.csv")
+df_tf_pair=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tf_pair_cooperativity_ratio_post_filter_lenient.csv")
 all_tfs=list(df_tf_pair['protein2'].unique())
 all_tfs=split_dimer(all_tfs)
 df_mapper=aliases[aliases['alias'].isin(all_tfs)].iloc[:,:2].drop_duplicates().reset_index(drop=True)
@@ -176,4 +176,5 @@ sns.scatterplot(data=df_network,x="cooperativity_ratio",y="score")
 plt.xlabel("Cooperativity ratio")
 plt.ylabel("Protein interaction score")
 plt.title("Cooperativity ratio and protein interaction score")
+plt.savefig("Plots/cooperativity_ratio_protein_interaction_score_lenient.pdf")
 plt.close()

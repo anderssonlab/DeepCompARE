@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import mannwhitneyu
 from scipy.stats import pearsonr,spearmanr
 import sys
-sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from tf_cooperativity import read_cooperativity
 
 
@@ -14,7 +14,11 @@ from tf_cooperativity import read_cooperativity
 # ----------------------------------------------------
 
 def analysis(file_prefix,sep):
-    df=read_cooperativity(f"/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_{file_prefix}.csv")
+    if "hepg2" in file_prefix:
+        track_nums=[0,2,4,6]
+    if "k562" in file_prefix:
+        track_nums=[1,3,5,7]
+    df=read_cooperativity(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_{file_prefix}.csv",track_nums=track_nums)
     # group by region_idx and codependency, count the number of zero and one in codependency column in each group
     df_grouped=df.groupby(["region_idx","codependency"])[["codependency"]].count().unstack().fillna(0).reset_index()
     # reduce to single index
@@ -30,7 +34,7 @@ def analysis(file_prefix,sep):
     regions_df["region_idx"]=regions_df["region_idx"].apply(lambda x: f"Region{x}")
     # merge with df_grouped
     df_grouped=pd.merge(df_grouped,regions_df,on="region_idx",how="left")
-    df_grouped.to_csv(f"{file_prefix}_tf_pair_cooperativity_counts.csv",index=False)
+    df_grouped.to_csv(f"{file_prefix}_tf_pair_cooperativity_counts_lenient.csv",index=False)
 
 
 # ----------------------------------------------------
@@ -42,10 +46,10 @@ analysis("promoters_hepg2","\t")
 analysis("promoters_k562","\t")
 
 
-df_enhancers_hepg2=pd.read_csv("enhancers_hepg2_tf_pair_cooperativity_counts.csv")
-df_enhancers_k562=pd.read_csv("enhancers_k562_tf_pair_cooperativity_counts.csv")
-df_promoters_hepg2=pd.read_csv("promoters_hepg2_tf_pair_cooperativity_counts.csv")
-df_promoters_k562=pd.read_csv("promoters_k562_tf_pair_cooperativity_counts.csv")
+df_enhancers_hepg2=pd.read_csv("enhancers_hepg2_tf_pair_cooperativity_counts_lenient.csv")
+df_enhancers_k562=pd.read_csv("enhancers_k562_tf_pair_cooperativity_counts_lenient.csv")
+df_promoters_hepg2=pd.read_csv("promoters_hepg2_tf_pair_cooperativity_counts_lenient.csv")
+df_promoters_k562=pd.read_csv("promoters_k562_tf_pair_cooperativity_counts_lenient.csv")
 
 # count rows with codependent=0 or redundant=0
 df_sub=df_promoters_k562
@@ -81,11 +85,8 @@ df_promoters_k562["codependent_pair_percentage"].median()
 
 # kdeplot codependent_pair_percentage, hue=dataset
 sns.kdeplot(data=df,x="codependent_pair_percentage",hue="dataset",common_norm=False)
-# add annotation
-plt.text(-0.3, 3.3, "p-value (HepG2)<1e-149", fontsize=8)
-plt.text(-0.3, 3.0, "p-value (K562)<1e-219", fontsize=8)
 plt.title("Distribution of codependent pair percentage")
-plt.savefig("codependent_pair_percentage.png")
+plt.savefig("codependent_pair_percentage_lenient.png")
 plt.close()
 
 

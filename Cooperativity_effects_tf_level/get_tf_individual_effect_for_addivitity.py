@@ -6,13 +6,13 @@ from scipy.stats import pearsonr,spearmanr,ks_2samp
 
 import sys
 
-sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from tf_cooperativity import read_file_remove_confusion,detect_and_remove_confusing_pairs
 
 
 
-def preprocess_file(file_path,remove_confusion=True,drop_protein2_duplicates=True):
-    df=read_file_remove_confusion(file_path,0.1)
+def preprocess_file(file_path,track_nums,remove_confusion=True):
+    df=read_file_remove_confusion(file_path,0.1,track_nums=track_nums)
     if remove_confusion:
         df=detect_and_remove_confusing_pairs(df)
         df["codependency"]=(df["codependency_count"]>0).astype(int)
@@ -29,24 +29,23 @@ def preprocess_file(file_path,remove_confusion=True,drop_protein2_duplicates=Tru
     cols_to_remove=[col for col in df.columns if col.startswith("ci") or col.startswith("cooperativity") or col.startswith("ism")]
     df.drop(columns=cols_to_remove,inplace=True)
     # remove duplicated rows
-    if drop_protein2_duplicates:
-        df.drop_duplicates(subset=['region_idx','chromosome2','start2','end2','protein2','score2','strand2','start_rel2','end_rel2'],inplace=True)
+    df.drop_duplicates(subset=['region_idx','chromosome2','start2','end2','protein2','score2','strand2','start_rel2','end_rel2'],inplace=True)
     return df
 
-df_coop=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tf_cooperativity_ratio.csv")
+
+df_coop=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tf_cooperativity_ratio_lenient.csv")
+
+df_promoter_hepg2=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_promoters_hepg2.csv",track_nums=[0,2,4,6])
+df_promoter_k562=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_promoters_k562.csv",track_nums=[1,3,5,7])
+df_enhancer_hepg2=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_enhancers_hepg2.csv",track_nums=[0,2,4,6])
+df_enhancer_k562=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_enhancers_k562.csv",track_nums=[1,3,5,7])
+df=pd.concat([df_promoter_hepg2,df_promoter_k562,df_enhancer_hepg2,df_enhancer_k562])
+df.fillna(0,inplace=True)
+
 
 #-------------------------------------------------------------------
 # Analysis 1: Correlation between TF effect on different tracks and cooperativity ratio
 #-------------------------------------------------------------------
-
-df_promoter_hepg2=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_promoters_hepg2.csv")
-df_promoter_k562=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_promoters_k562.csv")
-df_enhancer_hepg2=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_enhancers_hepg2.csv")
-df_enhancer_k562=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_enhancers_k562.csv")
-
-df=pd.concat([df_promoter_hepg2,df_promoter_k562,df_enhancer_hepg2,df_enhancer_k562])
-df.fillna(0,inplace=True)
-
 
 df_grouped=df.groupby(["protein2"]).agg({"cage":"mean","dhs":"mean","starr":"mean","sure":"mean"}).reset_index()
 df_grouped.fillna(0,inplace=True)
@@ -65,7 +64,7 @@ for track in ["cage","dhs","starr","sure"]:
     r,p=pearsonr(df_coop[track],df_coop["cooperativity_ratio"])
     plt.text(0.7,0.9,f"pearson r={r:.2f}\np={p:.2f}",transform=plt.gca().transAxes)
     plt.title(f"TF effect on {track} vs cooperativity ratio")
-    plt.savefig(f"cr_vs_{track}.png")
+    plt.savefig(f"cr_vs_{track}_lenient.pdf")
     plt.close()
 
 
@@ -77,13 +76,6 @@ for track in ["cage","dhs","starr","sure"]:
 # Analysis 2: Compare TF effect between redundant and codependent state
 #---------------------------------------------
 
-df_promoter_hepg2=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_promoters_hepg2.csv",drop_protein2_duplicates=False)
-df_promoter_k562=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_promoters_k562.csv",drop_protein2_duplicates=False)
-df_enhancer_hepg2=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_enhancers_hepg2.csv",drop_protein2_duplicates=False)
-df_enhancer_k562=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/mutate_pairs_enhancers_k562.csv",drop_protein2_duplicates=False)
-
-df=pd.concat([df_promoter_hepg2,df_promoter_k562,df_enhancer_hepg2,df_enhancer_k562])
-df.fillna(0,inplace=True)
 
 df["avg_effect"]=df[["cage","dhs","starr","sure"]].mean(axis=1)
 
@@ -142,16 +134,12 @@ df_stat[(df_stat[["cage","dhs","starr","sure"]]>=0).all(axis=1)]
 
 # shape by significance, hue by cooperativity ratio
 sns.scatterplot(x="redundant_median",y="codependent_median",data=df_stat,hue="cooperativity_ratio",style="significant")
-# annotate with protein name
-# for i in range(df_stat.shape[0]):
-#     plt.text(df_stat["redundant_median"][i],df_stat["codependent_median"][i],df_stat["protein2"][i],fontsize=6)
-
 plt.title("tf effect comparison")
 # add diagonal line
 min_val=min(df_stat["redundant_median"].min(),df_stat["codependent_median"].min())
 max_val=max(df_stat["redundant_median"].max(),df_stat["codependent_median"].max())
 plt.plot([min_val,max_val],[min_val,max_val],color="black",linestyle="--")
-plt.savefig("redundant_median_vs_codependent_median.png")
+plt.savefig("redundant_median_vs_codependent_median_lenient.png")
 plt.close()
 
 
