@@ -10,9 +10,10 @@ import seaborn as sns
 from loguru import logger
 
 import sys
-sys.path.append("/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
+sys.path.append("/isdata/alab/people/pcr980/Scripts_python")
 from seq_ops import SeqExtractor, dinucleotide_frequencies, trinucleotide_frequencies
-seq_extractor=SeqExtractor()
+
+seq_extractor=SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
 
 # TF level annotation
 def add_colocolization_info(df,cell_type):
@@ -120,14 +121,14 @@ def rf_summary(X,y,features,mode):
 
 def whole_analysis(features,file_suffix,track_num,mode):    
     # read in data
-    df=pd.read_csv(f'/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_{file_suffix}_track{track_num}.csv')
+    df=pd.read_csv(f'/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info_and_motif_pair/motif_info_thresh_500_{file_suffix}_track{track_num}.csv')
     # shuffle
     df = df.sample(frac=1, random_state=42).reset_index(drop=True)
     # Drop duplicates based on 'seq_idx' and 'protein' to avoid inflating correlation between #count_TF and ChIP_evidence
     df = df.drop_duplicates(subset=['seq_idx', 'protein'])
     
     # annotate
-    df['feat_imp_orig_quartile']=pd.qcut(df['feat_imp_orig'], q=4, labels=["Q1", "Q2", "Q3", "Q4"])
+    df['ism_motif_quartile']=pd.qcut(df['ism_motif'], q=4, labels=["Q1", "Q2", "Q3", "Q4"])
     df=add_cpg_info(df,file_suffix)
     if mode=="di":
         df=add_dinucleotide(df,file_suffix)
@@ -137,7 +138,7 @@ def whole_analysis(features,file_suffix,track_num,mode):
         features=features+[a+b+c for a in 'ACGT' for b in 'ACGT' for c in 'ACGT']
     
     X=df[features].values
-    y_featimp=df['feat_imp_orig_quartile'].values
+    y_featimp=df['ism_motif_quartile'].values
     y_chip=df['chip_evidence'].values
 
     # train random forest
@@ -166,7 +167,7 @@ def whole_analysis(features,file_suffix,track_num,mode):
     # put legend at top right
     plt.legend(loc='upper right')
     plt.title(file_suffix)
-    plt.savefig(f"feature_importance_{mode}_{file_suffix}_track{track_num}.pdf")
+    plt.savefig(f"Plots_rf/feature_importance_{mode}_{file_suffix}_track{track_num}.pdf")
     plt.close()
     
     return np.mean(acc_featimp), np.mean(acc_chip)
@@ -174,9 +175,10 @@ def whole_analysis(features,file_suffix,track_num,mode):
 
 def get_track_num(file_suffix):
     if "hepg2" in file_suffix:
-        return [8,10,12,14]
+        return [0,2,4,6]
     if "k562" in file_suffix:
-        return [9,11,13,15]
+        return [1,3,5,7]
+
 
 def main():
     features_basic=['score','cpg_percentage','seq_gc', 'context_gc_2bp','context_gc_10bp', 'context_gc_50bp', 'context_gc_100bp']
@@ -205,7 +207,7 @@ def main():
                              "mode":mode_list, 
                              "acc_motif_imp":acc_motif_imp_list, 
                              "acc_chip":acc_chip_list})
-    df_summary.to_csv("rf_summary_classification.csv")
+    df_summary.to_csv("Plots_rf/rf_summary.csv")
         
 
 if __name__ == "__main__":
