@@ -18,6 +18,8 @@ def analysis(file_prefix,sep):
         track_nums=[0,2,4,6]
     if "k562" in file_prefix:
         track_nums=[1,3,5,7]
+    if "common" in file_prefix:
+        track_nums=[0,1,2,3,4,5,6,7]
     df=read_cooperativity(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_{file_prefix}.csv",track_nums=track_nums)
     # group by region_idx and codependency, count the number of zero and one in codependency column in each group
     df_grouped=df.groupby(["region_idx","codependency"])[["codependency"]].count().unstack().fillna(0).reset_index()
@@ -108,12 +110,12 @@ analysis("promoters_sharp_k562"," ")
 
 
 # calculate sub ratio distribution for sharp and broad
-df_broad1=pd.read_csv("promoters_broad_common_tf_pair_cooperativity_counts.csv")
-df_broad2=pd.read_csv("promoters_broad_hepg2_tf_pair_cooperativity_counts.csv")
-df_broad3=pd.read_csv("promoters_broad_k562_tf_pair_cooperativity_counts.csv")
-df_sharp1=pd.read_csv("promoters_sharp_common_tf_pair_cooperativity_counts.csv")
-df_sharp2=pd.read_csv("promoters_sharp_hepg2_tf_pair_cooperativity_counts.csv")
-df_sharp3=pd.read_csv("promoters_sharp_k562_tf_pair_cooperativity_counts.csv")
+df_broad1=pd.read_csv("promoters_broad_common_tf_pair_cooperativity_counts_lenient.csv")
+df_broad2=pd.read_csv("promoters_broad_hepg2_tf_pair_cooperativity_counts_lenient.csv")
+df_broad3=pd.read_csv("promoters_broad_k562_tf_pair_cooperativity_counts_lenient.csv")
+df_sharp1=pd.read_csv("promoters_sharp_common_tf_pair_cooperativity_counts_lenient.csv")
+df_sharp2=pd.read_csv("promoters_sharp_hepg2_tf_pair_cooperativity_counts_lenient.csv")
+df_sharp3=pd.read_csv("promoters_sharp_k562_tf_pair_cooperativity_counts_lenient.csv")
 
 df_broad1["dataset"]="broad_common"
 df_broad2["dataset"]="broad_hepg2"
@@ -137,7 +139,7 @@ df[df["promoter_type"]=="broad"]["codepedent_pair_percentage"].median()
 df[df["promoter_type"]=="sharp"]["codepedent_pair_percentage"].median()
 
 # violinplot codependent_pair_percentage, hue=dataset
-sns.violinplot(data=df,x="dataset",y="codepedent_pair_percentage",hue="promoter_type",split=True,inner="quartile")
+sns.kdeplot(data=df,x="codepedent_pair_percentage",hue="promoter_type",common_norm=False)
 # add annotation, p round to 2 decimal
 plt.title("Distribution of codependent pair percentage")
 plt.savefig("codependent_pair_percentage_sharp_broad.png")

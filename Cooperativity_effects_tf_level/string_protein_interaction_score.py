@@ -178,3 +178,6 @@ plt.ylabel("Protein interaction score")
 plt.title("Cooperativity ratio and protein interaction score")
 plt.savefig("Plots/cooperativity_ratio_protein_interaction_score_lenient.pdf")
 plt.close()
+
+
+# TODO: who has more cofactors??

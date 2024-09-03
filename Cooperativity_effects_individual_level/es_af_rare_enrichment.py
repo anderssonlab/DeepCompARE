@@ -7,7 +7,7 @@ from loguru import logger
 
 
 import sys
-sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from stat_tests import calc_or, plot_or
 from utils import split_dimer
 
@@ -19,8 +19,8 @@ from utils import split_dimer
 #-----------------------------------------------------
 
 # for match_cell_type_specificity()
-df_dispersion_hepg2=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/TFs.dispersionEstimates.hepG2.tab",sep="\t")
-df_dispersion_k562=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/TFs.dispersionEstimates.k562.tab",sep="\t")
+df_dispersion_hepg2=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Cooperativity_effects_tf_level/TFs.dispersionEstimates.hepG2.tab",sep="\t")
+df_dispersion_k562=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Cooperativity_effects_tf_level/TFs.dispersionEstimates.k562.tab",sep="\t")
 df_dispersion=pd.concat([df_dispersion_hepg2,df_dispersion_k562],axis=0).reset_index(drop=True)
 df_dispersion=df_dispersion.drop_duplicates().reset_index(drop=True)
 df_dispersion["gini_rank"]=df_dispersion["gini"].rank(ascending=False)
@@ -106,8 +106,8 @@ df_tfbs_maf_es["AF_bin"]=np.where(df_tfbs_maf_es["log10_AF"]<-4,"rare",np.where(
 # select only positive motifs
 # df_tfbs_maf_es=df_tfbs_maf_es[df_tfbs_maf_es["motif"].isin(positive_tfs)].reset_index(drop=True)
 
-redundant_tfs= pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tfs_redundant.txt",header=None)[0].to_list()
-codependent_tfs = pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_individual_effect_and_cooperativity/tfs_codependent.txt",header=None)[0].to_list()
+redundant_tfs= pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_redundant_lenient.txt",header=None)[0].to_list()
+codependent_tfs = pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_codependent_lenient.txt",header=None)[0].to_list()
 df_tfbs_maf_es["TF_type"]=np.where(df_tfbs_maf_es["motif"].isin(redundant_tfs),"redundant",np.where(df_tfbs_maf_es["motif"].isin(codependent_tfs),"codependent","other"))
 
 

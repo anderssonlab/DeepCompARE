@@ -40,11 +40,7 @@ def get_isms(seq_extractor,motif_df,region,device):
 
 
 def get_phylop(motif_df,prefix, phylop_annotator):
-    motif_df[f"{prefix}_max_pos"] = motif_df.apply(lambda row: phylop_annotator.max_pos((row['chromosome'],row['start'],row['end'])), axis=1).round(3)
-    motif_df[f"{prefix}_min_pos"] = motif_df.apply(lambda row: phylop_annotator.min_pos((row['chromosome'],row['start'],row['end'])), axis=1).round(3)
-    motif_df[f"{prefix}_max_neg"] = motif_df.apply(lambda row: phylop_annotator.max_neg((row['chromosome'],row['start'],row['end'])), axis=1).round(3)
-    motif_df[f"{prefix}_min_neg"] = motif_df.apply(lambda row: phylop_annotator.min_neg((row['chromosome'],row['start'],row['end'])), axis=1).round(3)
-    motif_df[f"{prefix}_mean"] = motif_df.apply(lambda row: phylop_annotator.mean((row['chromosome'],row['start'],row['end'])), axis=1).round(3)
+    motif_df[f"{prefix}"] = motif_df.apply(lambda row: phylop_annotator.annotate((row['chromosome'],row['start'],row['end'])), axis=1)
     return motif_df
 
 
@@ -76,17 +72,14 @@ def annotate_one_region(idx,
     # add ism
     motif_df = get_isms(seq_extractor,motif_df,region,device)
     # add gnomad info
-    motif_df["max_af"] = motif_df.apply(lambda row: gnomad_annotator.max_af((row['chromosome'],row['start'],row['end'])), axis=1)
-    motif_df["min_af"] = motif_df.apply(lambda row: gnomad_annotator.min_af((row['chromosome'],row['start'],row['end'])), axis=1)
-    motif_df["num_variants"] = motif_df.apply(lambda row: gnomad_annotator.num_variants((row['chromosome'],row['start'],row['end'])), axis=1)
-    motif_df["num_rare_variants"] = motif_df.apply(lambda row: gnomad_annotator.num_rare_variants((row['chromosome'],row['start'],row['end'])), axis=1)
-    motif_df["num_common_variants"] = motif_df.apply(lambda row: gnomad_annotator.num_common_variants((row['chromosome'],row['start'],row['end'])), axis=1)
+    motif_df["af"] = motif_df.apply(lambda row: gnomad_annotator.annotate((row['chromosome'],row['start'],row['end'])), axis=1)
     # add phylop info
     motif_df = get_phylop(motif_df,"100way",phylop100way_annotator)
     motif_df = get_phylop(motif_df,"241way",phylop241way_annotator)
     motif_df = get_phylop(motif_df,"447way",phylop447way_annotator)
     motif_df = get_phylop(motif_df,"447wayLRT",phylop447wayLRT_annotator)
     motif_df = motif_df.round(3)
+
     # add sequence information
     motif_df["seq_idx"]= f"Seq{idx}"
     # write to csv
@@ -109,7 +102,7 @@ if __name__ == "__main__":
     args=parser.parse_args()
     
     # Load data and tools
-    df_regions=pr.read_bed(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/{args.file_name}.bed").df
+    df_regions=pr.read_bed(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/promoters_hepg2.bed").df
     #df_regions=pr.read_bed(f"/isdata/alab/people/pcr980/DeepCompare/Pd1_bed_processed/{args.file_name}.bed").df
     df_regions.iloc[:,2]=df_regions.iloc[:,2]-1
     
