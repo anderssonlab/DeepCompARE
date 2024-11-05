@@ -3,7 +3,6 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy import stats
-from sklearn.decomposition import PCA
 from scipy.stats import pearsonr, spearmanr
 
 
@@ -27,8 +26,8 @@ def read_joint_dispersion():
 
 
 
-tfs_redundant = pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_redundant_lenient.txt",header=None)[0].to_list()
-tfs_codependent = pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_codependent_lenient.txt",header=None)[0].to_list()
+tfs_redundant = pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_redundant_merged.txt",header=None)[0].to_list()
+tfs_codependent = pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_codependent_merged.txt",header=None)[0].to_list()
 df_tf_dispersion=read_joint_dispersion()
 df_tf_dispersion["tf_type"]=np.where(df_tf_dispersion["gene"].isin(tfs_redundant),"redundant",np.where(df_tf_dispersion["gene"].isin(tfs_codependent),"codependent","other"))
 df_tf_dispersion=df_tf_dispersion[df_tf_dispersion["tf_type"]!="other"].reset_index(drop=True)
@@ -39,14 +38,9 @@ stat, p_value = stats.ranksums(tfs_redundant_ranks,tfs_codependent_ranks)
 print(f"p-value: {p_value}")
 print(tfs_redundant_ranks.median()>tfs_codependent_ranks.median())
 
-tfs_codependent_ranks = df_tf_dispersion[df_tf_dispersion["tf_type"]=="codependent"]["mean_rank"]
-tfs_redundant_ranks = df_tf_dispersion[df_tf_dispersion["tf_type"]=="redundant"]["mean_rank"]
-stat, p_value = stats.ranksums(tfs_redundant_ranks,tfs_codependent_ranks)
-print(tfs_redundant_ranks.median()>tfs_codependent_ranks.median())
-
 sns.kdeplot(data=df_tf_dispersion,x="gini",hue="tf_type",common_norm=False)
 plt.title("Gini coefficient distribution")
-plt.savefig("Plots/gini_distribution_lenient.pdf") 
+plt.savefig("Plots/gini_distribution.pdf") 
 plt.close()
 
 
@@ -55,20 +49,29 @@ plt.close()
 #  calculate correlation between cooperativity ratio and gini
 
 df_dispersion=read_joint_dispersion()
-df_tf_cooperativity_ratio=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tf_cooperativity_ratio_lenient.csv")
-df_dispersion=df_dispersion.merge(df_tf_cooperativity_ratio,left_on="gene",right_on="protein2",how="inner")
+df_tf_cooperativity_index=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tf_cooperativity_index_merged.csv")
+df_dispersion=df_dispersion.merge(df_tf_cooperativity_index,left_on="gene",right_on="protein2",how="inner")
 df_dispersion["tf_type"]=np.where(df_dispersion["protein2"].isin(tfs_redundant),"redundant",np.where(df_dispersion["protein2"].isin(tfs_codependent),"codependent","other"))
 
-pcc,p_pear=pearsonr(df_dispersion["cooperativity_ratio"],df_dispersion["gini"])
-scc,p_spear=spearmanr(df_dispersion["cooperativity_ratio"],df_dispersion["gini"])
+pcc,p_pear=pearsonr(df_dispersion["cooperativity_index"],df_dispersion["gini"])
+scc,p_spear=spearmanr(df_dispersion["cooperativity_index"],df_dispersion["gini"])
 
-# sns scatter plot, x=cooperativity_ratio, y=gini,shape by tf_type, add a linear fit
-sns.regplot(data=df_dispersion,x="cooperativity_ratio",y="gini",scatter=False,color="black")
-sns.scatterplot(data=df_dispersion,x="cooperativity_ratio",y="gini",hue="tf_type")
+# sns
+sns.regplot(data=df_dispersion,x="cooperativity_index",y="gini",scatter=False,color="black")
+sns.scatterplot(data=df_dispersion,x="cooperativity_index",y="gini",hue="tf_type")
 plt.ylim(0,1.2)
 # annotate with spearman and pearson correlation, retain 2 decimal points
 plt.text(0.5, 1.1, f"Pearson corr: {pcc:.2f} (p: {p_pear:.2f})\nSpearman corr: {scc:.2f} (p: {p_spear:.2f})")
-plt.title("Cooperativity ratio vs Gini coefficient")
-plt.savefig("Plots/cooperativity_ratio_vs_gini_lenient.pdf")
+plt.title("Cooperativity index vs Gini coefficient")
+plt.savefig("Plots/cooperativity_index_vs_gini.pdf")
+plt.close()
+
+
+# sns boxplot, x=tf_type, y=gini,shape by tf_type, add a linear fit
+# make tf_type categorical with codependent, other, redundant
+df_dispersion["tf_type"]=pd.Categorical(df_dispersion["tf_type"],categories=["codependent","other","redundant"],ordered=True)
+sns.boxplot(data=df_dispersion,x="tf_type",y="gini")
+plt.title("Gini coefficient of different TF types")
+plt.savefig("Plots/box_gini_by_tf_type.pdf")
 plt.close()
 

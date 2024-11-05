@@ -9,11 +9,12 @@ from seq_ops import SeqExtractor
 from seq_annotators import JasparAnnotator, BindingEvidenceAnnotator
 from loguru import logger
 from tf_cooperativity import write_pair_mutation
+
 #-----------------------
 # Functions
 #-----------------------
 
-
+# TODO: change sep
 def analysis(file_prefix,device,sep=" "):
     be_type = get_binding_evidence(file_prefix)
     # load data and tools

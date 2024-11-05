@@ -1,8 +1,8 @@
 import pandas as pd
-import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr,spearmanr,ks_2samp
+from adjustText import adjust_text
 
 import sys
 
@@ -33,7 +33,7 @@ def preprocess_file(file_path,track_nums,remove_confusion=True):
     return df
 
 
-df_coop=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tf_cooperativity_ratio_lenient.csv")
+df_coop=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tf_cooperativity_index_merged.csv")
 
 df_promoter_hepg2=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_promoters_hepg2.csv",track_nums=[0,2,4,6])
 df_promoter_k562=preprocess_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_promoters_k562.csv",track_nums=[1,3,5,7])
@@ -49,23 +49,83 @@ df.fillna(0,inplace=True)
 
 df_grouped=df.groupby(["protein2"]).agg({"cage":"mean","dhs":"mean","starr":"mean","sure":"mean"}).reset_index()
 df_grouped.fillna(0,inplace=True)
-df_coop=pd.merge(df_grouped,df_coop[["protein2","cooperativity_ratio"]],left_on="protein2",right_on="protein2",how="inner")
+df_coop=pd.merge(df_grouped,df_coop[["protein2","cooperativity_index"]],left_on="protein2",right_on="protein2",how="inner")
+# df_coop.to_csv("tf_effect_vs_cooperativity_index.csv",index=False)
 
-
-
+# color by TF type
+tfs_codepedent=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_codependent_merged.txt",header=None)[0].values
+tfs_redundant=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_redundant_merged.txt",header=None)[0].values
 # scatter plot
-for track in ["cage","dhs","starr","sure"]:
-    # small dots
-    sns.regplot(x=f"{track}",y="cooperativity_ratio",data=df_coop,scatter_kws={"s":1})
-    # annotate with protein name
-    for i in range(df_coop.shape[0]):
-        plt.text(df_coop[track][i],df_coop["cooperativity_ratio"][i],df_coop["protein2"][i],fontsize=6)
-    # annotate with pearson r
-    r,p=pearsonr(df_coop[track],df_coop["cooperativity_ratio"])
-    plt.text(0.7,0.9,f"pearson r={r:.2f}\np={p:.2f}",transform=plt.gca().transAxes)
-    plt.title(f"TF effect on {track} vs cooperativity ratio")
-    plt.savefig(f"cr_vs_{track}_lenient.pdf")
-    plt.close()
+df_coop["tf_type"]="other"
+df_coop.loc[df_coop["protein2"].isin(tfs_codepedent),"tf_type"]="codependent"
+df_coop.loc[df_coop["protein2"].isin(tfs_redundant),"tf_type"]="redundant"
+
+
+track="cage"
+sns.regplot(x=f"{track}",y="cooperativity_index",data=df_coop,scatter_kws={"s":1})
+# annotate with protein name
+max_val=df_coop[track].max()
+texts = []
+for i,row in df_coop.iterrows():
+    if row["tf_type"]=="redundant":
+        if row[track]>0.5:
+            text = plt.text(row[track], row["cooperativity_index"], row["protein2"], fontsize=6,color="#2ca02c")
+            texts.append(text)
+    elif row["tf_type"]=="codependent":
+            if row[track]>0.2:
+                text = plt.text(row[track], row["cooperativity_index"], row["protein2"], fontsize=6,color="#ff7f0e")
+                texts.append(text)
+    else:
+        pass
+
+adjust_text(texts)
+r,p=pearsonr(df_coop[track],df_coop["cooperativity_index"])
+plt.text(0.6,0.7,f"Pearson R={r:.2f}",transform=plt.gca().transAxes)
+plt.title(f"TF effect on {track} vs cooperativity index")
+# add legend: codependent in blue, redundant in orange
+plt.scatter([],[],color="#ff7f0e",label="codependent")
+plt.scatter([],[],color="#2ca02c",label="redundant")
+plt.legend(title="TF type")
+plt.savefig(f"Plots/ci_vs_{track}.pdf")
+plt.close()
+
+
+
+
+
+
+
+
+track="starr"
+sns.regplot(x=f"{track}",y="cooperativity_index",data=df_coop,scatter_kws={"s":1})
+# annotate with protein name
+max_val=df_coop[track].max()
+texts = []
+for i,row in df_coop.iterrows():
+    if row["tf_type"]=="redundant":
+        if row[track]>0.04:
+            text = plt.text(row[track], row["cooperativity_index"], row["protein2"], fontsize=6,color="#2ca02c")
+            texts.append(text)
+    elif row["tf_type"]=="codependent":
+            if row[track]>0.1:
+                text = plt.text(row[track], row["cooperativity_index"], row["protein2"], fontsize=6,color="#ff7f0e")
+                texts.append(text)
+    else:
+        pass
+
+adjust_text(texts)
+r,p=pearsonr(df_coop[track],df_coop["cooperativity_index"])
+plt.text(0.4,0.9,f"Pearson R={r:.2f}",transform=plt.gca().transAxes)
+plt.title(f"TF effect on {track} vs cooperativity index")
+# add legend: codependent in blue, redundant in orange
+plt.scatter([],[],color="#ff7f0e",label="codependent")
+plt.scatter([],[],color="#2ca02c",label="redundant")
+plt.legend(title="TF type")
+plt.savefig(f"Plots/ci_vs_{track}.pdf")
+plt.close()
+
+
+
 
 
 
@@ -124,7 +184,7 @@ df_stat=pd.merge(df_stat,df_median,left_on="protein2",right_on="protein2",how="i
 df_stat["significant"]=(df_stat["avg_effect"]!=0)
 
 # merge with cooperativity ratio
-df_stat=pd.merge(df_stat,df_coop[["protein2","cooperativity_ratio"]],left_on="protein2",right_on="protein2",how="inner")
+df_stat=pd.merge(df_stat,df_coop[["protein2","cooperativity_index"]],left_on="protein2",right_on="protein2",how="inner")
 
 
 # any rows with all negative values?
@@ -133,7 +193,7 @@ df_stat[(df_stat[["cage","dhs","starr","sure"]]>=0).all(axis=1)]
 
 
 # shape by significance, hue by cooperativity ratio
-sns.scatterplot(x="redundant_median",y="codependent_median",data=df_stat,hue="cooperativity_ratio",style="significant")
+sns.scatterplot(x="redundant_median",y="codependent_median",data=df_stat,hue="cooperativity_index",style="significant")
 plt.title("tf effect comparison")
 # add diagonal line
 min_val=min(df_stat["redundant_median"].min(),df_stat["codependent_median"].min())

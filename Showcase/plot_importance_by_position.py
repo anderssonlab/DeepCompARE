@@ -1,0 +1,284 @@
+# https://kircherlab.bihealth.org/satMutMPRA/
+
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+import sys
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
+from prediction import compute_predictions
+from seq_ops import SeqExtractor,ablate_motifs
+from region_ops import resize_region
+from seq_annotators import JasparAnnotator
+from in_silico_mutagenesis import compute_ism
+
+
+
+#---------------
+# Load annotators
+#---------------
+seq_extractor=SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
+jaspar_hepg2_annotator=JasparAnnotator("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2022_hg38.bb",
+                                       "contained",
+                                       chip_file="/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_hepg2.bed",
+                                       rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tfs_hepg2.txt"
+                                       )
+jaspar_k562_annotator=JasparAnnotator("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2022_hg38.bb",
+                                       "contained",
+                                       chip_file="/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_k562.bed",
+                                       rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tfs_k562.txt"
+                                       )
+
+#---------------
+# Helper functions
+#---------------
+
+def get_motif_isa(sequence,motif_df,track_num):
+    motif_df["seq_orig"]= sequence
+    motif_df['seq_mut'] = motif_df.apply(lambda row: ablate_motifs(sequence, row['start_rel'], row['end_rel']), axis=1)
+    pred_orig=compute_predictions(motif_df["seq_orig"])[:,track_num]
+    pred_mut=compute_predictions(motif_df["seq_mut"])[:,track_num]
+    motif_df["isa"]=pred_orig-pred_mut
+    motif_df.drop(columns=["seq_orig","seq_mut"],inplace=True)
+    return motif_df
+
+
+def get_motifs(jaspar_annotator,region,seq,track_num,score_threshold):
+    df_motif=jaspar_annotator.annotate(region)
+    df_chip=df_motif.loc[df_motif["chip_evidence"]==True,:].reset_index(drop=True)
+    df_rest=df_motif.loc[df_motif["chip_evidence"]==False,:].reset_index(drop=True)
+    df_rna=df_rest.loc[df_rest["rna_evidence"]==True,:].reset_index(drop=True)
+    df_rna=df_rna.loc[df_rna["score"]>=score_threshold,:].reset_index(drop=True)
+    df_motif=pd.concat([df_chip,df_rna],axis=0).reset_index(drop=True)
+    df_motif["start_rel"]=df_motif["start"]-region[1]
+    df_motif["end_rel"]=df_motif["end"]-region[1]
+    # order by start_rel
+    df_motif=df_motif.sort_values(by="start_rel").reset_index(drop=True)
+    # remove protein with "::"
+    df_motif=df_motif[~df_motif["protein"].str.contains("::")].copy().reset_index(drop=True)
+    df_motif=get_motif_isa(seq,df_motif,track_num)
+    return df_motif
+
+
+def reduce_protein_names(protein_list):
+    protein_list=list(set(protein_list))
+    # order alphabetically
+    protein_list.sort()
+    # if there are more than 3 proteins sharing same prefix of length > 4
+    # only keep the prefix, followed by "s"
+    # eg: hoxa9, hoxa9b, hoxa9c -> hoxa9s
+    protein_dict={}
+    for protein in protein_list:
+        prefix=protein[:4]
+        if prefix in protein_dict:
+            protein_dict[prefix].append(protein)
+        else:
+            protein_dict[prefix]=[protein]
+    prefix_list=[]
+    for prefix in protein_dict:
+        if len(protein_dict[prefix])>1:
+            prefix_list.append(prefix+"s")
+        else:
+            prefix_list.append(protein_dict[prefix][0])
+    # concatenate by "\n"
+    return "\n".join(prefix_list)
+
+
+
+
+def reduce_motifs(df_motif,window=6):
+    # if start is within 3bp of another start
+    # choose the top 3 based on "score"
+    # concatenate protein with "\n", use largest "end" as end
+    df_res=pd.DataFrame()
+    while df_motif.shape[0]>0:
+        current_start=df_motif.loc[0,"start_rel"]
+        df_temp=df_motif[(df_motif["start_rel"]>=current_start) & (df_motif["start_rel"]<=(current_start+window))].copy().reset_index(drop=True)
+        df_temp=df_temp.sort_values(by="score",ascending=False).reset_index(drop=True)
+        df_temp=df_temp.iloc[:2,:]
+        df_temp["protein"]=reduce_protein_names(df_temp["protein"])
+        df_temp["isa"]=df_temp["isa"].mean()
+        df_temp["end_rel"]=df_temp["end_rel"].max()
+        df_temp["start_rel"]=df_temp["start_rel"].min()
+        df_temp["start"]=df_temp["start"].min()
+        df_temp["end"]=df_temp["end"].max()
+        df_res=df_res.append(df_temp.iloc[0,:],ignore_index=True)
+        # remove the rows in df_temp from df_motif
+        df_motif=df_motif[df_motif["start_rel"]>current_start+window].copy().reset_index(drop=True)
+    return df_res
+
+
+
+def plot_motif_imp(df_motif, ax):
+    # only relative position matters
+    # Hide spines
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    # Plot ISA score
+    ax.bar(df_motif["start_rel"], df_motif["isa"], width=df_motif["end_rel"] - df_motif["start_rel"], color="#1f77b4", alpha=0.5, align='edge')
+    ax.axhline(0, color='black', lw=0.5)
+    # Add text labels for proteins
+    prev_text_pos=0
+    for idx, row in df_motif.iterrows():
+        current_text_pos=row["start_rel"]
+        if current_text_pos-prev_text_pos<7:
+            current_text_pos=prev_text_pos+7
+            if current_text_pos>row["end_rel"]:
+                pass
+                # raise ValueError("Annotation overlap cannot be resolved")
+        ax.text(current_text_pos,row["isa"], row["protein"], rotation=90, fontsize=10)
+        prev_text_pos=current_text_pos
+    # Set title and labels
+    ax.set_title("Motif ISA score",fontsize=16)
+
+
+
+def plot_base_imp(df,ax,title,xlabel=False):
+    """
+    df have columns "position", "base", "imp"
+    """
+    # Hide spines
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.bar(df["position"], df["imp"], color="#1f77b4", alpha=0.5)
+    ax.axhline(0, color='black', lw=0.5)
+    # Create color map for bases
+    color_dict = {"A": "#1f77b4", "C": "#ff7f0e", "G": "#2ca02c", "T": "#d62728"}
+    # Plot markers for each base
+    for row in df.itertuples():
+        ax.plot(row.position, row.imp, marker="o", color=color_dict[row.base])
+    # Set title and labels
+    ax.set_title(title,fontsize=16)
+    if xlabel:
+        ax.set_xlabel("Position")
+    # Create legend
+    handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
+    ax.legend(handles=handles, title="Bases")
+
+
+
+
+
+def plot_region(jaspar_annotator, df_truth, element_name, region, track_num, score_threshold):
+    region_resized=resize_region(region,599,fix="center")
+    left_shift=region[1]-region_resized[1]
+    # get seq
+    seq=seq_extractor.get_seq(region)
+    seq_resized=seq_extractor.get_seq(region_resized)
+    # get base importance
+    isa=compute_ism(seq_resized,"isa","mean").loc[f"Seq0_Track{track_num}",:]
+    isa=isa[left_shift:(left_shift+region[2]-region[1]+1)].reset_index(drop=True)
+    ism=compute_ism(seq_resized,"ism","mean").loc[f"Seq0_Track{track_num}",:]
+    ism=ism[left_shift:(left_shift+region[2]-region[1]+1)].reset_index(drop=True)
+    # get df_motif
+    df_motif=get_motifs(jaspar_annotator,region_resized,seq_resized,track_num,score_threshold)
+    df_motif=reduce_motifs(df_motif)
+    # subset to region
+    df_motif=df_motif[(df_motif.loc[:,"start"]>=region[1]) & (df_motif.loc[:,"end"]<=region[2])].copy().reset_index(drop=True)
+    df_motif["start_rel"]-=left_shift
+    df_motif["end_rel"]-=left_shift
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True, figsize=(20, 15))
+    # Plot ISA score on the first axis
+    plot_motif_imp(df_motif, ax1)
+    # plot isa on the second axis
+    df_n= pd.DataFrame({"position":list(range(len(isa))),"base":list(seq),"imp":isa})
+    plot_base_imp(df_n,ax2,"ISA (Base replaced by N)")
+    df_a=pd.DataFrame({"position":list(range(len(ism))),"base":list(seq),"imp":ism})
+    plot_base_imp(df_a,ax3,"ISM (Average of 3 alternative bases)")
+    # rename "Position" to "position", "Value" to "imp","Ref" to "base"
+    df_truth=df_truth.loc[df_truth["Element"]==element_name,:].reset_index(drop=True)
+    df_truth["position"]=df_truth["position"]-region[1]
+    plot_base_imp(df_truth,ax4,"MPRA experiment",xlabel=True)
+    plt.tight_layout()
+    plt.savefig(f"{element_name}_track{track_num}.pdf")
+    plt.close()
+
+
+
+
+
+
+
+
+# truth
+df_truth=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Showcase/GRCh38_TERT-GAa_TERT-GSc_TERT-GBM_TERT-HEK_LDLR_F9_PKLR-24h_SORT1.tsv",sep="\t")
+# select P-Value<0.05
+df_truth=df_truth.loc[df_truth["P-Value"]<0.05,:].reset_index(drop=True)
+# group by Position, Ref, Element, and select the largest Value
+# method 1: aggregate by mean
+df_truth=df_truth.groupby(["Position","Ref","Element"],as_index=False).agg({"Value":"mean"})
+# method 2: aggregate by max(key=abs)
+# df_truth = df_truth.groupby(["Position", "Ref", "Element"], as_index=False).agg({"Value": lambda x: x.loc[x.abs().idxmax()]})
+df_truth=df_truth.rename(columns={"Position":"position","Value":"imp","Ref":"base"})
+df_truth["imp"]=-df_truth["imp"]
+df_truth.Element.unique()
+
+
+
+
+for track_num in [0,2,4,6]:
+    # F9 promoter: chrX:139530463-139530765
+    plot_region(jaspar_hepg2_annotator,df_truth,"F9",("chrX",139530463,139530765),track_num,360)
+    # LDLR promoter: chr19:11,089,231-11,089,548
+    plot_region(jaspar_hepg2_annotator,df_truth,"LDLR",("chr19",11089231,11089548),track_num,500)
+
+
+
+for track_num in [1,3,5,7]:
+    # PKLR promoter: chr1:155,301,395-155,301,864
+    plot_region(jaspar_k562_annotator,df_truth,"PKLR-24h",("chr1",155301395,155301864),track_num,1000)
+
+
+
+
+
+
+#----------------------------------
+# Understand SNV on SORT1 enhancer
+#----------------------------------
+
+# SORT1 enhancer: chr1:109,274,652-109,275,251
+
+def plot_ism_ref_vs_mut(imp_ref,imp_mut,title_prefix):
+    fig, (ax0, ax1) = plt.subplots(2, 1, sharex=True, figsize=(20, 8))
+    # plot ism_ref on the first axis
+    df_ref= pd.DataFrame({"position":list(range(len(imp_ref))),"base":list(seq_ref),"imp":imp_ref})
+    plot_base_imp(df_ref,ax0,f"{title_prefix} (reference)")
+    # plot ism_mut on the second axis
+    df_mut=pd.DataFrame({"position":list(range(len(imp_mut))),"base":list(seq_ref),"imp":imp_mut})
+    plot_base_imp(df_mut,ax1,f"{title_prefix} (109274968:G>T)",xlabel=True)
+    # add a red box to position 315-323
+    ax0.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=2))
+    ax1.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=2))
+    plt.xlabel("Relative position")
+    plt.tight_layout()
+    plt.savefig(f"SORT1_enhancer_mutation_{title_prefix}.pdf")
+    plt.close()
+
+
+
+region=("chr1",109274652,109275251)
+seq_ref=seq_extractor.get_seq(region)
+
+# get relative position of the mutation 1-109274968-G-T
+mut_pos=109274968-109274652
+seq_ref[mut_pos]
+seq_mut=seq_ref[:mut_pos]+"T"+seq_ref[(mut_pos+1):]
+
+# calculate ism and isa
+track_num=4
+isa_ref=compute_ism(seq_ref,"isa","mean").loc[f"Seq0_Track{track_num}",:]
+ism_ref=compute_ism(seq_ref,"ism","mean").loc[f"Seq0_Track{track_num}",:]
+isa_mut=compute_ism(seq_mut,"isa","mean").loc[f"Seq0_Track{track_num}",:]
+ism_mut=compute_ism(seq_mut,"ism","mean").loc[f"Seq0_Track{track_num}",:]
+
+# plot
+plot_ism_ref_vs_mut(ism_ref,ism_mut,"ISM")
+plot_ism_ref_vs_mut(isa_ref,isa_mut,"ISA")
+
+
+
+

@@ -54,9 +54,9 @@ df_promoters_hepg2=pd.read_csv("promoters_hepg2_tf_pair_cooperativity_counts_len
 df_promoters_k562=pd.read_csv("promoters_k562_tf_pair_cooperativity_counts_lenient.csv")
 
 # count rows with codependent=0 or redundant=0
-df_sub=df_promoters_k562
+df_sub=df_promoters_hepg2
 df_sub.shape
-df_sub[(df_sub["codependent"]==0)].shape[0]
+df_sub[(df_sub["codependent_pair_percentage"]>0.9)]
 df_sub[(df_sub["redundant"]==0)].shape[0]
 
 
@@ -88,7 +88,7 @@ df_promoters_k562["codependent_pair_percentage"].median()
 # kdeplot codependent_pair_percentage, hue=dataset
 sns.kdeplot(data=df,x="codependent_pair_percentage",hue="dataset",common_norm=False)
 plt.title("Distribution of codependent pair percentage")
-plt.savefig("codependent_pair_percentage_lenient.png")
+plt.savefig("codependent_pair_percentage.pdf")
 plt.close()
 
 

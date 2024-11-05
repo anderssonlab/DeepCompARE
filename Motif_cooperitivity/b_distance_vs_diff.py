@@ -5,7 +5,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
-from loguru import logger
+
 
 def change_track_name(df):
     track_dict={"track0":"cage","track1":"cage",
@@ -61,13 +61,12 @@ def read_file(file_name):
     df=df[["protein1","protein2"]+cols_retain]
     for track_num in track_list:
         df[f"ism2_wo_1_track{track_num}"]=df[f"ism_both_track{track_num}"]-df[f"ism1_track{track_num}"]
-        # TODO: is np.abs() needed?
-        df[f"diff_track{track_num}"]=df[f"ism2_track{track_num}"]-df[f"ism2_wo_1_track{track_num}"]
+        df[f"diff_track{track_num}"]=np.abs(df[f"ism2_track{track_num}"]-df[f"ism2_wo_1_track{track_num}"])
     df=change_track_name(df)
     cols_retain=[col for col in df.columns if col.startswith("diff")]
     df=df[["protein1","protein2","distance"]+cols_retain]
-    # df=rearrange(df)
-    df["avg_diff"]=df[cols_retain].mean(axis=1)
+    df=rearrange(df)
+    # df["avg_diff"]=df[cols_retain].mean(axis=1)
     return df
 
 
@@ -81,7 +80,6 @@ df_enhancers_k562=read_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_p
 df_promoters_hepg2=read_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_promoters_hepg2.csv")
 df_promoters_k562=read_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_promoters_k562.csv")
 
-
 df_null=pd.concat([df_null_enhancers_hepg2,df_null_enhancers_k562,df_null_promoters_hepg2,df_null_promoters_k562])
 df_null=df_null.groupby(["distance","data"]).agg({"diff":"mean"}).reset_index()
 
@@ -92,6 +90,8 @@ df_alt=df_alt.groupby(["distance","data"]).agg({"diff":"mean"}).reset_index()
 sns.lineplot(x="distance", y="diff", data=df_alt, hue="data")
 sns.lineplot(x="distance", y="diff", data=df_null, hue="data", alpha=0.3,legend=False)
 plt.title("Effect of partner decreases as distance increases")
+plt.xlabel("Distance")
+plt.ylabel("Difference between TF effect with and without partner")
 plt.savefig(f"Plots/distance_vs_diff.pdf")
 plt.close()
 

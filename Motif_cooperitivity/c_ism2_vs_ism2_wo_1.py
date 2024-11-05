@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from matplotlib.colors import LinearSegmentedColormap
 
 
 def change_track_name(df):
@@ -40,14 +39,14 @@ def read_file(file_name):
 
 
 
-df_enhancers_hepg2=read_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_enhancers_hepg2.csv")
-df_promoters_hepg2=read_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_promoters_hepg2.csv")
-df_all=pd.concat([df_enhancers_hepg2,df_promoters_hepg2],axis=0)
+df_enhancers=read_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_enhancers_k562.csv")
+df_promoters=read_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_lenient_promoters_k562.csv")
+df_all=pd.concat([df_enhancers,df_promoters],axis=0)
 
 
-tf="HNF4A"
+tf="ELF1"
 suffix="sure"
-df=df_promoters_hepg2
+df=df_enhancers
 df_sub=df[df["protein2"]==tf].copy()
 plt.figure(figsize=(5,5))
 # smaller scatter plot
@@ -60,12 +59,18 @@ df_redundant=df_sub[df_sub[f'ism2_wo_1_{suffix}']>df_sub[f'ism2_{suffix}']]
 plt.text(min_val+0.1,max_val-0.1,f"# codependent pairs: {df_codependent.shape[0]}",fontsize=8)
 plt.text(min_val+0.2,min_val+0.1,f"# redundant pairs: {df_redundant.shape[0]}",fontsize=8)
 plt.plot([min_val,max_val],[min_val,max_val],color='black',linestyle='--',linewidth=0.5)
-plt.title(f"{tf}, promoters")
-plt.legend(loc='lower right')
-plt.savefig(f"Plots/{tf}_track_{suffix}_promoters.pdf",dpi=300)
+plt.title(f"{tf}, enhancers")
+# legend title: distance
+plt.legend(loc='lower right',title="distance (bp)")
+plt.xlabel(f"ELF1 effect size without partner")
+plt.ylabel(f"ELF1 effect size with partner")
+# tight layout
+plt.tight_layout()
+plt.savefig(f"Plots/{tf}_track_{suffix}_enhancers.pdf",dpi=300)
 plt.close()
 
 
 
 
+#
 

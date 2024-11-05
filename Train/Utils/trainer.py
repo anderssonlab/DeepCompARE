@@ -96,16 +96,18 @@ class Trainer(ABC):
         self.n_epochs = param_dict["n_epochs"]
         self.batch_size = param_dict["batch_size"]
         self.batch_size_val = self.batch_size * 2
+        self.train_function = None
+        self.val_function = None
 
 
-    def _train_epoch(self, train_function):
+    def _train_epoch(self):
         self.model.train()
         idx_array = torch.randperm(self.train_dat.len, device=self.device)
         for i in range(math.ceil(self.train_dat.len / self.batch_size)):
             start_idx, end_idx = self.batch_size*i, min(self.batch_size*(i+1), self.train_dat.len)
             idx = idx_array[start_idx:end_idx].cpu().numpy()  
             self.optimizer.zero_grad()
-            loss_backprop, loss_reg, pred_all_correct = train_function(self.device, self.model, self.train_dat, idx, self.weight)
+            loss_backprop, loss_reg, pred_all_correct = self.train_function(self.device, self.model, self.train_dat, idx, self.weight)
             loss_backprop.backward()
             self.optimizer.step()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5, norm_type=2.0)
@@ -114,13 +116,13 @@ class Trainer(ABC):
         self.record_train.calculate()
         self.record_train.clean()
 
-    def _val(self, val_function):
+    def _val(self):
         self.model.eval()
         with torch.no_grad():
             for i in range(math.ceil(self.val_dat.len / self.batch_size_val)):
                 start_idx, end_idx = self.batch_size_val*i, min(self.batch_size_val*(i+1), self.val_dat.len)
                 idx = list(range(start_idx, end_idx))
-                _, loss_reg, pred_all_correct = val_function(self.device, self.model, self.val_dat, idx, self.weight)
+                _, loss_reg, pred_all_correct = self.val_function(self.device, self.model, self.val_dat, idx, self.weight)
                 self.record_val.batch_update(len(idx),loss_reg,pred_all_correct)
 
             self.record_val.calculate()
@@ -130,7 +132,7 @@ class Trainer(ABC):
         for epoch in range(self.n_epochs):
             self._train_epoch()
             if epoch % 2 == 0:
-                self.val()
+                self._val()
 
         return self.record_train.return_res(), self.record_val.return_res()
     
@@ -151,12 +153,14 @@ class CR_MT(Trainer):
         self.weight = torch.tensor(param_dict["weight"], device=device)
         self.record_train = Record(device, self.n_epochs,8)
         self.record_val = Record(device, self.n_epochs,8)
+        self.train_function = run_CR_MT
+        self.val_function = run_CR_MT
 
     def train_epoch(self):
-        self._train_epoch(run_CR_MT)
+        self._train_epoch()
 
     def val(self):
-        self._val(run_CR_MT)
+        self._val()
 
 class Reg_MT(Trainer):
     """
@@ -167,12 +171,14 @@ class Reg_MT(Trainer):
         self.weight = torch.tensor(param_dict["weight"], device=device)
         self.record_train = Record(device, self.n_epochs,8)
         self.record_val = Record(device, self.n_epochs,8)
+        self.train_function = run_regression_MT
+        self.val_function = run_regression_MT
 
     def train_epoch(self):
-        self._train_epoch(run_regression_MT)
+        self._train_epoch()
 
     def val(self):
-        self._val(run_regression_MT)
+        self._val()
 
 
 class Class_MT(Trainer):
@@ -184,12 +190,14 @@ class Class_MT(Trainer):
         self.weight = False
         self.record_train = Record(device, self.n_epochs,8)
         self.record_val = Record(device, self.n_epochs,8)
+        self.train_function = run_classification_MT
+        self.val_function = run_classification_MT
 
     def train_epoch(self):
-        self._train_epoch(run_classification_MT)
+        self._train_epoch()
 
     def val(self):
-        self._val(run_classification_MT)
+        self._val()
 
 
 
@@ -208,12 +216,14 @@ class CR_ST(Trainer):
         self.weight = False
         self.record_train = Record(device, self.n_epochs,1)
         self.record_val = Record(device, self.n_epochs,1)
+        self.train_function = run_CR_ST
+        self.val_function = run_CR_ST
 
     def train_epoch(self):
-        self._train_epoch(run_CR_ST)
+        self._train_epoch()
 
     def val(self):
-        self._val(run_CR_ST)
+        self._val()
 
 
 class Reg_ST(Trainer):
@@ -225,12 +235,14 @@ class Reg_ST(Trainer):
         self.weight = False
         self.record_train = Record(device, self.n_epochs,1)
         self.record_val = Record(device, self.n_epochs,1)
+        self.train_function = run_regression_ST
+        self.val_function = run_regression_ST
 
     def train_epoch(self):
-        self._train_epoch(run_regression_ST)
+        self._train_epoch()
 
     def val(self):
-        self._val(run_regression_ST)
+        self._val()
 
 
 class Class_ST(Trainer):
@@ -242,10 +254,12 @@ class Class_ST(Trainer):
         self.weight = False
         self.record_train = Record(device, self.n_epochs,1)
         self.record_val = Record(device, self.n_epochs,1)
+        self.train_function = run_classification_ST
+        self.val_function = run_classification_ST
 
     def train_epoch(self):
-        self._train_epoch(run_classification_ST)
+        self._train_epoch()
 
     def val(self):
-        self._val(run_classification_ST)
+        self._val()
 
