@@ -3,17 +3,14 @@
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-import numpy as np
 import pandas as pd
-import seaborn as sns
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
-from prediction import compute_predictions
-from seq_ops import SeqExtractor,ablate_motifs
+from seq_ops import SeqExtractor
 from region_ops import resize_region
 from seq_annotators import JasparAnnotator
-from in_silico_mutagenesis import compute_ism
+from in_silico_mutagenesis import compute_ism, get_motif_isa
 
 
 
@@ -24,43 +21,36 @@ seq_extractor=SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
 jaspar_hepg2_annotator=JasparAnnotator("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2022_hg38.bb",
                                        "contained",
                                        chip_file="/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_hepg2.bed",
-                                       rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tfs_hepg2.txt"
+                                       rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_hepg2.tsv"
                                        )
 jaspar_k562_annotator=JasparAnnotator("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2022_hg38.bb",
                                        "contained",
                                        chip_file="/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_k562.bed",
-                                       rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tfs_k562.txt"
+                                       rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_k562.tsv"
                                        )
 
 #---------------
 # Helper functions
 #---------------
 
-def get_motif_isa(sequence,motif_df,track_num):
-    motif_df["seq_orig"]= sequence
-    motif_df['seq_mut'] = motif_df.apply(lambda row: ablate_motifs(sequence, row['start_rel'], row['end_rel']), axis=1)
-    pred_orig=compute_predictions(motif_df["seq_orig"])[:,track_num]
-    pred_mut=compute_predictions(motif_df["seq_mut"])[:,track_num]
-    motif_df["isa"]=pred_orig-pred_mut
-    motif_df.drop(columns=["seq_orig","seq_mut"],inplace=True)
-    return motif_df
 
 
-def get_motifs(jaspar_annotator,region,seq,track_num,score_threshold):
+def get_motifs(seq_extractor,jaspar_annotator,region,track_num,score_threshold):
     df_motif=jaspar_annotator.annotate(region)
+    # remove uncertain proteins
+    df_motif=df_motif[~df_motif["protein"].str.contains("::")].copy().reset_index(drop=True)
     df_chip=df_motif.loc[df_motif["chip_evidence"]==True,:].reset_index(drop=True)
     df_rest=df_motif.loc[df_motif["chip_evidence"]==False,:].reset_index(drop=True)
     df_rna=df_rest.loc[df_rest["rna_evidence"]==True,:].reset_index(drop=True)
     df_rna=df_rna.loc[df_rna["score"]>=score_threshold,:].reset_index(drop=True)
     df_motif=pd.concat([df_chip,df_rna],axis=0).reset_index(drop=True)
-    df_motif["start_rel"]=df_motif["start"]-region[1]
-    df_motif["end_rel"]=df_motif["end"]-region[1]
-    # order by start_rel
-    df_motif=df_motif.sort_values(by="start_rel").reset_index(drop=True)
-    # remove protein with "::"
-    df_motif=df_motif[~df_motif["protein"].str.contains("::")].copy().reset_index(drop=True)
-    df_motif=get_motif_isa(seq,df_motif,track_num)
+    # sort df_motif by "start"
+    df_motif=df_motif.sort_values(by="start").reset_index(drop=True)
+    # get motif isa
+    df_motif=get_motif_isa(seq_extractor,df_motif,track_num)
+    df_motif.rename(columns={f"isa_track{track_num}":"isa"},inplace=True)
     return df_motif
+
 
 
 def reduce_protein_names(protein_list):
@@ -89,7 +79,7 @@ def reduce_protein_names(protein_list):
 
 
 
-def reduce_motifs(df_motif,window=6):
+def reduce_motifs(df_motif,window=4):
     # if start is within 3bp of another start
     # choose the top 3 based on "score"
     # concatenate protein with "\n", use largest "end" as end
@@ -124,8 +114,8 @@ def plot_motif_imp(df_motif, ax):
     prev_text_pos=0
     for idx, row in df_motif.iterrows():
         current_text_pos=row["start_rel"]
-        if current_text_pos-prev_text_pos<7:
-            current_text_pos=prev_text_pos+7
+        if current_text_pos-prev_text_pos<5:
+            current_text_pos=prev_text_pos+5
             if current_text_pos>row["end_rel"]:
                 pass
                 # raise ValueError("Annotation overlap cannot be resolved")
@@ -162,7 +152,7 @@ def plot_base_imp(df,ax,title,xlabel=False):
 
 
 
-def plot_region(jaspar_annotator, df_truth, element_name, region, track_num, score_threshold):
+def plot_region(seq_extractor,jaspar_annotator, df_truth, element_name, region, track_num, score_threshold):
     region_resized=resize_region(region,599,fix="center")
     left_shift=region[1]-region_resized[1]
     # get seq
@@ -174,7 +164,7 @@ def plot_region(jaspar_annotator, df_truth, element_name, region, track_num, sco
     ism=compute_ism(seq_resized,"ism","mean").loc[f"Seq0_Track{track_num}",:]
     ism=ism[left_shift:(left_shift+region[2]-region[1]+1)].reset_index(drop=True)
     # get df_motif
-    df_motif=get_motifs(jaspar_annotator,region_resized,seq_resized,track_num,score_threshold)
+    df_motif=get_motifs(seq_extractor,jaspar_annotator,region_resized,track_num,score_threshold)
     df_motif=reduce_motifs(df_motif)
     # subset to region
     df_motif=df_motif[(df_motif.loc[:,"start"]>=region[1]) & (df_motif.loc[:,"end"]<=region[2])].copy().reset_index(drop=True)
@@ -219,9 +209,13 @@ df_truth.Element.unique()
 
 
 
+
+
+
+
 for track_num in [0,2,4,6]:
     # F9 promoter: chrX:139530463-139530765
-    plot_region(jaspar_hepg2_annotator,df_truth,"F9",("chrX",139530463,139530765),track_num,360)
+    plot_region(seq_extractor,jaspar_hepg2_annotator,df_truth,"F9",("chrX",139530463,139530765),track_num,360) # window 4, text space 5
     # LDLR promoter: chr19:11,089,231-11,089,548
     plot_region(jaspar_hepg2_annotator,df_truth,"LDLR",("chr19",11089231,11089548),track_num,500)
 

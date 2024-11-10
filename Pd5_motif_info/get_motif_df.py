@@ -10,35 +10,12 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from seq_ops import SeqExtractor, ablate_motifs
 from region_ops import resize_df
 from prediction import compute_predictions
-from seq_annotators import JasparAnnotator, BindingEvidenceAnnotator, gnomadAnnotator, phylopAnnotator
+from seq_annotators import JasparAnnotator, gnomadAnnotator, phylopAnnotator
 #-----------------------
 # Functions
 #-----------------------
 
-
-def get_predictions(seq_col,device,prefix):
-    pred=compute_predictions(seq_col,device=device)
-    df_pred=pd.DataFrame(pred,columns=[f"pred_{prefix}_track{i}" for i in range(16)])
-    return df_pred
-
-
-
-
-def get_isms(seq_extractor,motif_df,region,device):
-    sequence=seq_extractor.get_seq(region)
-    motif_df["seq_orig"]= sequence
-    motif_df['seq_mut'] = motif_df.apply(lambda row: ablate_motifs(sequence, row['start_rel'], row['end_rel']), axis=1)
-    df_pred_orig=get_predictions(motif_df["seq_orig"],device=device,prefix="orig").round(3)
-    df_pred_mut=get_predictions(motif_df["seq_mut"],device=device,prefix="mut").round(3)
-    motif_df=pd.concat([motif_df,df_pred_orig,df_pred_mut],axis=1)
-    for i in range(16):
-        motif_df[f"ism_track{i}"]=motif_df[f"pred_orig_track{i}"]-motif_df[f"pred_mut_track{i}"]
-        motif_df[f"ism_track{i}"]=motif_df[f"ism_track{i}"].round(3)
-        motif_df.drop(columns=[f"pred_mut_track{i}"],inplace=True)
-    motif_df.drop(columns=["seq_orig","seq_mut"],inplace=True)
-    return motif_df
-
-
+# TODO: refactor, and add region info, use get_motif_isa(), make gnomadAnnotator smaller, and remove it and gc() when done
 
 def get_phylop(motif_df,prefix, phylop_annotator):
     motif_df[f"{prefix}"] = motif_df.apply(lambda row: phylop_annotator.annotate((row['chromosome'],row['start'],row['end'])), axis=1)
@@ -54,10 +31,8 @@ def annotate_one_region(idx,
                         jaspar_annotator, 
                         be_annotator,
                         gnomad_annotator,
-                        phylop100way_annotator,
                         phylop241way_annotator,
                         phylop447way_annotator,
-                        phylop447wayLRT_annotator, 
                         device,
                         score_thresh=500):
     motif_df=jaspar_annotator.annotate(region)
@@ -75,10 +50,8 @@ def annotate_one_region(idx,
     # add gnomad info
     motif_df["af"] = motif_df.apply(lambda row: gnomad_annotator.annotate((row['chromosome'],row['start'],row['end'])), axis=1)
     # add phylop info
-    motif_df = get_phylop(motif_df,"100way",phylop100way_annotator)
     motif_df = get_phylop(motif_df,"241way",phylop241way_annotator)
     motif_df = get_phylop(motif_df,"447way",phylop447way_annotator)
-    motif_df = get_phylop(motif_df,"447wayLRT",phylop447wayLRT_annotator)
     motif_df = motif_df.round(3)
 
     # add sequence information
@@ -108,48 +81,31 @@ if __name__ == "__main__":
     # rename columns
     df_regions.columns=["chromosome","start","end","name"]
     df_regions=resize_df(df_regions,600)
-    df_regions.iloc[:,2]=df_regions.iloc[:,2]-1
+    df_regions["end"]=df_regions["end"]-1
     
-    # load tools
+    # for debug purposes
+    df_regions=df_regions.iloc[:10,:]
+    
+    # load sequence extractor
     seq_extractor = SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
-    jaspar_annotator=JasparAnnotator("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2022_hg38.bb",by="contained")
+
+    # load jaspar annotator
+    if "hepg2" in args.file_name:
+        rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_hepg2.tsv"
+    if "k562" in args.file_name:
+        rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_k562.tsv"
+    jaspar_annotator=JasparAnnotator("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2022_hg38.bb",
+                                     score_thresh=500,
+                                     rna_file=rna_file)
+    
+    df_motif=jaspar_annotator.annotate(df_regions)
+    
     gnomad_annotator=gnomadAnnotator()
-    phylop100way_annotator=phylopAnnotator(f"/isdata/alab/people/pcr980/Resource/Conservation/hg38.phyloP100way.bw")
     phylop241way_annotator=phylopAnnotator(f"/isdata/alab/people/pcr980/Resource/Conservation/hg38.phyloP241way.bw")
     phylop447way_annotator=phylopAnnotator(f"/isdata/alab/people/pcr980/Resource/Conservation/hg38.phyloP447way.bw")
-    phylop447wayLRT_annotator=phylopAnnotator(f"/isdata/alab/people/pcr980/Resource/Conservation/hg38.phyloP447wayLRT.bw")
     
-    # using ChIP for binding evidence
-    if "k562" in args.file_name.lower():
-        be_annotator = BindingEvidenceAnnotator("/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_k562.bed",mode="chip")
-    if "hepg2" in args.file_name.lower():
-        be_annotator = BindingEvidenceAnnotator("/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_hepg2.bed",mode="chip")
-
-    # # using RNA for binding evidence
-    # if "k562" in args.file_name.lower():
-    #     be_annotator=BindingEvidenceAnnotator("/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_k562.tsv","rna")
-    # if "hepg2" in args.file_name.lower():
-    #     be_annotator=BindingEvidenceAnnotator("/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_hepg2.tsv","rna")
-        
-    for idx in range(df_regions.shape[0]):
-        if idx%1000==0:
-            logger.info(f"{idx} regions processed.")
-        region=df_regions.iloc[idx,0:3].tolist()
-        # TODO: change file name relative to "thresh" here
-        try:
-            annotate_one_region(idx,
-                                region,
-                                f"motif_info_thresh_500_{args.file_name}.csv",
-                                seq_extractor,
-                                jaspar_annotator,
-                                be_annotator,
-                                gnomad_annotator,
-                                phylop100way_annotator,
-                                phylop241way_annotator,
-                                phylop447way_annotator,
-                                phylop447wayLRT_annotator,
-                                args.device)
-        except Exception as e:
-            logger.error(f"Error in region {idx}: {e}")
+    
+    
+    
     logger.info(f"Finished annotating {args.file_name}.")
 
