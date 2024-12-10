@@ -42,8 +42,8 @@ def read_file(file_suffix,seq_extractor):
 
 
 def add_tf_cooperativity(df):
-    tfs_codependent=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_codependent.txt", header=None).iloc[:,0].tolist()
-    tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_redundant.txt", header=None).iloc[:,0].tolist()
+    tfs_codependent=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_codependent_merged.txt", header=None).iloc[:,0].tolist()
+    tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_cooperativity/tfs_redundant_merged.txt", header=None).iloc[:,0].tolist()
     df["cooperativity"]="unknown"
     df.loc[df["protein"].isin(tfs_codependent), "cooperativity"]="codependent"
     df.loc[df["protein"].isin(tfs_redundant), "cooperativity"]="redundant"
@@ -79,52 +79,6 @@ df_enhancer_k562["dataset"]="enhancers_k562"
 df=pd.concat([df_promoter_hepg2,df_enhancer_hepg2,df_promoter_k562,df_enhancer_k562], axis=0)
 df["cell_line"]=df["dataset"].apply(lambda x: x.split("_")[1])
 df["re"]=df["dataset"].apply(lambda x: x.split("_")[0])
-
-# TODO: maybe make more bins
-# plot effect size v.s. max allele frequency
-def plot_or_max_af(df,dataset,track_name,suffix=None):
-    df_plot=bin_two_columns(df,f"ism_{track_name}",[0, 0.1, 0.2, 0.5, np.inf],
-                       "max_af",{"0 - 0.001": "max(AF)<0.001", "0.001 - 0.01": "low", "0.01 - 1":"max(AF)>0.01"},
-                       [0,0.001,0.01,1],"TFBS_type")
-    df_plot=df_plot[df_plot.sum(axis=1)>10]
-    df_plot=calc_or(df_plot,"ISA score","TFBS_type",out_group="low")
-    plot_or(df_plot, 'ISA score', 'odds_ratio', "TFBS_type",
-            f"Odds ratio ({dataset}, track {track_name})",
-            {'max(AF)<0.001': "#1f77b4", 'max(AF)>0.01': '#ff7f0e'},
-            f"Plots/or_max_af_{dataset}_{track_name}.pdf")
-
-
-for dataset in ["promoters_hepg2","enhancers_hepg2","promoters_k562","enhancers_k562"]:
-    for track_name in ["cage","dhs","starr","sure"]:
-        logger.info(f"Processing {dataset}, track {track_name}")
-        df_sub=df[df["dataset"]==dataset].reset_index(drop=True)
-        df_sub=df_sub[df_sub[f"ism_{track_name}"]>0].reset_index(drop=True)
-        plot_or_max_af(df_sub,dataset,track_name)
-
-
-
-
-# plot effect size v.s. max phylop score
-def plot_or_241way_max(df,dataset,track_name,suffix=None):
-    df_plot=bin_two_columns(df,f"ism_{track_name}",[0, 0.1, 0.2, 0.5, np.inf],
-                       "241way_max",{"0 - 1": "max(phyloP)<1", "1 - 3": "conserved", "3 - inf":"max(phyloP)>3"},
-                       [0,1,3,np.inf],"TFBS_type")
-    df_plot=df_plot[df_plot.sum(axis=1)>10]
-    df_plot=calc_or(df_plot,"ISA score","TFBS_type",out_group="low")
-    plot_or(df_plot, 'ISA score', 'odds_ratio', "TFBS_type",
-            f"Odds ratio ({dataset}, track {track_name})",
-            {'max(phyloP)<1': "#1f77b4", 'max(phyloP)>3': '#ff7f0e'},
-            f"Plots/or_241way_max_{dataset}_{track_name}.pdf")
-
-
-
-for dataset in ["promoters_hepg2","enhancers_hepg2","promoters_k562","enhancers_k562"]:
-    for track_name in ["cage","dhs","starr","sure"]:
-        logger.info(f"Processing {dataset}, track {track_name}")
-        df_sub=df[df["dataset"]==dataset].reset_index(drop=True)
-        df_sub=df_sub[df_sub[f"ism_{track_name}"]>0].reset_index(drop=True)
-        plot_or_241way_max(df_sub,dataset,track_name)
-
 
 
 

@@ -8,24 +8,38 @@ def map_name(df):
     return df
 
 
-def write_expressed_tfs(file_path, chip_path, output_path):
+
+def get_expressed_proteins(file_path):
     df_expr=pd.read_csv(file_path,sep='\t')
     df_expr["gene_id"]=df_expr["gene_id"].str.split(".").str[0]
     df_expr=map_name(df_expr)
-    # select the HGNC symbol and TPM>1
-    df_expr=df_expr[df_expr['TPM']>1].reset_index(drop=True)
+    # select the HGNC symbol and TPM>0.5
+    df_expr=df_expr[df_expr['TPM']>0.5].reset_index(drop=True)
+    return df_expr['HGNC symbol'].tolist()
+
+
+
+def write_expressed_tfs(rep_path1,rep_path2, chip_path, output_path):
+    proteins1=get_expressed_proteins(rep_path1)
+    proteins2=get_expressed_proteins(rep_path2)
+    # get the proteins that are expressed in both replicates
+    proteins=list(set(proteins1).intersection(set(proteins2)))
     # output the HGNC symbol
-    protein_names=df_expr['HGNC symbol'].tolist()
-    chip_tfs=pd.read_csv(chip_path,header=None).iloc[:,0].tolist()
-    protein_list=list(set(protein_names+chip_tfs))
+    # chip_tfs=pd.read_csv(chip_path,header=None).iloc[:,0].tolist()
+    # protein_list=list(set(proteins+chip_tfs))
+    protein_list=proteins
     pd.DataFrame(protein_list).to_csv(output_path,header=None,index=None)
+    return protein_list
 
 
 
-write_expressed_tfs("Raw_data/ENCFF928NYA_RNASeq_K562.tsv",
+
+write_expressed_tfs("Raw_data/ENCFF928NYA_rep1_RNASeq_K562.tsv",
+                    "Raw_data/ENCFF003XKT_rep2_RNASeq_K562.tsv",
                     "/isdata/alab/people/pcr980/Resource/ReMap2022/TFs_K562.txt",
                     "expressed_tf_list_k562.tsv")
-write_expressed_tfs("Raw_data/ENCFF103FSL_RNASeq_HepG2.tsv",
+write_expressed_tfs("Raw_data/ENCFF103FSL_rep1_RNASeq_HepG2.tsv",
+                    "Raw_data/ENCFF692QVJ_rep2_RNASeq_HepG2.tsv",
                     "/isdata/alab/people/pcr980/Resource/ReMap2022/TFs_HepG2.txt",
                     "expressed_tf_list_hepg2.tsv")
 

@@ -10,6 +10,8 @@ from mutational_constraints import calc_constraint
 from utils import get_track_num
 
 
+# TODO: change ISM to ISA
+
 prefix="/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_"
 
 
@@ -18,16 +20,16 @@ prefix="/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_
 #------------------
 
 
-def signed_ks_test(df,tf,ism_col):
+def signed_ks_test(df,tf,isa_col):
     """
     calculate the ks test statistic for a given tf and a given importance
     """
     df_this_protein=df[df.protein==tf].reset_index(drop=True)
     if df_this_protein.shape[0]<10:
         return None
-    dstat, _=ks_2samp(df_this_protein[ism_col],df[ism_col])
+    dstat, _=ks_2samp(df_this_protein[isa_col],df[isa_col])
     # determine sign of dstat
-    if df_this_protein[ism_col].median()<df[ism_col].median():
+    if df_this_protein[isa_col].median()<df[isa_col].median():
         dstat=-dstat
     return dstat
 
@@ -55,7 +57,7 @@ def process(df,cell_type):
     df_constraints=calc_constraint(df,seq_extractor)
     # select and rename columns
     track_num_list=get_track_num(cell_type,classification=True)
-    cols_retain=['protein']+[f'ism_track{i}' for i in track_num_list]
+    cols_retain=['protein']+[f'isa_track{i}' for i in track_num_list]
     df=df[cols_retain].copy()
     mapper={0:"cage_activity",
             1:"cage_activity",
@@ -73,8 +75,8 @@ def process(df,cell_type):
             13:"starr_probability",
             14:"sure_probability",
             15:"sure_probability"}
-    df.rename(columns={f"ism_track{i}":f"ism_{mapper[i]}" for i in range(16)}, inplace=True)
-    # calculate avg ism
+    df.rename(columns={f"isa_track{i}":f"isa_{mapper[i]}" for i in range(16)}, inplace=True)
+    # calculate avg isa
     df_imp=df.groupby(["protein"]).mean().reset_index()
     df_imp.rename(columns={col:f"avg_{col}" for col in df_imp.columns[1:]}, inplace=True)
     # calculate ks
@@ -87,8 +89,11 @@ def process(df,cell_type):
 
 
 
-def whole_analysis(df,col_name,dataset):
-    df_sub=df[df[col_name]==dataset].reset_index(drop=True).copy()
+def whole_analysis(df,col_name,dataset=None):
+    if dataset is not None:
+        df_sub=df[df[col_name]==dataset].reset_index(drop=True).copy()
+    else:
+        df_sub=df.copy()
     df_res=process(df_sub,dataset)
     df_res.to_csv(f"tf_effect_and_constraints_{dataset}.csv",index=False)
 
@@ -111,6 +116,9 @@ df = pd.concat([
 df["cell_type"]=df["dataset"].apply(lambda x: x.split("_")[1])
 
 logger.info("Start analysis")
+
+whole_analysis(df,"dataset")
+
 whole_analysis(df,"dataset","promoters_hepg2")
 logger.info("promoters_hepg2 done")
 whole_analysis(df,"dataset","promoters_k562")
