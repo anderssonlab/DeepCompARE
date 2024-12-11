@@ -117,7 +117,6 @@ df["cell_type"]=df["dataset"].apply(lambda x: x.split("_")[1])
 
 logger.info("Start analysis")
 
-whole_analysis(df,"dataset")
 
 whole_analysis(df,"dataset","promoters_hepg2")
 logger.info("promoters_hepg2 done")
@@ -140,7 +139,7 @@ logger.info("k562 done")
 
 
 
-# nohup python3 get_tf_individual_effect.py > get_tf_individual_effect.out &
+# nohup python3 get_tf_effect_and_constraints.py > get_tf_effect_and_constraints.out &
 
 
 

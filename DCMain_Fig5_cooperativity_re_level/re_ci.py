@@ -70,40 +70,43 @@ plt.close()
 # ----------------------------------------------------
 # constrained v.s. non-constrained
 # ----------------------------------------------------
-ci_proximal_constrained=get_re_ci("proximal_constrained_k562")
-logger.info(f"ci_proximal_constrained: {len(ci_proximal_constrained)}")
-ci_proximal_non_constrained=get_re_ci("proximal_not_constrained_k562")
-logger.info(f"ci_proximal_non_constrained: {len(ci_proximal_non_constrained)}")
-ci_distal_constrained=get_re_ci("distal_constrained_k562")
-logger.info(f"ci_distal_constrained: {len(ci_distal_constrained)}")
-ci_distal_non_constrained=get_re_ci("distal_not_constrained_k562")
-logger.info(f"ci_distal_non_constrained: {len(ci_distal_non_constrained)}")
-
-mannwhitneyu(ci_proximal_constrained,ci_proximal_non_constrained)
-np.median(ci_proximal_constrained)
-np.median(ci_proximal_non_constrained)
-
-
-
-mannwhitneyu(ci_distal_constrained,ci_distal_non_constrained)
-np.median(ci_distal_constrained)
-np.median(ci_distal_non_constrained)
+constrained_distal_ti=get_re_ci("dhs_constrained_distal_ti_k562")
+logger.info(f"ci_proximal_constrained: {len(constrained_distal_ti)}")   
+constrained_distal_ts=get_re_ci("dhs_constrained_distal_ts_k562")
+logger.info(f"ci_proximal_non_constrained: {len(constrained_distal_ts)}")
+nonconstrained_distal_ti=get_re_ci("dhs_nonconstrained_distal_ti_k562")
+logger.info(f"ci_distal_constrained: {len(nonconstrained_distal_ti)}")
+nonconstrained_distal_ts=get_re_ci("dhs_nonconstrained_distal_ts_k562")
+logger.info(f"ci_distal_non_constrained: {len(nonconstrained_distal_ts)}")
+constrained_proximal_ti=get_re_ci("dhs_constrained_proximal_ti_k562")
+logger.info(f"ci_proximal_constrained: {len(constrained_proximal_ti)}")
+constrained_proximal_ts=get_re_ci("dhs_constrained_proximal_ts_k562")
+logger.info(f"ci_proximal_non_constrained: {len(constrained_proximal_ts)}")
+nonconstrained_proximal_ti=get_re_ci("dhs_nonconstrained_proximal_ti_k562")
+logger.info(f"ci_proximal_constrained: {len(nonconstrained_proximal_ti)}")
+nonconstrained_proximal_ts=get_re_ci("dhs_nonconstrained_proximal_ts_k562")
+logger.info(f"ci_proximal_non_constrained: {len(nonconstrained_proximal_ts)}")
 
 
-df_res=pd.DataFrame({"ci":ci_proximal_constrained+ci_proximal_non_constrained+ci_distal_constrained+ci_distal_non_constrained,
-                    "region":["proximal_constrained"]*len(ci_proximal_constrained)+["proximal_non_constrained"]*len(ci_proximal_non_constrained)+["distal_constrained"]*len(ci_distal_constrained)+["distal_non_constrained"]*len(ci_distal_non_constrained)})
+df_res=pd.DataFrame({"ci":constrained_distal_ti+constrained_distal_ts+nonconstrained_distal_ti+nonconstrained_distal_ts+constrained_proximal_ti+constrained_proximal_ts+nonconstrained_proximal_ti+nonconstrained_proximal_ts,
+                    "region":["constrained_distal_ti"]*len(constrained_distal_ti)+["constrained_distal_ts"]*len(constrained_distal_ts)+["nonconstrained_distal_ti"]*len(nonconstrained_distal_ti)+["nonconstrained_distal_ts"]*len(nonconstrained_distal_ts)+["constrained_proximal_ti"]*len(constrained_proximal_ti)+["constrained_proximal_ts"]*len(constrained_proximal_ts)+["nonconstrained_proximal_ti"]*len(nonconstrained_proximal_ti)+["nonconstrained_proximal_ts"]*len(nonconstrained_proximal_ts)})
+df_res.to_csv("re_ci.csv",index=False)
 
 
-df_res.to_csv("ci_constrained_non_constrained.csv",index=False)
+
+df_res["constraint"]=df_res["region"].apply(lambda x: x.split("_")[0])
+df_res["region"]=df_res["region"].apply(lambda x: x.split("_")[1]+"_"+x.split("_")[2])
+
+
 
 plt.figure(figsize=(6,8))
-sns.boxplot(x="region", y="ci", data=df_res)
+sns.boxplot(x="region", y="ci", data=df_res, hue="constraint")
 plt.title("CI of regulatory elements")
 plt.ylabel("Cooperativity index")
 plt.xlabel("Region")
 plt.xticks(rotation=90)
 plt.tight_layout()
-plt.savefig("ci_constrained_non_constrained.pdf")
+plt.savefig("re_ci.pdf")
 plt.close()
 
 
