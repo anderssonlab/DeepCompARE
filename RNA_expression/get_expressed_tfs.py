@@ -1,6 +1,10 @@
 import pandas as pd
 
 
+
+
+thresh=1
+
 def map_name(df):
     df_name_mapper=pd.read_csv("/isdata/alab/people/pcr980/Resource/Human_transcription_factors/DatabaseExtract_v_1.01.csv")
     df_name_mapper=df_name_mapper[['Ensembl ID', 'HGNC symbol']].copy()
@@ -8,13 +12,12 @@ def map_name(df):
     return df
 
 
-
 def get_expressed_proteins(file_path):
     df_expr=pd.read_csv(file_path,sep='\t')
     df_expr["gene_id"]=df_expr["gene_id"].str.split(".").str[0]
     df_expr=map_name(df_expr)
-    # select the HGNC symbol and TPM>0.5
-    df_expr=df_expr[df_expr['TPM']>0.5].reset_index(drop=True)
+    # select the HGNC symbol and TPM>thresh
+    df_expr=df_expr[df_expr['TPM']>thresh].reset_index(drop=True)
     return df_expr['HGNC symbol'].tolist()
 
 
@@ -37,9 +40,9 @@ def write_expressed_tfs(rep_path1,rep_path2, chip_path, output_path):
 write_expressed_tfs("Raw_data/ENCFF928NYA_rep1_RNASeq_K562.tsv",
                     "Raw_data/ENCFF003XKT_rep2_RNASeq_K562.tsv",
                     "/isdata/alab/people/pcr980/Resource/ReMap2022/TFs_K562.txt",
-                    "expressed_tf_list_k562.tsv")
+                    f"expressed_tf_list_k562_{thresh}.tsv")
 write_expressed_tfs("Raw_data/ENCFF103FSL_rep1_RNASeq_HepG2.tsv",
                     "Raw_data/ENCFF692QVJ_rep2_RNASeq_HepG2.tsv",
                     "/isdata/alab/people/pcr980/Resource/ReMap2022/TFs_HepG2.txt",
-                    "expressed_tf_list_hepg2.tsv")
+                    f"expressed_tf_list_hepg2_{thresh}.tsv")
 

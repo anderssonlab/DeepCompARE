@@ -7,30 +7,39 @@ from scipy.stats import mannwhitneyu
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from tf_cooperativity import read_cooperativity
-
+from stat_tests import bin_and_label
 
 # ----------------------------------------------------
 # Helper functions
 # ----------------------------------------------------
 
+# TODO: output total count, constraints, a df, not just the ci
+
+
 def get_re_ci(file_name):
-    # get cooperative pairs
+    df_regions=pd.read_csv(f"Pd1_Regions/{file_name}.tsv",sep="\t")
+    df_regions["region_idx"]=[f"Region{i}" for i in range(df_regions.shape[0])]
+    # get cooperativity info
     df_coop=read_cooperativity(f"Pd2_mutate_pairs/mutate_pairs_{file_name}.csv",threshold=0.01, track_nums=[1,3,5,7])
-    # group by region_idx and codependency, sum column c within group
     df_coop=df_coop.groupby(["region_idx","codependency"]).agg({"c":"sum"}).unstack(fill_value=0)
     # reduce to single index
     df_coop.columns = df_coop.columns.droplevel(0)
     df_coop.reset_index(inplace=True)
     df_coop.columns=["region_idx","redundant","codependent"]
     df_coop["redundant"]=df_coop["redundant"].abs()
-    df_coop=df_coop[(df_coop["redundant"]+df_coop["codependent"])>0].reset_index(drop=True)
+    df_coop=df_coop[(df_coop["redundant"]+df_coop["codependent"])>1].reset_index(drop=True)
     df_coop["ci_re"]=df_coop["codependent"]/(df_coop["codependent"]+df_coop["redundant"])
-    # add region information
-    return df_coop["ci_re"].tolist()
-
-
-
-
+    # get tf pair count
+    df=pd.read_csv(f"Pd2_mutate_pairs/mutate_pairs_{file_name}.csv")
+    df=df.groupby(["region_idx"]).size().reset_index()
+    df.columns=["region_idx","tf_pair_count"]
+    # merge df_coop and df with df_regions, on region_idx
+    df_regions=pd.merge(df_regions,df,on="region_idx",how="left")
+    df_regions=pd.merge(df_regions,df_coop,on="region_idx",how="left")
+    # remove rows with nan
+    df_regions.dropna(inplace=True)
+    df_regions["region"]=file_name
+    return df_regions
 
 
 # ----------------------------------------------------
@@ -70,6 +79,7 @@ plt.close()
 # ----------------------------------------------------
 # constrained v.s. non-constrained
 # ----------------------------------------------------
+
 constrained_distal_ti=get_re_ci("dhs_constrained_distal_ti_k562")
 logger.info(f"ci_proximal_constrained: {len(constrained_distal_ti)}")   
 constrained_distal_ts=get_re_ci("dhs_constrained_distal_ts_k562")
@@ -88,18 +98,59 @@ nonconstrained_proximal_ts=get_re_ci("dhs_nonconstrained_proximal_ts_k562")
 logger.info(f"ci_proximal_non_constrained: {len(nonconstrained_proximal_ts)}")
 
 
-df_res=pd.DataFrame({"ci":constrained_distal_ti+constrained_distal_ts+nonconstrained_distal_ti+nonconstrained_distal_ts+constrained_proximal_ti+constrained_proximal_ts+nonconstrained_proximal_ti+nonconstrained_proximal_ts,
-                    "region":["constrained_distal_ti"]*len(constrained_distal_ti)+["constrained_distal_ts"]*len(constrained_distal_ts)+["nonconstrained_distal_ti"]*len(nonconstrained_distal_ti)+["nonconstrained_distal_ts"]*len(nonconstrained_distal_ts)+["constrained_proximal_ti"]*len(constrained_proximal_ti)+["constrained_proximal_ts"]*len(constrained_proximal_ts)+["nonconstrained_proximal_ti"]*len(nonconstrained_proximal_ti)+["nonconstrained_proximal_ts"]*len(nonconstrained_proximal_ts)})
+df_res=pd.concat([constrained_distal_ti,constrained_distal_ts,nonconstrained_distal_ti,nonconstrained_distal_ts,constrained_proximal_ti,constrained_proximal_ts,nonconstrained_proximal_ti,nonconstrained_proximal_ts])
+
 df_res.to_csv("re_ci.csv",index=False)
 
 
 
-df_res["constraint"]=df_res["region"].apply(lambda x: x.split("_")[0])
-df_res["region"]=df_res["region"].apply(lambda x: x.split("_")[1]+"_"+x.split("_")[2])
+df_res=pd.read_csv("re_ci.csv")
+
+sns.scatterplot(x="ci_re", y="weighted_z", data=df_res)
+plt.savefig("temp_scatter_ci_re_z.pdf")
+plt.close()
+
+
+df_res["constraint"]=df_res["region"].apply(lambda x: x.split("_")[1])
+df_res["region"]=df_res["region"].apply(lambda x: x.split("_")[2]+"_"+x.split("_")[3])
+df_res=bin_and_label(df_res,"ci_re",[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1])
+
+
+for region_type, df_sub in df_res.groupby("region"):
+    sns.boxplot(x="ci_re_bin", y="weighted_z", data=df_sub)
+    plt.title(f"{region_type}")
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.savefig(f"temp_reverse_{region_type}.png")
+    plt.close()
 
 
 
-plt.figure(figsize=(6,8))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+plt.figure(figsize=(8,10))
 sns.boxplot(x="region", y="ci", data=df_res, hue="constraint")
 plt.title("CI of regulatory elements")
 plt.ylabel("Cooperativity index")

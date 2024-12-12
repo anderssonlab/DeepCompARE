@@ -5,197 +5,34 @@ import csv
 from loguru import logger
 from communities.algorithms import louvain_method
 
+
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
-from prediction import compute_predictions
-from loguru import logger
-from utils import get_track_num
-from seq_ops import ablate_motifs
+from seq_annotators import find_binding_evidence
 
 
 
-#-------------------------------
-# For all pair permutations
-#-------------------------------
-
-# TODO: add function to center one TF, and get all other TFs that are within a certain distance
-
-
-
-def get_permutations(n):
-    temp=[(i,j) for i in range(n) for j in range(n)]
-    temp=[(i,j) for i,j in temp if i!=j]
-    return temp
-
-
-
-def extract_motif(jaspar_annotator,region):
-    """
-    Given a genomic region, extract the motif information.
-    Args:
-        region: A tuple of (chromosome, start, end).
-    Returns:
-        A data frame of location, TF, Jaspar score and strand of ChIP-supported motif
-    """
-    df_motif=jaspar_annotator.annotate(region)
-    if df_motif.shape[0]==0:
-        return df_motif
-    # df_motif.drop(columns=['rna_evidence'],inplace=True)
-    df_motif["start_rel"]=df_motif["start"]-region[1]
-    df_motif["end_rel"]=df_motif["end"]-region[1]
-    return df_motif
-
-
-
-
-def get_predictions(seq_col,device,prefix):
-    pred=compute_predictions(seq_col,device=device)
-    df_pred=pd.DataFrame(pred,columns=[f"pred_{prefix}_track{i}" for i in range(16)])
-    return df_pred
-
-
-
-
-def get_isas(df):
-    """
-    Given a dataframe of mutation results, calculate isa score.
-    Args:
-        df: A dataframe of mutation results.
-    Returns:
-        A dataframe of mutation results with isa score.
-    """
-    for i in range(16):
-        df[f"isa1_track{i}"]=df[f"pred_orig_track{i}"]-df[f"pred_mut1_track{i}"]
-        df[f"isa2_track{i}"]=df[f"pred_orig_track{i}"]-df[f"pred_mut2_track{i}"]
-        df[f"isa_both_track{i}"]=df[f"pred_orig_track{i}"]-df[f"pred_mut_both_track{i}"]
-        df[f"isa1_track{i}"]=df[f"isa1_track{i}"].round(3)
-        df[f"isa2_track{i}"]=df[f"isa2_track{i}"].round(3)
-        df[f"isa_both_track{i}"]=df[f"isa_both_track{i}"].round(3)
-    return df
-
-
-
-
-def write_pair_mutation_res_for_one_region(seq_extractor,jaspar_annotator,region,out_path,region_idx,device):
-
-    df_motif=extract_motif(jaspar_annotator,region)
-    if df_motif.shape[0]==0:
-        return
-    
-    # get indices of all possible motif pairs
-    combination_indices=get_permutations(df_motif.shape[0])
-    df_mutation = pd.DataFrame(combination_indices, columns=['idx1', 'idx2'])
-    df_mutation["region_idx"]=f"Region{region_idx}"
-    df_mutation = df_mutation.merge(df_motif, left_on='idx1', right_index=True)
-    df_mutation = df_mutation.merge(df_motif, left_on='idx2', right_index=True, suffixes=('', '2'))
-    df_mutation.rename(columns={
-        'chromosome':'chromosome1',
-        'start':'start1',
-        'end':'end1',
-        'protein':'protein1',
-        'score':'score1',
-        'strand':'strand1',
-        'chip_evidence':'chip_evidence1',
-        'start_rel':'start_rel1',
-        'end_rel':'end_rel1'},inplace=True) 
-
-    df_mutation.drop(columns=['region2'],inplace=True)
-    # move "region_idx" and "region" to the first 2 column
-    df_mutation=df_mutation[["region_idx","region"]+[col for col in df_mutation.columns if col not in ["region_idx","region"]]]
-    # remove overlapping motifs
-    idx_olap_row=df_mutation.apply(lambda row: max(row['start_rel1'],row['start_rel2'])<=min(row['end_rel1'],row['end_rel2']),axis=1)
-    df_mutation=df_mutation[~idx_olap_row].reset_index(drop=True)
-    if df_mutation.shape[0]==0:
-        return
-    
-    # get sequences
-    seq = seq_extractor.get_seq(region)
-    df_mutation["seq_orig"]=seq
-    df_mutation['seq_mut1'] = df_mutation.apply(lambda row: ablate_motifs(seq, row['start_rel1'], row['end_rel1']), axis=1)
-    df_mutation['seq_mut2'] = df_mutation.apply(lambda row: ablate_motifs(seq, row['start_rel2'], row['end_rel2']), axis=1)
-    df_mutation['seq_mut_both'] = df_mutation.apply(lambda row: ablate_motifs(seq, [row['start_rel1'], row['start_rel2']],[row['end_rel1'], row['end_rel2']]), axis=1)
- 
-    # get predictions
-    df_pred_orig=get_predictions(df_mutation["seq_orig"],device=device,prefix="orig").round(3)
-    df_pred_mut1=get_predictions(df_mutation["seq_mut1"],device=device,prefix="mut1").round(3)
-    df_pred_mut2=get_predictions(df_mutation["seq_mut2"],device=device,prefix="mut2").round(3)
-    df_pred_mut_both=get_predictions(df_mutation["seq_mut_both"],device=device,prefix="mut_both").round(3)
-
-    # concatenate predictions with df_mutation by columns
-    df_mutation=pd.concat([df_mutation,df_pred_orig,df_pred_mut1,df_pred_mut2,df_pred_mut_both],axis=1)
-
-    # positive isa score indicate the original motif is contributing positively to RE activity.
-    df_mutation=get_isas(df_mutation)
-    
-    columns_to_drop=[col for col in df_mutation.columns if col.startswith("seq")]+\
-                    [col for col in df_mutation.columns if col.startswith("pred_mut")]+\
-                    ["idx1","idx2"]
-    df_mutation.drop(columns=columns_to_drop,inplace=True)
-    # if out_path does not exist, create it using mode="w", include header
-    if not os.path.exists(out_path):
-        df_mutation.to_csv(out_path,mode="w",header=True,index=False)
-        return
-    else:
-        df_mutation.to_csv(out_path,mode="a",header=False,index=False)
-        return 
-
-
-
-
-def write_pair_mutation(df_regions,
-                        seq_extractor,
-                        jaspar_annotator,
-                        device,
-                        out_path):
-    """
-    First three columns of df_regions should be chromosome, start, end
-    """
-    for idx in range(df_regions.shape[0]):
-        if idx%100==0:
-            logger.info(f"{idx} regions processed.")
-        region=df_regions.iloc[idx,[0,1,2]].tolist()
-        write_pair_mutation_res_for_one_region(seq_extractor,
-                                               jaspar_annotator,
-                                               region,
-                                               out_path,
-                                               idx,
-                                               device)
-
-
-
-
-
-
-
-
-
-
-
-
-
-#--------------------------------------------
-# Functions to aggregate df_mutate_pair
-#--------------------------------------------
-
-
-def read_file_remove_confusion(file_name,threshold,track_nums=None):
+def read_file_remove_confusion(file_name,tpm_thresh, nonlinearity_thresh,track_nums=None):
     """
     Read in file, remove mistaking rows, calculate cooperativity, and return the dataframe with cooperativity information
     """
     # read file
+    logger.info(f"Reading {file_name}")
     df=pd.read_csv(file_name)
-    
+    logger.info(f"# Total tf pairs: {df.shape[0]}")
     # remove rows if protein1 or protein2 are not expressed
     if "hepg2" in file_name:
-        expressed_protein_list=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_hepg2.tsv", sep='\t', header=None).iloc[:,0].tolist()
+        expressed_protein_list=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_hepg2_{tpm_thresh}.tsv", sep='\t', header=None).iloc[:,0].tolist()
     elif "k562" in file_name:
-        expressed_protein_list=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_k562.tsv", sep='\t', header=None).iloc[:,0].tolist()
-    df=df[df["protein1"].isin(expressed_protein_list)].reset_index(drop=True)
-    df=df[df["protein2"].isin(expressed_protein_list)].reset_index(drop=True)
+        expressed_protein_list=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_k562_{tpm_thresh}.tsv", sep='\t', header=None).iloc[:,0].tolist()
+
+    df=find_binding_evidence(df,"protein1",expressed_protein_list,"rna_evidence")
+    df=df[df["rna_evidence"]].reset_index(drop=True)
+    df=find_binding_evidence(df,"protein2",expressed_protein_list,"rna_evidence")
+    df=df[df["rna_evidence"]].reset_index(drop=True)
     
-    if track_nums is None:
-        # get track number
-        track_nums=get_track_num(file_name)
+    logger.info(f"# Expressed tf pairs: {df.shape[0]}")
+    
     tracks_to_remove=[i for i in range(16) if i not in track_nums]
     # remove all columns with track{i} and i is in tracks_to_remove
     col_suffix_to_remove=[f"_track{i}" for i in tracks_to_remove]
@@ -210,8 +47,8 @@ def read_file_remove_confusion(file_name,threshold,track_nums=None):
         df[f"c_track{i}"]=df[f"isa2_track{i}"]-df[f"isa2_wo_protein1_track{i}"]
         # assign cooperativity
         df[f"cooperativity_track{i}"]="unknown"
-        df.loc[df[f"c_track{i}"]< -threshold,f"cooperativity_track{i}"]="redundancy"
-        df.loc[df[f"c_track{i}"]> threshold,f"cooperativity_track{i}"]="codependency"
+        df.loc[df[f"c_track{i}"]< -nonlinearity_thresh,f"cooperativity_track{i}"]="redundancy"
+        df.loc[df[f"c_track{i}"]> nonlinearity_thresh,f"cooperativity_track{i}"]="codependency"
     # drop columns starting with "pred" and isa, and motif_length
     col_names_to_remove=[col for col in df.columns if col.startswith("pred") or col.startswith("motif_length")]
     df.drop(columns=col_names_to_remove,inplace=True)
@@ -246,8 +83,8 @@ def detect_and_remove_confusing_pairs(df):
 
 
 
-def read_cooperativity(file_name,threshold=0.1,track_nums=None):
-    df=read_file_remove_confusion(file_name,threshold,track_nums)
+def read_cooperativity(file_name,tpm_thresh, nonlinearity_thresh,track_nums=None):
+    df=read_file_remove_confusion(file_name,tpm_thresh,nonlinearity_thresh,track_nums)
     df=detect_and_remove_confusing_pairs(df)
     df.drop(columns=["redundancy_count","codependency_count"],inplace=True)
     df["distance"]=np.abs(df["start1"]-df["start2"])
