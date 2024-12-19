@@ -1,8 +1,5 @@
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-from itertools import combinations
-from scipy.stats import mannwhitneyu
+
 
 
 import sys
@@ -10,7 +7,7 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from stat_tests import bin_and_label
 from plotting import plot_violin_with_statistics
 
-cell_line="hepg2"
+cell_line="k562"
 
 df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}.csv")
 df_coop=df_coop[df_coop["c_sum"]>1].reset_index(drop=True)
@@ -24,8 +21,6 @@ df=bin_and_label(df,"cooperativity_index",[0,0.3,0.7,1])
 #-------------------------
 # Analysis1: plot distance distribution of cooperativity index bin
 #-------------------------
-# Perform pairwise Mann-Whitney U tests
-# bins are the catepories of cooperativity index
 
 def plot_ci_vs_tf_effect(effect_col, ylabel, output_file):
     """
@@ -49,9 +44,11 @@ def plot_ci_vs_tf_effect(effect_col, ylabel, output_file):
 
 
 
-plot_ci_vs_tf_effect("avg_isa_starr_activity","Individual TF effect on STARR",f"ci_vs_starr_{cell_line}.pdf")
-plot_ci_vs_tf_effect("avg_isa_cage_activity","Individual TF effect on CAGE",f"ci_vs_cage_{cell_line}.pdf")
+# plot_ci_vs_tf_effect("avg_isa_starr_activity","Individual TF effect on STARR",f"ci_vs_starr_{cell_line}.pdf")
+# plot_ci_vs_tf_effect("avg_isa_cage_activity","Individual TF effect on CAGE",f"ci_vs_cage_{cell_line}.pdf")
 
+plot_ci_vs_tf_effect("avg_isa_dhs_activity","Individual TF effect on DHS",f"ci_vs_dhs_{cell_line}.pdf")
+plot_ci_vs_tf_effect("avg_isa_sure_activity","Individual TF effect on sure",f"ci_vs_sure_{cell_line}.pdf")
 
 
 

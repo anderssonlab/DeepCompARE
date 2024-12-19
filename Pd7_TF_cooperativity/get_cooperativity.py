@@ -26,8 +26,7 @@ def read_all_files(threshold):
 
 def write_ci_by_cell_type(df_orig,cell_type):
     df=df_orig.copy()
-    if cell_type!="merged":
-        df=df[df["cell_line"]==cell_type].reset_index(drop=True)
+    df=df[df["cell_line"]==cell_type].reset_index(drop=True)
     df=calculate_tf_pair_cooperativity_index(df)
     df.to_csv(f"tf_pair_cooperativity_index_{cell_type}.csv",index=False)
     df_tf=calculate_tf_cooperativity_index(df)
@@ -64,7 +63,7 @@ def write_tfs_codependent_and_redundant(path,suffix):
 
 df=read_all_files(0.1)
 df["cell_line"]=df["dataset"].apply(lambda x: x.split("_")[-1])
-for suffix in ["hepg2","k562","merged"]:
+for suffix in ["hepg2","k562"]:
     logger.info(f"Processing {suffix}")
     write_ci_by_cell_type(df,suffix)
 
@@ -77,7 +76,6 @@ for suffix in ["promoter","enhancer"]:
     write_ci_by_re(df,suffix)
 
 
-write_tfs_codependent_and_redundant("tf_cooperativity_index_merged.csv","merged")
 write_tfs_codependent_and_redundant("tf_cooperativity_index_hepg2.csv","hepg2")
 write_tfs_codependent_and_redundant("tf_cooperativity_index_k562.csv","k562")
 

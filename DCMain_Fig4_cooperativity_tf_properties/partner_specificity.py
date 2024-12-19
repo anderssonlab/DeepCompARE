@@ -2,28 +2,41 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-df=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_merged.csv")
+
+cell_line="k562"
+
+df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell_line}.csv")
 df=df[df["c_sum"]>1].reset_index(drop=True)
-df["cooperativity"]=pd.cut(df["cooperativity_index"],bins=[-1,0.3,0.7,2],labels=["redundant","other","codependent"])
 
-# group by protein2 and cooperativity, count the number of  protein1
-df_coop=df.groupby(["protein2","cooperativity"]).agg({"protein1":pd.Series.nunique}).reset_index()
-# replace NaN with 0
-df_coop["protein1"].fillna(0,inplace=True)
-# rename
-df_coop.rename(columns={"protein1":"num_partners","cooperativity":"partner_cooperativity"},inplace=True)
+# get tf type
+tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}.txt",header=None).iloc[:,0].tolist()
+tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}.txt",header=None).iloc[:,0].tolist()
 
 
-df_tf=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_merged.csv")
-# merge df_coop with df_tf, on protein2
-df_coop=pd.merge(df_coop,df_tf,left_on="protein2",right_on="protein2",how="inner")
-df_coop["protein2_cooperativity"]=pd.cut(df_coop["cooperativity_index"],bins=[-1,0.3,0.7,2],labels=["redundant","other","codependent"])
+df["protein2_cooperativity"]="other"
+df.loc[df["protein2"].isin(tfs_codependent),"protein2_cooperativity"]="codependent"
+df.loc[df["protein2"].isin(tfs_redundant),"protein2_cooperativity"]="redundant"
 
 
-# plot distribution of num_partners, color by partner_cooperativity
-sns.boxplot(x="protein2_cooperativity",
-            y="num_partners",
-            hue="partner_cooperativity",
-            data=df_coop)
-plt.savefig("partner_specificity.png")
+
+
+
+df_sub=df[df["protein2"]=="BACH1"].reset_index(drop=True)
+df_sub=df_sub[["protein2","c_redundancy","c_codependency"]]
+
+
+# long format
+df_sub=df_sub.melt(id_vars=["protein2"],value_vars=["c_redundancy","c_codependency"],var_name="cooperativity_type",value_name="cooperativity_index")
+# remove columns cooperativity_type
+df_sub=df_sub.drop(columns=["cooperativity_type"])
+# get the rank of the cooperativity index
+df_sub["rank"]=df_sub["cooperativity_index"].rank(ascending=False)
+
+
+# scatterplot rank v.s. cooperativity index
+
+sns.scatterplot(data=df_sub,x="rank",y="cooperativity_index")
+plt.xlabel("Rank",fontsize=15)
+plt.ylabel("Cooperativity Index",fontsize=15)
+plt.savefig(f"rank_cooperativity_index.png")
 plt.close()
