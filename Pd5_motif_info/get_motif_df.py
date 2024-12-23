@@ -23,6 +23,8 @@ def main(file_name,device):
     df_regions=pr.read_bed(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/{file_name}.bed").df.iloc[:,0:3]
     df_regions.columns=["chromosome","start","end"]
     df_regions["end"]=df_regions["end"]-1
+    # select chromosomes
+    df_regions=df_regions[df_regions["chromosome"].apply(lambda x: x in [f"chr{i}" for i in list(range(1,23))+["X","Y"]])].reset_index(drop=True)
     
     # Step 1: Annotate motif info
     if "hepg2" in file_name:
@@ -40,10 +42,10 @@ def main(file_name,device):
     # step 2: read back motif info, get isa
     seq_extractor = SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
     df_motif=pd.read_csv(f"{file_name}_temp1.csv")
-    os.remove(f"{file_name}_temp1.csv")
     df_motif=get_motif_isa(seq_extractor,df_motif,device=torch.device(f"cuda:{device}"))
     logger.info(f"Done with gpu for file {file_name}")
     df_motif.to_csv(f"{file_name}_temp2.csv",index=False)
+    # os.remove(f"{file_name}_temp1.csv")
     
     # step 3: annotate with conservation and feature importance
     df_motif=pd.read_csv(f"{file_name}_temp2.csv")
@@ -73,7 +75,7 @@ def main(file_name,device):
             df_chr.to_csv(out_name,mode="a",header=False)
     
     # remove temp file
-    os.remove(f"{file_name}_temp2.csv")
+    # os.remove(f"{file_name}_temp2.csv")
 
 
 

@@ -13,39 +13,48 @@ from utils import split_dimer
 #-------------------------------
 
 
-def read_joint_dispersion():
-    df_dispersion_hepg2=pd.read_csv("TFs.dispersionEstimates.hepG2.tab",sep="\t")
-    df_dispersion_k562=pd.read_csv("TFs.dispersionEstimates.k562.tab",sep="\t")
-    df_dispersion=pd.concat([df_dispersion_hepg2,df_dispersion_k562],axis=0).reset_index(drop=True)
-    df_dispersion=df_dispersion.drop_duplicates().reset_index(drop=True)
-    return df_dispersion
+
+cell_line="k562"
+
+df_dispersion=pd.read_csv(f"/isdata/alab/people/pcr980/Resource/gtex.dispersionEstimates.tab",sep="\t")
+
+df_tf=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}.csv")
+# merge with df_dispersion
+df_tf=df_tf.merge(df_dispersion,left_on="protein2",right_on="symbol",how="inner")
+df_tf.drop_duplicates(subset="protein2",inplace=True)
 
 
-
-tfs_redundant = pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_merged.txt",header=None)[0].to_list()
-tfs_codependent = pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_merged.txt",header=None)[0].to_list()
-tf_redundant=split_dimer(tfs_redundant)
+tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}.txt",header=None).iloc[:,0].tolist()
 tfs_codependent=split_dimer(tfs_codependent)
-df_dispersion=read_joint_dispersion()
-df_dispersion["tf_type"]=np.where(df_dispersion["gene"].isin(tfs_redundant),"redundant",np.where(df_dispersion["gene"].isin(tfs_codependent),"codependent","other"))
-ci_codependent = df_dispersion[df_dispersion["tf_type"]=="codependent"]
-ci_redundant= df_dispersion[df_dispersion["tf_type"]=="redundant"]
-stat, p_value = mannwhitneyu(ci_codependent["gini"],ci_redundant["gini"])
+tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}.txt",header=None).iloc[:,0].tolist()
+tfs_redundant=split_dimer(tfs_redundant)
+df_tf["tf_type"]="other"
+df_tf.loc[df_tf["protein2"].isin(tfs_codependent),"tf_type"]="codependent"
+df_tf.loc[df_tf["protein2"].isin(tfs_redundant),"tf_type"]="redundant"
+
+
+
+# pearson correlation
+from scipy.stats import pearsonr
+pearsonr(df_tf["adjusted_dispersion"],df_tf["cooperativity_index"])
+
+ci_codependent = df_tf[df_tf["tf_type"]=="codependent"]
+ci_redundant= df_tf[df_tf["tf_type"]=="redundant"]
+stat, p_value = mannwhitneyu(ci_codependent["adjusted_dispersion"],ci_redundant["adjusted_dispersion"])
 print(f"p-value: {p_value}")
 
-df_dispersion["tf_type"]=pd.Categorical(df_dispersion["tf_type"],categories=["redundant","other","codependent"],ordered=True)
+df_tf["tf_type"]=pd.Categorical(df_tf["tf_type"],categories=["redundant","other","codependent"],ordered=True)
 
 
 
 
-# Assuming df_dispersion is your DataFrame
-categories = df_dispersion["tf_type"].unique()
+categories = df_tf["tf_type"].cat.categories
 p_values = []
 
 # Calculate pairwise p-values
 for cat1, cat2 in combinations(categories, 2):
-    group1 = df_dispersion[df_dispersion["tf_type"] == cat1]["gini"]
-    group2 = df_dispersion[df_dispersion["tf_type"] == cat2]["gini"]
+    group1 = df_tf[df_tf["tf_type"] == cat1]["gini"]
+    group2 = df_tf[df_tf["tf_type"] == cat2]["gini"]
     stat, p_value = mannwhitneyu(group1, group2, alternative="two-sided")
     p_values.append({"cat1": cat1, "cat2": cat2, "p_value": p_value})
 
@@ -53,15 +62,15 @@ for cat1, cat2 in combinations(categories, 2):
 p_values_df = pd.DataFrame(p_values)
 
 # Count the number of observations in each category
-category_counts = df_dispersion["tf_type"].value_counts()
+category_counts = df_tf["tf_type"].value_counts()
 
 # Plot boxplot
 plt.figure(figsize=(6, 6))
-sns.boxplot(data=df_dispersion, x="tf_type", y="gini")
+sns.boxplot(data=df_tf, x="tf_type", y="gini")
 plt.title("Gini coefficient of different TF types")
 
 # Annotate plot with p-values
-y_max = df_dispersion["gini"].max() + 0.1  # Adjust for annotation placement
+y_max = df_tf["gini"].max() + 0.1  # Adjust for annotation placement
 annotation_offset = 0.1  # Increase spacing between annotation lines
 line_offset = 0.02       # Adjust vertical height of lines
 categories_list = categories.tolist()  # To ensure consistent order
