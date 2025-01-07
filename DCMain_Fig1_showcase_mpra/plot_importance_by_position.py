@@ -1,3 +1,4 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import pandas as pd
@@ -7,9 +8,9 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from seq_ops import SeqExtractor
 from region_ops import resize_region
 from seq_annotators import JasparAnnotator
-from in_silico_mutagenesis import compute_ism, get_motif_isa
+from in_silico_mutagenesis import compute_mutagenesis_score, get_motif_isa
 
-
+matplotlib.rcParams['pdf.fonttype']=42
 
 #---------------
 # Load annotators
@@ -97,7 +98,7 @@ def reduce_motifs(df_motif,window=4):
 
 
 
-def plot_motif_imp(df_motif, ax):
+def plot_motif_imp(df_motif, ax,ylim=None):
     # only relative position matters
     # Hide spines
     for spine in ax.spines.values():
@@ -114,14 +115,17 @@ def plot_motif_imp(df_motif, ax):
             if current_text_pos>row["end_rel"]:
                 pass
                 # raise ValueError("Annotation overlap cannot be resolved")
-        ax.text(current_text_pos,row["isa"], row["protein"], rotation=90, fontsize=10)
+        ax.text(current_text_pos,row["isa"], row["protein"], rotation=90, fontsize=5)
         prev_text_pos=current_text_pos
     # Set title and labels
-    ax.set_title("Motif ISA score",fontsize=16)
+    ax.set_title("Motif ISA score",fontsize=7)
+    ax.tick_params(axis='y', which='major', labelsize=7)
+    if ylim:
+        ax.set_ylim(ylim)
 
 
 
-def plot_base_imp(df,ax,title,xlabel=False):
+def plot_base_imp(df,ax,title,ylim=None,xlabel=False):
     """
     df have columns "position", "base", "imp"
     """
@@ -134,15 +138,18 @@ def plot_base_imp(df,ax,title,xlabel=False):
     color_dict = {"A": "#1f77b4", "C": "#ff7f0e", "G": "#2ca02c", "T": "#d62728"}
     # Plot markers for each base
     for row in df.itertuples():
-        ax.plot(row.position, row.imp, marker="o", color=color_dict[row.base])
+        ax.plot(row.position, row.imp, marker="o", color=color_dict[row.base], markersize=1) # 1 for F9, 2 for SORT1
     # Set title and labels
-    ax.set_title(title,fontsize=16)
+    ax.set_title(title,fontsize=7)
     if xlabel:
-        ax.set_xlabel("Position")
+        ax.set_xlabel("Position",fontsize=7)
+    ax.tick_params(axis='both', which='major', labelsize=7)
+    #
     # Create legend
     handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
-    ax.legend(handles=handles, title="Bases")
-
+    ax.legend(handles=handles, title="Bases", title_fontsize=7, fontsize=7, loc="upper right")
+    if ylim:
+        ax.set_ylim(ylim)
 
 
 
@@ -154,9 +161,9 @@ def plot_region(seq_extractor,jaspar_annotator, df_truth, element_name, region, 
     seq=seq_extractor.get_seq(region)
     seq_resized=seq_extractor.get_seq(region_resized)
     # get base importance
-    isa=compute_ism(seq_resized,"isa","mean").loc[f"Seq0_Track{track_num}",:]
+    isa=compute_mutagenesis_score(seq_resized,"isa","mean").loc[f"Seq0_Track{track_num}",:]
     isa=isa[left_shift:(left_shift+region[2]-region[1]+1)].reset_index(drop=True)
-    ism=compute_ism(seq_resized,"ism","mean").loc[f"Seq0_Track{track_num}",:]
+    ism=compute_mutagenesis_score(seq_resized,"ism","mean").loc[f"Seq0_Track{track_num}",:]
     ism=ism[left_shift:(left_shift+region[2]-region[1]+1)].reset_index(drop=True)
     # get df_motif
     df_motif=get_motifs(seq_extractor,jaspar_annotator,region_resized,track_num,score_threshold)
@@ -165,20 +172,22 @@ def plot_region(seq_extractor,jaspar_annotator, df_truth, element_name, region, 
     df_motif=df_motif[(df_motif.loc[:,"start"]>=region[1]) & (df_motif.loc[:,"end"]<=region[2])].copy().reset_index(drop=True)
     df_motif["start_rel"]-=left_shift
     df_motif["end_rel"]-=left_shift
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True, figsize=(20, 15))
+    ymax=max(max(ism),max(isa))
+    ymin=min(min(ism),min(isa))
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True, figsize = (140/25.4, 140/25.4))
     # Plot ISA score on the first axis
-    plot_motif_imp(df_motif, ax1)
+    plot_motif_imp(df_motif, ax1,ylim=(ymin,ymax))
     # plot isa on the second axis
     df_n= pd.DataFrame({"position":list(range(len(isa))),"base":list(seq),"imp":isa})
-    plot_base_imp(df_n,ax2,"ISA (Base replaced by N)")
+    plot_base_imp(df_n,ax2,"ISA (Base replaced by N)",ylim=(ymin,ymax))
     df_a=pd.DataFrame({"position":list(range(len(ism))),"base":list(seq),"imp":ism})
-    plot_base_imp(df_a,ax3,"ISM (Average of 3 alternative bases)")
+    plot_base_imp(df_a,ax3,"ISM (Average of 3 alternative bases)",ylim=(ymin,ymax))
     # rename "Position" to "position", "Value" to "imp","Ref" to "base"
     df_truth=df_truth.loc[df_truth["Element"]==element_name,:].reset_index(drop=True)
     df_truth["position"]=df_truth["position"]-region[1]
     plot_base_imp(df_truth,ax4,"MPRA experiment",xlabel=True)
     plt.tight_layout()
-    plt.savefig(f"{element_name}_track{track_num}.pdf")
+    plt.savefig(f"{element_name}_track{track_num}.pdf",dpi=300)
     plt.close()
 
 
@@ -189,7 +198,7 @@ def plot_region(seq_extractor,jaspar_annotator, df_truth, element_name, region, 
 
 
 # truth
-df_truth=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Showcase/GRCh38_TERT-GAa_TERT-GSc_TERT-GBM_TERT-HEK_LDLR_F9_PKLR-24h_SORT1.tsv",sep="\t")
+df_truth=pd.read_csv("GRCh38_TERT-GAa_TERT-GSc_TERT-GBM_TERT-HEK_LDLR_F9_PKLR-24h_SORT1.tsv",sep="\t")
 # select P-Value<0.05
 df_truth=df_truth.loc[df_truth["P-Value"]<0.05,:].reset_index(drop=True)
 # group by Position, Ref, Element, and select the largest Value
@@ -205,20 +214,17 @@ df_truth.Element.unique()
 
 
 
-
-
-
-for track_num in [0,2,4,6]:
+for track_num in [6]:
     # F9 promoter: chrX:139530463-139530765
     plot_region(seq_extractor,jaspar_hepg2_annotator,df_truth,"F9",("chrX",139530463,139530765),track_num,360) # window 4, text space 5
     # LDLR promoter: chr19:11,089,231-11,089,548
-    plot_region(jaspar_hepg2_annotator,df_truth,"LDLR",("chr19",11089231,11089548),track_num,500)
+    plot_region(seq_extractor,jaspar_hepg2_annotator,df_truth,"LDLR",("chr19",11089231,11089548),track_num,500)
 
 
 
-for track_num in [1,3,5,7]:
+for track_num in [7]:
     # PKLR promoter: chr1:155,301,395-155,301,864
-    plot_region(jaspar_k562_annotator,df_truth,"PKLR-24h",("chr1",155301395,155301864),track_num,1000)
+    plot_region(seq_extractor,jaspar_k562_annotator,df_truth,"PKLR-24h",("chr1",155301395,155301864),track_num,1000)
 
 
 
@@ -232,7 +238,7 @@ for track_num in [1,3,5,7]:
 # SORT1 enhancer: chr1:109,274,652-109,275,251
 
 def plot_ism_ref_vs_mut(imp_ref,imp_mut,title_prefix):
-    fig, (ax0, ax1) = plt.subplots(2, 1, sharex=True, figsize=(20, 8))
+    fig, (ax0, ax1) = plt.subplots(2, 1, sharex=True, figsize=(280/25.4, 90/25.4))
     # plot ism_ref on the first axis
     df_ref= pd.DataFrame({"position":list(range(len(imp_ref))),"base":list(seq_ref),"imp":imp_ref})
     plot_base_imp(df_ref,ax0,f"{title_prefix} (reference)")
@@ -242,9 +248,9 @@ def plot_ism_ref_vs_mut(imp_ref,imp_mut,title_prefix):
     # add a red box to position 315-323
     ax0.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=2))
     ax1.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=2))
-    plt.xlabel("Relative position")
-    plt.tight_layout()
-    plt.savefig(f"SORT1_enhancer_mutation_{title_prefix}.pdf")
+    plt.xlabel("Relative position",fontsize=7)
+    # legend font size: 7
+    plt.savefig(f"SORT1_enhancer_mutation_{title_prefix}.pdf",dpi=300)
     plt.close()
 
 
@@ -259,10 +265,10 @@ seq_mut=seq_ref[:mut_pos]+"T"+seq_ref[(mut_pos+1):]
 
 # calculate ism and isa
 track_num=4
-isa_ref=compute_ism(seq_ref,"isa","mean").loc[f"Seq0_Track{track_num}",:]
-ism_ref=compute_ism(seq_ref,"ism","mean").loc[f"Seq0_Track{track_num}",:]
-isa_mut=compute_ism(seq_mut,"isa","mean").loc[f"Seq0_Track{track_num}",:]
-ism_mut=compute_ism(seq_mut,"ism","mean").loc[f"Seq0_Track{track_num}",:]
+isa_ref=compute_mutagenesis_score(seq_ref,"isa","mean").loc[f"Seq0_Track{track_num}",:]
+ism_ref=compute_mutagenesis_score(seq_ref,"ism","mean").loc[f"Seq0_Track{track_num}",:]
+isa_mut=compute_mutagenesis_score(seq_mut,"isa","mean").loc[f"Seq0_Track{track_num}",:]
+ism_mut=compute_mutagenesis_score(seq_mut,"ism","mean").loc[f"Seq0_Track{track_num}",:]
 
 # plot
 plot_ism_ref_vs_mut(ism_ref,ism_mut,"ISM")
