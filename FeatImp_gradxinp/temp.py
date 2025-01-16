@@ -17,10 +17,12 @@ def read_file(file_suffix):
     return df
 
 
-df=read_file("promoters_hepg2")
+df=read_file("enhancers_hepg2")
 
 df.columns
 
 # pearson correlation
 pearsonr(df["max_gradxinp_0"],df["min_gradxinp_0"])
 pearsonr(df["max_gradxinp_0"],df["isa_track0"])
+pearsonr(df["max_gradxinp_0"],df["max_ism_0"])
+pearsonr(df["max_gradxinp_0"],df["max_isa_0"])

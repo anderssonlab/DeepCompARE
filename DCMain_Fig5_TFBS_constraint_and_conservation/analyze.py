@@ -18,6 +18,11 @@ seq_extractor=SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
 #-------------------
 
 
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
+
+
+
 def add_tf_cooperativity(df,cell_line):
     tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}.txt", header=None).iloc[:,0].tolist()
     tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}.txt", header=None).iloc[:,0].tolist()

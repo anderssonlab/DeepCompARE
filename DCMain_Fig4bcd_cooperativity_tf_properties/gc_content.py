@@ -4,7 +4,12 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from seq_ops import SeqExtractor
 from plotting import plot_violin_with_statistics
 
-cell_line="hepg2"
+
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
+
+
+cell_line="k562"
 
 prefix='/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_'
 
@@ -39,6 +44,6 @@ plot_violin_with_statistics(
     "gc_content",
     "TF Type",
     "GC percentage",
-    f"GC content of TF motifs in {cell_line}", 
+    None,
     f"gc_content_{cell_line}.pdf"
 )

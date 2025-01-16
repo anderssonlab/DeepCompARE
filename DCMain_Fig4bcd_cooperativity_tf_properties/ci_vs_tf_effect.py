@@ -6,7 +6,7 @@ import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from plotting import plot_violin_with_statistics
 
-cell_line="hepg2"
+cell_line="k562"
 
 df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_effect_and_constraint/tf_effect_and_constraints_{cell_line}.csv")
 
@@ -40,7 +40,7 @@ def plot_ci_vs_tf_effect(effect_col, ylabel, output_file):
         y_col=effect_col,
         x_label="TF type",
         y_label=ylabel,
-        title="Cooperativity Index vs. TF Effect",
+        title=None,
         output_file=output_file
     )
 

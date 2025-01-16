@@ -6,6 +6,15 @@ from loguru import logger
 
 from adjustText import adjust_text
 
+
+
+
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
+
+
+
+
 universal_stripe_factors=pd.read_csv("/isdata/alab/people/pcr980/Resource/universal_stripe_factors.txt",sep='\t').iloc[:,0].tolist()
 
 def create_dimer_list(tf_list):
@@ -42,28 +51,33 @@ for cell_line in ["hepg2","k562"]:
     stat,p=mannwhitneyu(df_pf["cooperativity_index"],df_non_pf["cooperativity_index"],alternative='greater')
     logger.info(f"PF vs non-PF: {p}")
 
-
+    plt.figure(figsize=(3,3))
     sns.scatterplot(x="rank",y="cooperativity_index",data=df_tf,s=5,color='black')
-    plt.xlim(-40,df_tf.shape[0]+40)
+    plt.xlim(-70,df_tf.shape[0]+70)
     plt.ylim(-0.1,1.1)
-    plt.title("TF cooperativity index")
     plt.xlabel("Rank")
     plt.ylabel("TF cooperativity index")
 
     texts=[]
     for i in range(df_usf.shape[0]):
-        texts.append(plt.text(df_usf.iloc[i]["rank"],df_usf.iloc[i]["cooperativity_index"],df_usf.iloc[i]["protein2"],color='#4169E1'))
+        texts.append(plt.text(df_usf.iloc[i]["rank"],df_usf.iloc[i]["cooperativity_index"],df_usf.iloc[i]["protein2"],color='#4169E1',fontsize=5))
 
     for i in range(df_pf.shape[0]):
-        texts.append(plt.text(df_pf.iloc[i]["rank"],df_pf.iloc[i]["cooperativity_index"],df_pf.iloc[i]["protein2"],color='darkorange'))
+        texts.append(plt.text(df_pf.iloc[i]["rank"],df_pf.iloc[i]["cooperativity_index"],df_pf.iloc[i]["protein2"],color='darkorange',fontsize=5))
 
     adjust_text(texts)
 
     # add legend for text color
     plt.scatter([],[],color='#4169E1',label='Universal stripe factors')
     plt.scatter([],[],color='darkorange',label='Pioneer factors')
-    plt.legend()
-
-    plt.savefig(f"usf_pf_{cell_line}.pdf")
+    plt.legend(fontsize=7)
+    # ticks 7
+    plt.xticks(fontsize=7)
+    plt.yticks(fontsize=7)
+    # label 7
+    plt.xlabel("Rank",fontsize=9)
+    plt.ylabel("TF cooperativity index",fontsize=9)
+    plt.tight_layout()
+    plt.savefig(f"usf_pf_{cell_line}.pdf",dpi=300)
     plt.close()
 

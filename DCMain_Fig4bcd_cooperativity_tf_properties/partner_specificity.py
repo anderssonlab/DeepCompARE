@@ -3,6 +3,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
+
+
 cell_line="hepg2"
 
 df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell_line}.csv")

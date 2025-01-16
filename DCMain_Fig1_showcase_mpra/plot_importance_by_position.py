@@ -147,7 +147,7 @@ def plot_base_imp(df,ax,title,ylim=None,xlabel=False):
     #
     # Create legend
     handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
-    ax.legend(handles=handles, title="Bases", title_fontsize=7, fontsize=7, loc="upper right")
+    ax.legend(handles=handles, title="Bases", title_fontsize=5, fontsize=5, loc="upper right")
     if ylim:
         ax.set_ylim(ylim)
 
@@ -174,7 +174,7 @@ def plot_region(seq_extractor,jaspar_annotator, df_truth, element_name, region, 
     df_motif["end_rel"]-=left_shift
     ymax=max(max(ism),max(isa))
     ymin=min(min(ism),min(isa))
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True, figsize = (140/25.4, 140/25.4))
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True, figsize = (180/25.4, 120/25.4))
     # Plot ISA score on the first axis
     plot_motif_imp(df_motif, ax1,ylim=(ymin,ymax))
     # plot isa on the second axis
@@ -238,7 +238,7 @@ for track_num in [7]:
 # SORT1 enhancer: chr1:109,274,652-109,275,251
 
 def plot_ism_ref_vs_mut(imp_ref,imp_mut,title_prefix):
-    fig, (ax0, ax1) = plt.subplots(2, 1, sharex=True, figsize=(280/25.4, 90/25.4))
+    fig, (ax0, ax1) = plt.subplots(2, 1, sharex=True, figsize=(180/25.4, 100/25.4))
     # plot ism_ref on the first axis
     df_ref= pd.DataFrame({"position":list(range(len(imp_ref))),"base":list(seq_ref),"imp":imp_ref})
     plot_base_imp(df_ref,ax0,f"{title_prefix} (reference)")
@@ -246,10 +246,11 @@ def plot_ism_ref_vs_mut(imp_ref,imp_mut,title_prefix):
     df_mut=pd.DataFrame({"position":list(range(len(imp_mut))),"base":list(seq_ref),"imp":imp_mut})
     plot_base_imp(df_mut,ax1,f"{title_prefix} (109274968:G>T)",xlabel=True)
     # add a red box to position 315-323
-    ax0.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=2))
-    ax1.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=2))
+    ax0.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=1))
+    ax1.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=1))
     plt.xlabel("Relative position",fontsize=7)
     # legend font size: 7
+    plt.tight_layout()
     plt.savefig(f"SORT1_enhancer_mutation_{title_prefix}.pdf",dpi=300)
     plt.close()
 

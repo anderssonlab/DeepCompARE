@@ -13,7 +13,7 @@ from prediction import compute_predictions
 #-----------------------
 # Functions
 #-----------------------
-
+# TODO: change row names to region
 
 
 def main(file_name,device):
@@ -26,7 +26,10 @@ def main(file_name,device):
     seq_extractor = SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
     seqs=df.apply(lambda row: seq_extractor.get_seq((row["chromosome"],row["start"],row["end"])),axis=1)
     preds=compute_predictions(seqs,device=device)
-    pd.DataFrame(preds).to_csv(f"predictions_{file_name}.csv",index=False)
+    # index is chr:start-end
+    indices=df.apply(lambda row: f"{row['chromosome']}:{row['start']}-{row['end']}",axis=1).tolist()
+    df_preds=pd.DataFrame(preds,index=indices)
+    df_preds.to_csv(f"predictions_{file_name}.csv")
 
 
 #-----------------------

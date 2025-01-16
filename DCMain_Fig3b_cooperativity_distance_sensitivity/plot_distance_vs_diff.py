@@ -10,6 +10,9 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from utils import change_track_name
 
 
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
+
 def rearrange(df):
     df_cage=df[["protein1","protein2","distance","diff_cage"]].copy()
     df_dhs=df[["protein1","protein2","distance","diff_dhs"]].copy()
@@ -65,7 +68,7 @@ def read_file(file_name):
 
 
 option=""
-option="cnn6_"
+#option="cnn6_"
 
 df_null_enhancers_hepg2=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null_{option}enhancers_hepg2.csv")
 df_null_enhancers_k562=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null_{option}enhancers_k562.csv")
@@ -85,11 +88,27 @@ df_alt=pd.concat([df_enhancers_hepg2,df_enhancers_k562,df_promoters_hepg2,df_pro
 df_alt=df_alt.groupby(["distance","data"]).agg({"diff":"mean"}).reset_index()
 
 
-sns.lineplot(x="distance", y="diff", data=df_alt, hue="data")
-sns.lineplot(x="distance", y="diff", data=df_null, hue="data", alpha=0.3,legend=False)
-plt.title(f"Effect of partner decreases as distance increases ({option})")
-plt.xlabel("Distance")
-plt.ylabel("Difference between TF effect with and without partner")
+plt.figure(figsize=(2.3,2))
+# thin frame
+plt.gca().spines['top'].set_linewidth(0.5)
+plt.gca().spines['right'].set_linewidth(0.5)
+plt.gca().spines['bottom'].set_linewidth(0.5)
+plt.gca().spines['left'].set_linewidth(0.5)
+# thin line
+sns.lineplot(x="distance", y="diff", data=df_alt, hue="data",linewidth=0.5)
+sns.lineplot(x="distance", y="diff", data=df_null, hue="data", alpha=0.3,legend=False,linewidth=0.5)
+# x ends at 200
+plt.xlim(0,200)
+plt.xlabel("Distance",fontsize=7)
+plt.ylabel("Difference",fontsize=7)
+# add more ticks, round to 2 decimal places
+x_ticks = np.linspace(0, 200, num=6)  # 21 ticks from 0 to 200
+y_ticks = [0,0.05,0.1,0.15,0.2]
+plt.xticks(x_ticks, fontsize=5)
+plt.yticks(y_ticks, fontsize=5)
+plt.legend(title="Modality",fontsize=5,title_fontsize=5)
+plt.tight_layout()
+plt.margin=0.01
 plt.savefig(f"Plots/distance_vs_diff_cnn5.pdf")
 plt.close()
 

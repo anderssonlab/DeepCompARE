@@ -7,6 +7,10 @@ from scipy.stats import mannwhitneyu
 
 
 
+
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
+
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from stat_tests import bin_and_label
@@ -159,89 +163,6 @@ df_class1["codependent_tf_count"].median()
 df_class2["codependent_tf_count"].median()
 
 
-
-
-
-
-
-
-
-
-
-# ----------------------------------------------------
-# classifier
-# ----------------------------------------------------
-
-cell_line="k562"
-df=pd.read_csv(f"tf_count_{cell_line}.csv")
-df["region_type"]=df["region_type"].replace(f"_{cell_line}","",regex=True)
-df["distal_proximal"]=df["region_type"].apply(lambda x: x.split("_")[2])
-df["ti_ts"]=df["region_type"].apply(lambda x: x.split("_")[3])
-df["region_type"]=df["region_type"].apply(lambda x: x.split("_")[2]+"_"+x.split("_")[3])
-
-
-pred_col = "region_type"
-x = df[['codependent_tf_count', 'redundant_tf_count']]
-y = df[pred_col]
-
-# Encode target labels
-le = LabelEncoder()
-y = le.fit_transform(y)
-
-# Get class counts for weights
-class_counts = df[pred_col].value_counts()
-class_weights = {le.transform([cls])[0]: 1000.0 / count for cls, count in class_counts.items()}
-
-# Initialize classifier with class weights
-clf = RandomForestClassifier(random_state=0)
-scorers = {
-    'f1': make_scorer(f1_score, average='weighted'),  # F1 score
-    'accuracy': make_scorer(accuracy_score)          # Accuracy
-}
-
-cv_results = cross_validate(clf, x, y, cv=5, scoring=scorers)
-f1_scores = cv_results['test_f1']
-accuracy_scores = cv_results['test_accuracy']
-
-
-
-
-# train test split
-from sklearn.model_selection import train_test_split
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=0)
-clf.fit(x_train, y_train)
-y_pred = clf.predict(x_test)
-# count each type of y_pred
-pd.Series(y_pred).value_counts()
-pd.Series(y).value_counts()
-le.inverse_transform([3])
-
-
-# confusion matrix
-from sklearn.metrics import confusion_matrix
-confusion_matrix(y_test, y_pred)
-
-
-
-
-
-
-
-
-# predict on another cell line
-df_pred=pd.read_csv(f"re_ci_hepg2.csv")
-# remove "_hepg2" from region
-df_pred["region_type"]=df_pred["region_type"].replace("_hepg2","",regex=True)
-df_pred["constraint"]=df_pred["region_type"].apply(lambda x: x.split("_")[1])
-df_pred["distal_proximal"]=df_pred["region_type"].apply(lambda x: x.split("_")[2])
-df_pred["ti_ts"]=df_pred["region_type"].apply(lambda x: x.split("_")[3])
-x_pred = df_pred[['codependent_tf_count', 'redundant_tf_count']]
-y_truth = df_pred[pred_col]
-y_truth = le.transform(y_truth)
-
-y_pred=clf.predict(x_pred)
-# how many are correctly predicted
-sum(y_truth==y_pred)/len(y_truth)
 
 
 
