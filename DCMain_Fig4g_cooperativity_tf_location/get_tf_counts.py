@@ -65,6 +65,7 @@ for cell_line in ["hepg2","k562"]:
 # ----------------------------------------------------
 
 
+
 # Neighbor pairs for Mann-Whitney U tests
 neighbor_pairs = [
     ("distal_ts", "distal_ti"),
@@ -80,31 +81,32 @@ for cell_line in ["k562", "hepg2"]:
         categories=["distal_ts", "distal_ti", "proximal_ts", "proximal_ti"],
         ordered=True
     )
-    # Add pseudocount
-    df["redundant_tf_count"] += 1
-    df["codependent_tf_count"] += 1
-    df["other_tf_count"] += 1
     #
     for col in ["redundant_tf_count", "codependent_tf_count", "other_tf_count"]:
         logger.info(f"Plotting {col}")
-        plt.figure(figsize=(6, 6))
-        sns.boxplot(x="region_type", y=col, data=df, boxprops={'facecolor': 'none'})
-        plt.xticks(rotation=90)
-        plt.yscale("log")
+        plt.figure(figsize=(2.3, 2.3))
+        # thin frame  
+        plt.gca().spines['top'].set_linewidth(0.5)
+        plt.gca().spines['right'].set_linewidth(0.5)
+        plt.gca().spines['bottom'].set_linewidth(0.5)
+        plt.gca().spines['left'].set_linewidth(0.5)  
+        # box plot with thin lines     
+        sns.boxplot(x="region_type", y=col, data=df, boxprops={'facecolor': 'none'}, whiskerprops={'color': 'black'}, capprops={'color': 'black'}, medianprops={'color': 'black'}, showfliers=False, linewidth=0.5)
+        plt.xticks(rotation=30)
         #
         # Calculate and annotate Mann-Whitney U test p-values
         for pair in neighbor_pairs:
             group1 = df[df["region_type"] == pair[0]][col]
             group2 = df[df["region_type"] == pair[1]][col]
             stat, p_value = mannwhitneyu(group1, group2, alternative='two-sided')
-            # Add p-value annotation
-            y_max = max(group1.max(), group2.max())
-            y_position = y_max * 1.5  # Adjust the multiplier as needed for spacing
+            # Add p-value annotation at 90 percentile
+            y_max = max(group1.quantile(0.95), group2.quantile(0.95))
+            y_position = y_max * 1.05  # Adjust the multiplier as needed for spacing
             #
             plt.plot([
                 df["region_type"].cat.categories.get_loc(pair[0]),
                 df["region_type"].cat.categories.get_loc(pair[1])
-            ], [y_position, y_position], lw=1.5, color='black')
+            ], [y_position, y_position], lw=0.2, color='black')
             #
             plt.text(
                 (df["region_type"].cat.categories.get_loc(pair[0]) + df["region_type"].cat.categories.get_loc(pair[1])) / 2,
@@ -112,12 +114,14 @@ for cell_line in ["k562", "hepg2"]:
                 f"p={p_value:.2e}",
                 ha='center',
                 va='bottom',
-                fontsize=8
+                fontsize=5
             )
-            #
+        plt.xlabel("Region type",fontsize=7)
+        plt.ylabel(f"{col} count",fontsize=7)
+        plt.xticks(fontsize=5)
+        plt.yticks(fontsize=5)
         plt.tight_layout()
-        plt.subplots_adjust(bottom=0.3)  # Larger lower margin
-        plt.savefig(f"Plots/{col}_{cell_line}.pdf")
+        plt.savefig(f"{col}_{cell_line}.pdf")
         plt.close()
 
 

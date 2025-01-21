@@ -49,24 +49,9 @@ def main(file_name,device):
     # step 3: annotate with conservation 
     df_motif=pd.read_csv(f"{file_name}_temp2.csv")
     logger.info(f"Annotate {df_motif.shape[0]} rows in {file_name}.")
-    df_motif_completed=pd.read_csv(f"motif_info_thresh_{THRESHOLD}_{file_name}.csv")
-    logger.info(f"Already annotated {df_motif_completed.shape[0]} rows for {file_name}.")
-    # remove all rows that are already annotated
-    # if chromosome,start,end,protein,score,strand,region,seq_idx,chip_evidence,rna_evidence
-    # then remove them from df_motif
-    df_motif["info_combined"]=df_motif.apply(lambda row: f"{row['chromosome']}_{row['start']}_{row['end']}_{row['protein']}_{row['score']}_{row['strand']}_{row['region']}_{row['seq_idx']}_{row['chip_evidence']}_{row['rna_evidence']}",axis=1)
-    df_motif_completed["info_combined"]=df_motif_completed.apply(lambda row: f"{row['chromosome']}_{row['start']}_{row['end']}_{row['protein']}_{row['score']}_{row['strand']}_{row['region']}_{row['seq_idx']}_{row['chip_evidence']}_{row['rna_evidence']}",axis=1)
-    df_motif=df_motif[~df_motif["info_combined"].isin(df_motif_completed["info_combined"])].reset_index(drop=True)  
-    logger.info(f"Annotating {df_motif.shape[0]} unannotated rows in {file_name}.")
     phylop_annotator=phylopAnnotator(f"/isdata/alab/people/pcr980/Resource/Conservation/hg38.phyloP241way.bw")
     
-    # chr_nums are unique chromosomes in the df_motif, removing "chr" from the chromosome names
-    chr_names=df_motif["chromosome"].unique().tolist()
-    chr_nums=[chr_name.replace("chr","") for chr_name in chr_names]
-    logger.info(f"Chromosomes to annotate: {chr_nums}")
-    
-    #for chr_num in list(range(1,23))+["X","Y"]: 
-    for chr_num in chr_nums:
+    for chr_num in list(range(1,23))+["X","Y"]: 
         logger.info(f"Working on chromosome {chr_num}.")
         df_chr=df_motif[df_motif["chromosome"]==f"chr{chr_num}"].reset_index(drop=True)
         if df_chr.shape[0]==0:
@@ -74,7 +59,6 @@ def main(file_name,device):
         gnomad_annotator=gnomadAnnotator(chr_num)
         df_chr = gnomad_annotator.annotate(df_chr)
         df_chr["phylop_241way"] = df_chr.apply(lambda row: phylop_annotator.annotate((row['chromosome'],row['start'],row['end'])), axis=1)
-
         # if the file doesn't exist, write header
         out_name=f"motif_info_thresh_{THRESHOLD}_{file_name}.csv"
         if not os.path.isfile(out_name):

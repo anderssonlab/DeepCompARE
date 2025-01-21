@@ -213,7 +213,7 @@ df_truth.Element.unique()
 
 
 
-
+track_num=6
 for track_num in [6]:
     # F9 promoter: chrX:139530463-139530765
     plot_region(seq_extractor,jaspar_hepg2_annotator,df_truth,"F9",("chrX",139530463,139530765),track_num,360) # window 4, text space 5

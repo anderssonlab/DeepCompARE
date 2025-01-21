@@ -51,8 +51,13 @@ for cell_line in ["hepg2","k562"]:
     stat,p=mannwhitneyu(df_pf["cooperativity_index"],df_non_pf["cooperativity_index"],alternative='greater')
     logger.info(f"PF vs non-PF: {p}")
 
-    plt.figure(figsize=(3,3))
-    sns.scatterplot(x="rank",y="cooperativity_index",data=df_tf,s=5,color='black')
+    plt.figure(figsize=(3.2,3.2))
+    # thin frame
+    plt.gca().spines['top'].set_linewidth(0.5)
+    plt.gca().spines['right'].set_linewidth(0.5)
+    plt.gca().spines['bottom'].set_linewidth(0.5)
+    plt.gca().spines['left'].set_linewidth(0.5)
+    sns.scatterplot(x="rank",y="cooperativity_index",data=df_tf,s=1,color='black')
     plt.xlim(-70,df_tf.shape[0]+70)
     plt.ylim(-0.1,1.1)
     plt.xlabel("Rank")
@@ -70,13 +75,13 @@ for cell_line in ["hepg2","k562"]:
     # add legend for text color
     plt.scatter([],[],color='#4169E1',label='Universal stripe factors')
     plt.scatter([],[],color='darkorange',label='Pioneer factors')
-    plt.legend(fontsize=7)
+    plt.legend(fontsize=5)
     # ticks 7
-    plt.xticks(fontsize=7)
-    plt.yticks(fontsize=7)
+    plt.xticks(fontsize=5)
+    plt.yticks(fontsize=5)
     # label 7
-    plt.xlabel("Rank",fontsize=9)
-    plt.ylabel("TF cooperativity index",fontsize=9)
+    plt.xlabel("Rank",fontsize=7)
+    plt.ylabel("TF cooperativity index",fontsize=7)
     plt.tight_layout()
     plt.savefig(f"usf_pf_{cell_line}.pdf",dpi=300)
     plt.close()

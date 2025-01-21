@@ -8,4 +8,4 @@ python3 get_motif_df.py --file_name dhs_distal_k562   --device 1 &
 
 
 
-# nohup bash get_motif_df.sh
+# nohup bash get_motif_df.sh > get_motif_df.log &
