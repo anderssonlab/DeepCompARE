@@ -13,7 +13,7 @@ matplotlib.rcParams['pdf.fonttype']=42
 
 
 #---------------------------------
-# Read and merge data
+# Plot
 #---------------------------------
 cell_line = "hepg2"
 
@@ -51,3 +51,5 @@ for cell_line in ["hepg2", "k562"]:
             title=None,
             output_file=f"ppi_{col}_{cell_line}.pdf"
         )
+        
+
