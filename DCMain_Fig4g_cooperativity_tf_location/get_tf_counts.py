@@ -21,16 +21,16 @@ from stat_tests import bin_and_label
 
 
 
-def get_tf_count(file_name):
-    df=pd.read_csv(f"Pd2_motif_info/motif_info_thresh_500_{file_name}.tsv.csv")
+def get_tf_count(prefix,file_name):
+    df=pd.read_csv(f"{prefix}_{file_name}.tsv.csv")
     if "hepg2" in file_name:
         cell_line="hepg2"
     elif "k562" in file_name:
         cell_line="k562"
     else:
         raise ValueError("cell line not found")
-    tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}.txt",header=None).iloc[:,0].tolist()
-    tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}.txt",header=None).iloc[:,0].tolist()
+    tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}_dhs.txt",header=None).iloc[:,0].tolist()
+    tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}_dhs.txt",header=None).iloc[:,0].tolist()
     df["tf_type"]="other"
     df.loc[df["protein"].isin(tfs_codependent),"tf_type"]="codependent"
     df.loc[df["protein"].isin(tfs_redundant),"tf_type"]="redundant"

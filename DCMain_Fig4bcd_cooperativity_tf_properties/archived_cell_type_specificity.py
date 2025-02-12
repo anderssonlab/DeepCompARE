@@ -15,18 +15,19 @@ from utils import split_dimer
 
 
 cell_line="k562"
-
+suffix="dhs"
 df_dispersion=pd.read_csv(f"/isdata/alab/people/pcr980/Resource/gtex.dispersionEstimates.tab",sep="\t")
 
-df_tf=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}.csv")
+df_tf=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}_{suffix}.csv")
+df_tf=df_tf[df_tf["c_sum"]>1].reset_index(drop=True)
 # merge with df_dispersion
 df_tf=df_tf.merge(df_dispersion,left_on="protein2",right_on="symbol",how="inner")
 df_tf.drop_duplicates(subset="protein2",inplace=True)
 
 
-tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}.txt",header=None).iloc[:,0].tolist()
+tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}_{suffix}.txt",header=None).iloc[:,0].tolist()
 tfs_codependent=split_dimer(tfs_codependent)
-tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}.txt",header=None).iloc[:,0].tolist()
+tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}_{suffix}.txt",header=None).iloc[:,0].tolist()
 tfs_redundant=split_dimer(tfs_redundant)
 df_tf["tf_type"]="other"
 df_tf.loc[df_tf["protein2"].isin(tfs_codependent),"tf_type"]="codependent"
@@ -37,10 +38,12 @@ df_tf.loc[df_tf["protein2"].isin(tfs_redundant),"tf_type"]="redundant"
 # pearson correlation
 from scipy.stats import pearsonr
 pearsonr(df_tf["adjusted_dispersion"],df_tf["cooperativity_index"])
+pearsonr(df_tf["gini"],df_tf["cooperativity_index"])
+
 
 ci_codependent = df_tf[df_tf["tf_type"]=="codependent"]
 ci_redundant= df_tf[df_tf["tf_type"]=="redundant"]
-stat, p_value = mannwhitneyu(ci_codependent["adjusted_dispersion"],ci_redundant["adjusted_dispersion"])
+stat, p_value = mannwhitneyu(ci_codependent["gini"],ci_redundant["gini"])
 print(f"p-value: {p_value}")
 
 df_tf["tf_type"]=pd.Categorical(df_tf["tf_type"],categories=["redundant","other","codependent"],ordered=True)

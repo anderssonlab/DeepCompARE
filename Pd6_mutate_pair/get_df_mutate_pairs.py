@@ -13,27 +13,28 @@ from tf_cooperativity import write_pair_mutation
 # Functions
 #-----------------------
 
-# TODO: change sep
-def analysis(file_name,device,sep="\t"):
+def analysis(file_name,device,sep=" "):
     # load data and tools
+    df_regions = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/{file_name}.tsv",sep=sep)
+    print(df_regions.shape)
+    # TODO: choose to -1 or not
+    # df_regions.iloc[:,2]=df_regions.iloc[:,2]-1
     seq_extractor = SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
     if "hepg2" in file_name:
         jaspar_annotator=JasparAnnotator("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2022_hg38.bb",
                                         score_thresh=500,
                                         rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_hepg2.tsv",
-                                        chip_file="/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_hepg2.bed",
-                                        subset="rna")
+                                        #chip_file="/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_hepg2.bed"
+                                        )
     elif "k562" in file_name:
         jaspar_annotator=JasparAnnotator("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2022_hg38.bb",
                                         score_thresh=500,
                                         rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_k562.tsv",
-                                        chip_file="/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_k562.bed",
-                                        subset="rna")
+                                        #chip_file="/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_k562.bed"
+                                        )
     else:
         raise ValueError("file_name should contain hepg2 or k562")
-    df_regions = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/{file_name}.bed",sep=sep,header=None)
-    # TODO: choose to -1 or not
-    df_regions.iloc[:,2]=df_regions.iloc[:,2]-1
+    #
     out_path = f"mutate_pairs_{file_name}.csv"
     write_pair_mutation(df_regions,seq_extractor,jaspar_annotator,device,out_path)
 
