@@ -137,6 +137,33 @@ logger.info("k562 done")
 
 
 
+# df_proximal_hepg2=pd.read_csv(f'{prefix}dhs_proximal_hepg2.csv')
+# df_proximal_k562=pd.read_csv(f'{prefix}dhs_proximal_k562.csv')
+# df_distal_hepg2=pd.read_csv(f'{prefix}dhs_distal_hepg2.csv')
+# df_distal_k562=pd.read_csv(f'{prefix}dhs_distal_k562.csv')
+
+# df = pd.concat([df_proximal_hepg2.assign(dataset="proximal_hepg2"),
+#                 df_proximal_k562.assign(dataset="proximal_k562"),
+#                 df_distal_hepg2.assign(dataset="distal_hepg2"),
+#                 df_distal_k562.assign(dataset="distal_k562")], ignore_index=True)
+
+# df["cell_type"]=df["dataset"].apply(lambda x: x.split("_")[1])
+
+# whole_analysis(df,"dataset","proximal_hepg2")
+# logger.info("proximal_hepg2 done")
+# whole_analysis(df,"dataset","proximal_k562")
+# logger.info("proximal_k562 done")
+# whole_analysis(df,"dataset","distal_hepg2")
+# logger.info("distal_hepg2 done")
+# whole_analysis(df,"dataset","distal_k562")
+# logger.info("distal_k562 done")
+# whole_analysis(df,"cell_type","hepg2")
+# logger.info("hepg2 done")
+# whole_analysis(df,"cell_type","k562")
+# logger.info("k562 done")
+
+
+
 
 
 # nohup python3 get_tf_effect_and_constraints.py > get_tf_effect_and_constraints.out &
