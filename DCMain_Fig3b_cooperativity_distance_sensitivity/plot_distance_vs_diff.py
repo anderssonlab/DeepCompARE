@@ -13,6 +13,7 @@ from utils import change_track_name
 import matplotlib
 matplotlib.rcParams['pdf.fonttype']=42
 
+
 def rearrange(df):
     df_cage=df[["protein1","protein2","distance","diff_cage"]].copy()
     df_dhs=df[["protein1","protein2","distance","diff_dhs"]].copy()
@@ -67,18 +68,18 @@ def read_file(file_name):
 
 
 
-option=""
-#option="cnn6_"
+#option=""
+option="_cnn6"
 
-df_null_enhancers_hepg2=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null_{option}enhancers_hepg2.csv")
-df_null_enhancers_k562=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null_{option}enhancers_k562.csv")
-df_null_promoters_hepg2=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null_{option}promoters_hepg2.csv")
-df_null_promoters_k562=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null_{option}promoters_k562.csv")
+df_null_enhancers_hepg2=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null{option}_enhancers_hepg2.csv")
+df_null_enhancers_k562=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null{option}_enhancers_k562.csv")
+df_null_promoters_hepg2=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null{option}_promoters_hepg2.csv")
+df_null_promoters_k562=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null{option}_promoters_k562.csv")
 
-df_enhancers_hepg2=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_{option}enhancers_hepg2.csv")
-df_enhancers_k562=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_{option}enhancers_k562.csv")
-df_promoters_hepg2=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_{option}promoters_hepg2.csv")
-df_promoters_k562=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_{option}promoters_k562.csv")
+df_enhancers_hepg2=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs{option}_enhancers_hepg2.csv")
+df_enhancers_k562=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs{option}_enhancers_k562.csv")
+df_promoters_hepg2=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs{option}_promoters_hepg2.csv")
+df_promoters_k562=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs{option}_promoters_k562.csv")
 
 
 df_null=pd.concat([df_null_enhancers_hepg2,df_null_enhancers_k562,df_null_promoters_hepg2,df_null_promoters_k562])
@@ -87,35 +88,31 @@ df_null=df_null.groupby(["distance","data"]).agg({"diff":"mean"}).reset_index()
 df_alt=pd.concat([df_enhancers_hepg2,df_enhancers_k562,df_promoters_hepg2,df_promoters_k562])
 df_alt=df_alt.groupby(["distance","data"]).agg({"diff":"mean"}).reset_index()
 
-
 plt.figure(figsize=(2.3,2))
-# thin frame
 plt.gca().spines['top'].set_linewidth(0.5)
 plt.gca().spines['right'].set_linewidth(0.5)
 plt.gca().spines['bottom'].set_linewidth(0.5)
 plt.gca().spines['left'].set_linewidth(0.5)
-# thin line
-sns.lineplot(x="distance", y="diff", data=df_alt, hue="data",linewidth=0.5)
-sns.lineplot(x="distance", y="diff", data=df_null, hue="data", alpha=0.3,legend=False,linewidth=0.5)
-# x ends at 200
-plt.xlim(0,200)
-plt.xlabel("Distance",fontsize=7)
-plt.ylabel("Difference",fontsize=7)
-# add more ticks, round to 2 decimal places
-x_ticks = np.linspace(0, 200, num=6)  # 21 ticks from 0 to 200
-y_ticks = [0,0.05,0.1,0.15,0.2]
-plt.xticks(x_ticks, fontsize=5)
+
+sns.lineplot(x="distance", y="diff", data=df_alt, hue="data", linewidth=0.5)
+sns.lineplot(x="distance", y="diff", data=df_null, hue="data", legend=False, linewidth=0.5, linestyle="--")
+
+plt.xlabel("Distance", fontsize=7)
+plt.ylabel("Difference", fontsize=7)
+
+# Set log scale and specify ticks
+plt.xscale("log")
+xticks = [10, 20, 50, 100, 200, 300, 600]
+plt.xticks(xticks, [str(x) for x in xticks], fontsize=5)
+
+y_ticks = [0, 0.05, 0.1, 0.15, 0.2]
 plt.yticks(y_ticks, fontsize=5)
-plt.legend(title="Modality",fontsize=5,title_fontsize=5)
+
+plt.legend(title="Modality", fontsize=5, title_fontsize=5)
 plt.tight_layout()
-plt.margin=0.01
-plt.savefig(f"Plots/distance_vs_diff_cnn5.pdf")
+plt.savefig(f"Plots/distance_vs_diff{option}.pdf")
 plt.close()
 
-
-
-
-
-# nohup python3 distance_vs_diff.py > distance_vs_diff.log &
+# nohup python3 plot_distance_vs_diff.py > plot_distance_vs_diff.log &
 
 

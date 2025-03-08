@@ -25,13 +25,16 @@ matplotlib.rcParams['pdf.fonttype']=42
 #-------------------
 
 
+# add mediator info to compare conservation
+
+
 def add_tf_cooperativity(df,cell_line):
     tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}_dhs.txt", header=None).iloc[:,0].tolist()
     tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}_dhs.txt", header=None).iloc[:,0].tolist()
     df_tf_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}_dhs.csv")
     df_tf_coop=df_tf_coop[df_tf_coop["c_sum"]>1].reset_index(drop=True)
     df_tf_coop.rename(columns={"protein2":"protein"}, inplace=True)
-    df["cooperativity"]="unknown"
+    df["cooperativity"]="intermediate"
     df.loc[df["protein"].isin(tfs_codependent), "cooperativity"]="codependent"
     df.loc[df["protein"].isin(tfs_redundant), "cooperativity"]="redundant"
     df=df.merge(df_tf_coop, on="protein", how="inner")
@@ -156,7 +159,7 @@ df_gnocchi=pd.concat([df_proximal_hepg2_gnocchi,df_proximal_k562_gnocchi,df_dist
 df_gnocchi["cell_line"]=df_gnocchi["dataset"].apply(lambda x: x.split("_")[1])
 df_gnocchi["re"]=df_gnocchi["dataset"].apply(lambda x: x.split("_")[0])
 # turn cooperativity into category, order: redudant, codependent
-df_gnocchi["cooperativity"]=pd.Categorical(df_gnocchi["cooperativity"], categories=["redundant","unknown","codependent"], ordered=True)
+df_gnocchi["cooperativity"]=pd.Categorical(df_gnocchi["cooperativity"], categories=["redundant","intermediate","codependent"], ordered=True)
 # turn dataset into category, order: proximal_hepg2, distal_hepg2, proximal_k562, distal_k562
 df_gnocchi["dataset"]=pd.Categorical(df_gnocchi["dataset"], categories=["proximal_hepg2","distal_hepg2","proximal_k562","distal_k562"], ordered=True)
 
@@ -221,29 +224,29 @@ for file in df_gnocchi["dataset"].unique():
 #----------------------------------
 
 
-col="241way_max"
-plt.figure(figsize=(2.6,2.3))
-# thin frame
-plt.gca().spines['top'].set_linewidth(0.5)
-plt.gca().spines['right'].set_linewidth(0.5)
-plt.gca().spines['bottom'].set_linewidth(0.5)
-plt.gca().spines['left'].set_linewidth(0.5)
-flierprops = {
-    'marker': 'o',        # marker style
-    'markersize': 1,      # marker size
-    'markerfacecolor': 'gray',  # marker face color
-    'markeredgecolor': 'gray'  # marker edge color
-}
-sns.boxplot(data=df_gnocchi, x="dataset", y=col, hue="cooperativity", palette="coolwarm",linewidth=0.5, flierprops=flierprops)
-# x rotation 30 degrees
-plt.xticks(rotation=30,fontsize=5)
-plt.yticks(fontsize=5)
-plt.xlabel("Regulatory element", fontsize=7)
-plt.ylabel(col, fontsize=7)
-plt.legend(title="TF Cooperativity", fontsize=5, title_fontsize=5, loc="upper right")
-plt.tight_layout()
-plt.savefig(f"box_{col}_vs_cooperativity.pdf")
-plt.close()
+for col in ["241way_max","241way_mean","241way_min"]:
+    plt.figure(figsize=(2.6,2.3))
+    # thin frame
+    plt.gca().spines['top'].set_linewidth(0.5)
+    plt.gca().spines['right'].set_linewidth(0.5)
+    plt.gca().spines['bottom'].set_linewidth(0.5)
+    plt.gca().spines['left'].set_linewidth(0.5)
+    flierprops = {
+        'marker': 'o',        # marker style
+        'markersize': 1,      # marker size
+        'markerfacecolor': 'gray',  # marker face color
+        'markeredgecolor': 'gray'  # marker edge color
+    }
+    sns.boxplot(data=df_gnocchi, x="dataset", y=col, hue="cooperativity", palette="coolwarm",linewidth=0.5, flierprops=flierprops)
+    # x rotation 30 degrees
+    plt.xticks(rotation=30,fontsize=5)
+    plt.yticks(fontsize=5)
+    plt.xlabel("Regulatory element", fontsize=7)
+    plt.ylabel(col, fontsize=7)
+    plt.legend(title="TF Cooperativity", fontsize=5, title_fontsize=5, loc="upper right")
+    plt.tight_layout()
+    plt.savefig(f"box_{col}_vs_cooperativity.pdf")
+    plt.close()
 
 
 
@@ -281,7 +284,7 @@ mannwhitneyu(df_k562_distal[df_k562_distal["cooperativity"]=="redundant"]["241wa
 
 #----------------------------------
 # 3. 241way_max vs cooperativity_index, and z vs cooperativity_index
-# don't remove unknown cooperativity
+# don't remove intermediate cooperativity
 #----------------------------------
 
 
@@ -335,7 +338,8 @@ custom_palette = {
     "redundant": "dodgerblue",   # cool color
 }
 for cell in ["hepg2", "k562"]:
-    for col in ["z", "have_common_variants"]:
+    # for col in ["z", "have_common_variants"]:
+    for col in ["z"]:
         # Subset the data to only constrained TFs for one cell line
         df_sub = df_gnocchi[df_gnocchi["cell_line"] == cell].reset_index(drop=True)
         df_pivot = df_sub.pivot(index="protein", columns="re", values=col).dropna().reset_index()
@@ -361,8 +365,8 @@ for cell in ["hepg2", "k562"]:
             spine.set_linewidth(0.5)
         #
         # Use the custom palette in the scatterplot
-        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"]!="unknown"], hue="cooperativity", s=5, palette=custom_palette)
-        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"]=="unknown"], hue="cooperativity_index", s=5, palette="coolwarm",legend=False,marker="x")
+        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"]!="intermediate"], hue="cooperativity", s=5, palette=custom_palette)
+        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"]=="intermediate"], hue="cooperativity_index", s=5, palette="coolwarm",legend=False,marker="x")
         min_val = min(df_pivot["proximal"].min(), df_pivot["distal"].min())
         max_val = max(df_pivot["proximal"].max(), df_pivot["distal"].max())
         plt.plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.3)
@@ -427,23 +431,23 @@ for cell in ["hepg2", "k562"]:
         sns.scatterplot(
             x="proximal", 
             y="distal", 
-            data=df_pivot[df_pivot["cooperativity"] != "unknown"],
+            data=df_pivot[df_pivot["cooperativity"] != "intermediate"],
             hue="cooperativity", 
             s=5, 
             palette=custom_palette, 
-            alpha=df_pivot[df_pivot["cooperativity"] != "unknown"]["alpha"]
+            alpha=df_pivot[df_pivot["cooperativity"] != "intermediate"]["alpha"]
         )
         #
         sns.scatterplot(
             x="proximal", 
             y="distal", 
-            data=df_pivot[df_pivot["cooperativity"] == "unknown"],
+            data=df_pivot[df_pivot["cooperativity"] == "intermediate"],
             hue="cooperativity_index", 
             s=5, 
             palette="coolwarm",
             legend=False,
             marker="x", 
-            alpha=df_pivot[df_pivot["cooperativity"] == "unknown"]["alpha"]
+            alpha=df_pivot[df_pivot["cooperativity"] == "intermediate"]["alpha"]
         )
         min_val = min(df_pivot["proximal"].min(), df_pivot["distal"].min())
         max_val = max(df_pivot["proximal"].max(), df_pivot["distal"].max())

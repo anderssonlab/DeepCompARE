@@ -1,0 +1,293 @@
+import pandas as pd
+import numpy as np
+from loguru import logger
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import mannwhitneyu
+import numpy as np
+
+
+
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
+
+# ----------------------------------------------------
+# Helper functions
+# ----------------------------------------------------
+
+def read_df_add_tf_coop(prefix,file_name):
+    df=pd.read_csv(f"{prefix}_{file_name}.csv",index_col=0)
+    if "hepg2" in file_name:
+        cell_line="hepg2"
+    elif "k562" in file_name:
+        cell_line="k562"
+    else:
+        raise ValueError("cell line not found")
+    tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}_dhs.txt",header=None).iloc[:,0].tolist()
+    tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}_dhs.txt",header=None).iloc[:,0].tolist()
+    df["tf_type"]="intermediate"
+    df.loc[df["protein"].isin(tfs_codependent),"tf_type"]="codependent"
+    df.loc[df["protein"].isin(tfs_redundant),"tf_type"]="redundant"
+    # add tf ci
+    df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}_dhs.csv")
+    df_coop=df_coop[df_coop["c_sum"]>1].reset_index(drop=True)
+    df_coop=df_coop[["protein2","cooperativity_index"]]
+    df_coop.rename(columns={"protein2":"protein"},inplace=True)
+    df=pd.merge(df,df_coop,on="protein",how="inner")
+    return df
+
+
+
+def count_tf(df,file_name):
+    # count number of redundant and codependent TFs in each region
+    df=df.groupby(["region","tf_type"]).size().unstack(fill_value=0).reset_index()
+    df.rename(columns={"codependent":"codependent_tf_count","redundant":"redundant_tf_count","intermediate":"intermediate_tf_count"},inplace=True)
+    # remove rows with nan
+    df["region_type"]=file_name
+    return df
+
+
+
+def assign_region_type(df):
+    df["re"]=df["dataset"].apply(lambda x: x.split("_")[0])
+    df["cell_line"]=df["dataset"].apply(lambda x: x.split("_")[1])
+    conditions = [
+        (df['re'] == 'proximal') & (df['tissue_invariance'] == 'yes'),
+        (df['re'] == 'proximal') & (df['tissue_invariance'] == 'no'),
+        (df['re'] == 'distal') & (df['tissue_invariance'] == 'yes'),
+        (df['re'] == 'distal') & (df['tissue_invariance'] == 'no'),
+    ]
+    choices = ['proximal_ti', 'proximal_ts', 'distal_ti', 'distal_ts']
+    df["region_type"] = np.select(conditions, choices, default='distal_ts')
+    df["region_type"] = pd.Categorical(
+        df["region_type"],
+        categories=["distal_ts", "distal_ti", "proximal_ts", "proximal_ti"],
+        ordered=True
+    )
+    return df
+
+
+def add_seq_info(df,file_name):
+    df_seq_info=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/dhs_{file_name}.tsv",sep=" ")
+    df_seq_info["region"]=df_seq_info["seqnames"]+":"+df_seq_info["start"].astype(str)+"-"+df_seq_info["end"].astype(str)
+    # merge by region
+    df=pd.merge(df,df_seq_info,on="region",how="inner")
+    return df
+
+
+prefix="/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_dhs"
+
+
+#---------------------------------------
+# DHS: boxplot for distribution of TF count
+#---------------------------------------
+
+def preprocess(prefix,file_name):
+    df=read_df_add_tf_coop(prefix,file_name)
+    df=count_tf(df,file_name)
+    # add sequence info
+    df=add_seq_info(df,file_name)
+    return df
+
+
+
+
+df_proximal_hepg2=preprocess(prefix,"proximal_hepg2")
+df_distal_hepg2=preprocess(prefix,"distal_hepg2")
+df_proximal_k562=preprocess(prefix,"proximal_k562")
+df_distal_k562=preprocess(prefix,"distal_k562")
+
+df=pd.concat([df_proximal_hepg2.assign(dataset="proximal_hepg2"),
+              df_distal_hepg2.assign(dataset="distal_hepg2"),
+              df_proximal_k562.assign(dataset="proximal_k562"),
+              df_distal_k562.assign(dataset="distal_k562")],axis=0)
+
+df=assign_region_type(df)
+
+
+
+# Neighbor pairs for Mann-Whitney U tests
+neighbor_pairs = [
+    ("distal_ts", "distal_ti"),
+    ("distal_ti", "proximal_ts"),
+    ("proximal_ts", "proximal_ti")
+]
+
+color_map = {
+    "redundant_tf_count": "dodgerblue",
+    "codependent_tf_count": "orangered",
+    "intermediate_tf_count": "grey"
+}
+
+for cell_line in ["k562", "hepg2"]:
+    df_sub = df[df["cell_line"] == cell_line].reset_index(drop=True)
+    for col in ["redundant_tf_count", "codependent_tf_count", "intermediate_tf_count"]:
+        col_color = color_map[col]
+        logger.info(f"Plotting {col} for {cell_line}")
+        plt.figure(figsize=(2.3, 2.3))
+        ax = plt.gca()
+        # thin frame  
+        for spine in ax.spines.values():
+            spine.set_linewidth(0.5)
+        #
+        # box plot with colored boxes and thin lines  
+        sns.boxplot(
+            x="region_type", 
+            y=col, 
+            data=df_sub, 
+            color=col_color,  # this sets the default color
+            boxprops={'facecolor': col_color, 'alpha': 0.3},  # add some transparency if desired
+            whiskerprops={'color': "black"},
+            capprops={'color': "black"},
+            medianprops={'color': col_color},
+            showfliers=False,
+            linewidth=0.5
+        )
+        plt.xticks(rotation=30)
+        #
+        # Calculate and annotate Mann-Whitney U test p-values
+        for pair in neighbor_pairs:
+            group1 = df_sub[df_sub["region_type"] == pair[0]][col]
+            group2 = df_sub[df_sub["region_type"] == pair[1]][col]
+            #
+            stat, p_value = mannwhitneyu(group1, group2, alternative='two-sided')
+            # Add p-value annotation at 95 percentile
+            y_max = max(group1.quantile(0.95), group2.quantile(0.95))
+            y_position = y_max * 1.05  # adjust multiplier as needed
+            #
+            x1 = df_sub["region_type"].cat.categories.get_loc(pair[0])
+            x2 = df_sub["region_type"].cat.categories.get_loc(pair[1])
+            #
+            plt.plot([x1, x2], [y_position, y_position], lw=0.2, color='black')
+            plt.text((x1 + x2) / 2, y_position * 1.05, f"p={p_value:.2e}",
+                     ha='center', va='bottom', fontsize=5)
+            #
+        plt.xlabel("Region type", fontsize=7)
+        plt.ylabel(f"{col} count", fontsize=7)
+        plt.xticks(fontsize=5)
+        plt.yticks(fontsize=5)
+        plt.tight_layout()
+        plt.savefig(f"{col}_{cell_line}.pdf")
+        plt.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#---------------------------------------
+# DHS: box plot for cooperativity index distribution of intermediate TFs (or all TFs)
+#---------------------------------------
+df_proximal_hepg2=read_df_add_tf_coop(prefix,"proximal_hepg2")
+df_distal_hepg2=read_df_add_tf_coop(prefix,"distal_hepg2")
+df_proximal_k562=read_df_add_tf_coop(prefix,"proximal_k562")
+df_distal_k562=read_df_add_tf_coop(prefix,"distal_k562")
+
+
+df_proximal_hepg2=add_seq_info(df_proximal_hepg2,"proximal_hepg2")
+df_distal_hepg2=add_seq_info(df_distal_hepg2,"distal_hepg2")
+df_proximal_k562=add_seq_info(df_proximal_k562,"proximal_k562")
+df_distal_k562=add_seq_info(df_distal_k562,"distal_k562")
+
+df=pd.concat([df_proximal_hepg2.assign(dataset="proximal_hepg2"),
+              df_distal_hepg2.assign(dataset="distal_hepg2"),
+              df_proximal_k562.assign(dataset="proximal_k562"),
+              df_distal_k562.assign(dataset="distal_k562")],axis=0)
+
+
+# select tf_type=="intermediate"
+# df=df[df["tf_type"]=="intermediate"].reset_index(drop=True)
+df=assign_region_type(df)
+df=df[["region_type","cooperativity_index","cell_line"]]
+
+# box plot cooperativity index by region type
+neighbor_pairs = [
+    ("distal_ts", "distal_ti"),
+    ("distal_ti", "proximal_ts"),
+    ("proximal_ts", "proximal_ti")
+]
+
+for cell in ["hepg2", "k562"]:
+    df_sub = df[df["cell_line"] == cell].reset_index(drop=True)
+    plt.figure(figsize=(2.3, 2.3))
+    ax = plt.gca()
+    # thin frame  
+    for spine in ax.spines.values():
+        spine.set_linewidth(0.5)
+    sns.boxplot(
+        x="region_type",
+        y="cooperativity_index",
+        data=df_sub,
+        order=["distal_ts", "distal_ti", "proximal_ts", "proximal_ti"],
+        linewidth=0.5,
+        boxprops={'facecolor': 'none'},
+        whiskerprops={'color': 'black'},
+        capprops={'color': 'black'}
+    )
+    plt.xticks(rotation=30)
+    #
+    # Calculate and annotate Mann-Whitney U test p-values
+    for pair in neighbor_pairs:
+        group1 = df_sub[df_sub["region_type"] == pair[0]]["cooperativity_index"]
+        group2 = df_sub[df_sub["region_type"] == pair[1]]["cooperativity_index"]
+        stat, p_value = mannwhitneyu(group1, group2, alternative='two-sided')
+        # Determine y position for annotation (using 95th percentile as reference)
+        y_max = max(group1.quantile(0.95), group2.quantile(0.95))
+        y_position = y_max * 1.05  # Adjust as needed
+        # Get x-axis positions based on the categorical order
+        x1 = df_sub["region_type"].cat.categories.get_loc(pair[0])
+        x2 = df_sub["region_type"].cat.categories.get_loc(pair[1])
+        # Draw a line connecting the two groups
+        plt.plot([x1, x2], [y_position, y_position], lw=0.2, color='black')
+        # Add p-value text; adjust multiplier to position text closer to the line if needed
+        plt.text((x1 + x2) / 2, y_position * 1.05, f"p={p_value:.2e}",
+                 ha='center', va='bottom', fontsize=5)
+    #
+    plt.xlabel("Region type", fontsize=7)
+    plt.ylabel("Cooperativity index", fontsize=7)
+    plt.xticks(fontsize=5)
+    plt.yticks(fontsize=5)
+    plt.tight_layout()
+    plt.savefig(f"tf_ci_by_region_type_{cell}.pdf")
+    plt.close()
+
+
+
+
+
+
+
+# nohup python3 re_ci.py > re_ci.out &
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

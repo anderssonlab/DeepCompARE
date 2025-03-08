@@ -27,23 +27,25 @@ def create_dimer_list(tf_list):
 
 for cell_line in ["hepg2","k562"]:
     for suffix in ["pe","dhs"]:
-        
+        #
         logger.info(f"Processing {cell_line}")
         df_tf=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}_{suffix}.csv")
-        df_tf=df_tf[df_tf["c_sum"]>1].reset_index(drop=True)
+        # select not Nan cooperativity index
+        df_tf=
+        df_tf=df_tf[df_tf["c_sum"]>5].reset_index(drop=True)
         # sort by cooperativity index
         df_tf["rank"]=df_tf["cooperativity_index"].rank(ascending=True)
-
+        #
         universal_stripe_factors=pd.read_csv("/isdata/alab/people/pcr980/Resource/universal_stripe_factors.txt",sep='\t').iloc[:,0].tolist()
         usf_dimers=create_dimer_list(universal_stripe_factors)
         universal_stripe_factors=universal_stripe_factors+usf_dimers
         pioneer_factors=pd.read_csv("/isdata/alab/people/pcr980/Resource/pioneer_factor_list.txt",sep='\t').iloc[:,0].tolist()
         pf_dimers=create_dimer_list(pioneer_factors)
         pioneer_factors=pioneer_factors+pf_dimers
-        
+        #
         df_usf=df_tf[df_tf["protein2"].isin(universal_stripe_factors)]
         df_pf=df_tf[df_tf["protein2"].isin(pioneer_factors)]
-
+        #
         # mann-whitney u test
         df_non_usf=df_tf[~df_tf["protein2"].isin(universal_stripe_factors)]
         stat,p=mannwhitneyu(df_usf["cooperativity_index"],df_non_usf["cooperativity_index"],alternative='less')

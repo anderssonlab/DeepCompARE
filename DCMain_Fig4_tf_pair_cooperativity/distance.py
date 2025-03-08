@@ -7,8 +7,8 @@ from adjustText import adjust_text
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
-from stat_tests import bin_and_label
 from plotting import plot_violin_with_statistics
+from tf_cooperativity import assign_cooperativity
 
 
 
@@ -18,21 +18,26 @@ matplotlib.rcParams['pdf.fonttype']=42
 
 
 for cell_line in ["hepg2","k562"]:
-    df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell_line}.csv")
-    df=df[df["c_sum"]>1].reset_index(drop=True)
-    df=bin_and_label(df,"cooperativity_index",[0,0.3,0.7,1])
-    df["cooperativity"]=np.where(df["cooperativity_index"]>0.7,"codependent",np.where(df["cooperativity_index"]<0.3,"redundant",""))
-    #
+    df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell_line}_pe.csv")
+    df=assign_cooperativity(df,0.3,0.7)
+    # set distance to plot
+    df["distance_to_plot"]=df["nonlinear_distance"]
+    # for linear pairs, use linear distance
+    df.loc[df["cooperativity"]=="Linear","distance_to_plot"]=df.loc[df["cooperativity"]=="Linear","linear_distance"]
     # Analysis 1: distance vs cooperativity index
     plot_violin_with_statistics(
         df=df,
-        x_col="cooperativity_index_bin",
-        y_col="distance",
-        x_label="Cooperativity index bin",
+        x_col="cooperativity",
+        y_col="distance_to_plot",
+        x_label="Cooperativity",
         y_label="Median distance\nbetween TFBS pair (bp)",
         title=None,
-        output_file=f"distance_vs_cooperativity_index_bin_{cell_line}.pdf"
+        output_file=f"distance_vs_cooperativity_{cell_line}.pdf"
     )
+
+
+
+
 
 
     # Analysis 2: fix one TF, compare distance between codependent and redundant pairs
