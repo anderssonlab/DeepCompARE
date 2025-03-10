@@ -8,8 +8,9 @@ from utils import split_dimer
 from stat_tests import fisher_exact_with_ci
 from tf_cooperativity import assign_cooperativity
 
+# TODO: add dimers maybe?
 
-def match_dfs_nearest_neighbor(df_small, df_large, small_col='linear_distance', large_col='median_abs', remove_matched=True):
+def match_dfs_nearest_neighbor(df_small, df_large, small_col='distance', large_col='median_abs', remove_matched=False):
     # Make a copy of df_large so that we can remove rows if needed without modifying the original DataFrame.
     df_large_temp = df_large.copy()
     matched_indices = []
@@ -22,7 +23,7 @@ def match_dfs_nearest_neighbor(df_small, df_large, small_col='linear_distance', 
         matched_indices.append(best_idx)
         # Optionally remove the matched row to avoid duplicate selections
         if remove_matched:
-            df_large_temp = df_large_temp.drop(best_idx)
+            df_large_temp.drop(best_idx, inplace=True)
     return df_large.loc[matched_indices]
 
 
@@ -50,18 +51,25 @@ def relevance_of_investigation(bait, df):
     proteins_expressed=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_k562.tsv",sep='\t',header=None).iloc[:,0].values
     df_htfs=df_htfs[df_htfs["HGNC symbol"].isin(proteins_expressed)].reset_index(drop=True)
     # read df_coop
-    df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/Temp/tf_pair_cooperativity_index_k562_pe.csv")
+    df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_k562_pe.csv")
     df_coop=assign_cooperativity(df_coop,0.3,0.7)
     df_coop=df_coop[(df_coop["protein2"]==bait)].reset_index(drop=True)
     tfs_linear=df_coop[df_coop["cooperativity"]=="Linear"]["protein1"].values.tolist()
     tfs_nonlinear=df_coop[df_coop["cooperativity"]!="Linear"]["protein1"].values.tolist()
     # filter df to only include TFs
     df=df[df["gene"].isin(df_htfs["HGNC symbol"])].reset_index(drop=True)
+    # decide linearity
     df["is_linear"]=df["gene"].isin(tfs_linear)
     df["is_nonlinear"]=df["gene"].isin(tfs_nonlinear)
     # enrichment test
     oddsratio_pos, pvalue_pos, ci_lower_pos, ci_higher_pos = fisher_exact_test(df, tfs_linear, df_htfs, "is_linear")
     # negative control: ChIP colocolization with similar distance
+    # decide distance
+    # if is_linear, distance is linear_distance
+    # if is_nonlinear, distance is nonlinear_distance
+    df.loc[df["is_linear"],"distance"]=df.loc[df["is_linear"],"linear_distance"]
+    df.loc[df["is_nonlinear"],"distance"]=df.loc[df["is_nonlinear"],"nonlinear_distance"]
+    
     df_chip=pd.read_csv("/isdata/alab/people/pcr980/Resource/ReMap2022/Colocolization/colocolization_k562_summary.csv")
     df_chip=df_chip[df_chip["tf2"]==bait].reset_index(drop=True)
     df_chip=df_chip[['tf1', 'tf2', 'tf_pair_count', 'median_abs']]

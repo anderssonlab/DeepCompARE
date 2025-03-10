@@ -22,4 +22,3 @@ plt.close()
 
 
 
-df[df["DBD"]=="T-box"]

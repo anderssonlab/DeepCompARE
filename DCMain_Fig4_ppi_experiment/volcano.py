@@ -9,6 +9,7 @@ from adjustText import adjust_text
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from utils import split_dimer
+from tf_cooperativity import assign_cooperativity
 
 
 
@@ -32,10 +33,17 @@ for bait in bait_list:
     df_htfs=df_htfs[df_htfs["HGNC symbol"].isin(proteins_expressed)].reset_index(drop=True)
     # read cooperativity
     df_coop = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_k562_pe.csv")
+    df_coop = assign_cooperativity(df_coop, 0.3, 0.7)
+    # select baits
     df_coop = df_coop[df_coop["protein2"] == bait].reset_index(drop=True)
-    tfs_investigated = split_dimer(df_coop["protein1"])  # assuming split_dimer is defined elsewhere
+    # determine if TF is linear or nonlinear
+    df_nonlinear = df_coop[df_coop["cooperativity"]!="Linear"].reset_index(drop=True)
+    df_linear = df_coop[df_coop["cooperativity"]=="Linear"].reset_index(drop=True)
+    
     df_bait["is_tf"] = df_bait["gene"].isin(df_htfs["HGNC symbol"])
-    df_bait["is_investigated"] = df_bait["gene"].isin(tfs_investigated)
+    df_bait["is_nonlinear"] = df_bait["gene"].isin(df_nonlinear["protein1"])
+    df_bait["is_linear"] = df_bait["gene"].isin(df_linear["protein1"])
+    df_bait["is_not_investigated"] = ~df_bait["gene"].isin(df_coop["protein1"])
     df_bait["-log10_pvalue"] = df_bait["pvalue"].apply(lambda x: -1 if x == 0 else -1 * np.log10(x))
 
     
@@ -49,7 +57,7 @@ for bait in bait_list:
         data=df_bait,
         x="logFC",
         y="-log10_pvalue",
-        style="is_investigated",
+        style="is_nonlinear",
         s=5,
         color="LightGray",
         legend=False,
@@ -57,7 +65,7 @@ for bait in bait_list:
     )
     
     # Plot uninvestigated TFs
-    df_bait_tfs = df_bait[(df_bait["is_tf"]) & (df_bait["is_investigated"] == False)].reset_index(drop=True)
+    df_bait_tfs = df_bait[(df_bait["is_tf"]) & (df_bait["is_not_investigated"])].reset_index(drop=True)
     sns.scatterplot(
         data=df_bait_tfs,
         x="logFC",
@@ -68,11 +76,14 @@ for bait in bait_list:
         alpha=0.3
     )
     
-    # Plot investigated TFs with hue based on cooperativity_index
-    df_bait_foreground = df_bait[df_bait["is_investigated"]].reset_index(drop=True)
-    df_bait_foreground = pd.merge(df_bait_foreground, df_coop, how="inner", left_on="gene", right_on="protein1")
+    # plot lineari TFs 
+    df_linear=pd.merge(df_linear,df_bait,how="inner",left_on="protein1",right_on="gene")
+    sns.scatterplot(data=df_linear,x="logFC",y="-log10_pvalue",s=5,color="black",label="Linear TFs",marker="x")
+    
+    # Plot nonlinear TFs with hue based on cooperativity_index
+    df_nonlinear=pd.merge(df_nonlinear,df_bait,how="inner",left_on="protein1",right_on="gene")
     sns.scatterplot(
-        data=df_bait_foreground,
+        data=df_nonlinear,
         x="logFC",
         y="-log10_pvalue",
         hue="cooperativity_index",
@@ -83,10 +94,10 @@ for bait in bait_list:
     
     # Add gene names for investigated TFs
     texts = []
-    for i in range(len(df_bait_foreground)):
-        texts.append(plt.text(df_bait_foreground.loc[i, "logFC"],
-                 df_bait_foreground.loc[i, "-log10_pvalue"],
-                 df_bait_foreground.loc[i, "gene"],
+    for i in range(len(df_nonlinear)):
+        texts.append(plt.text(df_nonlinear.loc[i, "logFC"],
+                 df_nonlinear.loc[i, "-log10_pvalue"],
+                 df_nonlinear.loc[i, "gene"],
                  fontsize=5))
     adjust_text(texts)
     
@@ -96,6 +107,8 @@ for bait in bait_list:
     plt.ylabel("-log10 pvalue", fontsize=7)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
+    # legend font size: 5
+    plt.legend(fontsize=5)
     plt.title(f"{bait}", fontsize=7)
     # Add the same coolwarm color bar to each plot
     cbar = plt.colorbar(sm)

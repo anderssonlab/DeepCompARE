@@ -32,7 +32,7 @@ for cell_line in ["hepg2","k562"]:
         x_label="Cooperativity",
         y_label="Median distance\nbetween TFBS pair (bp)",
         title=None,
-        output_file=f"distance_vs_cooperativity_{cell_line}.pdf"
+        output_file=f"distance_vs_ci_{cell_line}.pdf"
     )
 
 

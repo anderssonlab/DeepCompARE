@@ -10,13 +10,15 @@
 # <date>_s10_PublishedPPIandProtComplexes_0.5_0.1_k562.txt
 # <date>_s10_PublishedPPIandProtComplexes_0.5_0.1_hepg2.txt
 
-# Author: Petra Palenikova
-# Last updated: 09 Jan 2025
+# Author: Petra Palenikova, Xuening He
+# Last updated: 09 Jan 2025 (Petra), 07 Mar 2025 (Xuening)
 ##########################################################################################
 
 ### load libraries ####
 library(genoppi) ## version from Github (lagelab/Genoppi@85de482)
 library(tidyverse) ## version 2.0.0
+
+
 ### functions ####
 pullInts <- function(protein, stringTh = 0, inWebAllProts, stringAllProts){
   pInts <- NULL
@@ -39,9 +41,9 @@ pullInts <- function(protein, stringTh = 0, inWebAllProts, stringAllProts){
 
 ### data processing ####
 #### read cooperativity index data for both cell lines #####
-dfCoop_k562 <- read_delim("data/tf_pair_cooperativity_index_0.5_0.1_k562.csv",
+dfCoop_k562 <- read_delim("tf_pair_cooperativity_index_k562_pe.csv",
                      show_col_types = FALSE)
-dfCoop_hepg2 <- read_delim("data/tf_pair_cooperativity_index_0.5_0.1_hepg2.csv",
+dfCoop_hepg2 <- read_delim("tf_pair_cooperativity_index_hepg2_pe.csv",
                           show_col_types = FALSE)
 
 #### filter and select required columns ####
@@ -142,7 +144,7 @@ dfCoop_withInts_cellModels <- inner_join(dfCoop_filtered, dfCoop_withInts,
 ### C) RNA pol II 
 ### D) TFII B,D,E,F,H
 ### pull PPIs for these protein complexes
-dfComplexes <- read_delim("data/CofactorComplexes.txt")
+dfComplexes <- read_delim("CofactorComplexes.txt")
 allComplexes <- unique(dfComplexes$Complex)
 complexInts <- NULL
 for(cVal in allComplexes){
@@ -221,9 +223,9 @@ dfCoop_withInts_Complexes_cellModels %>%
 
 ### export files with PPI annotation ####
 write.table(dfCoop_withInts_Complexes_k562,
-            paste0(Sys.Date(),"_s10_PublishedPPIandProtComplexes_0.5_0.1_k562.txt"),
+            paste0(Sys.Date(),"_s10_PublishedPPIandProtComplexes_k562_pe.txt"),
             sep = "\t",row.names = FALSE, quote = FALSE)
 
 write.table(dfCoop_withInts_Complexes_hepg2,
-            paste0(Sys.Date(),"_s10_PublishedPPIandProtComplexes_0.5_0.1_hepg2.txt"),
+            paste0(Sys.Date(),"_s10_PublishedPPIandProtComplexes_hepg2_pe.txt"),
             sep = "\t",row.names = FALSE, quote = FALSE)

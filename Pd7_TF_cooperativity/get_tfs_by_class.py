@@ -4,15 +4,14 @@ import pandas as pd
 import sys
 from loguru import logger
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
-from tf_cooperativity import calculate_tf_cooperativity_index
+
+
 
 # TODO: refactor with assign_cooperativity
 
 def write_tfs_by_class(path,suffix,thresh_redun,thresh_codep):
     df_tf=pd.read_csv(path)
-    df_linear=df_tf[df_tf["c_sum"]<5].reset_index(drop=True)
-    df_nonlinear=df_tf[df_tf["c_sum"]>=5].reset_index(drop=True)
-    tfs_linear=df_linear["protein2"].to_list()
+    
     # write linear 
     with open(f"tfs_linear_{suffix}.txt","w") as f:
         f.write("\n".join(tfs_linear))

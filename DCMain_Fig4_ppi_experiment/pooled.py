@@ -1,28 +1,22 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import numpy as np
 
 
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
-from utils import split_dimer
 from tf_cooperativity import assign_cooperativity
 
 
 ci_suffix="pe"
 redundancy_threshold=0.3 # 0.46
 codependent_threshold=0.7 # 0.83
-mode="linearity_index"
+mode="cooperativity_index"
 
-df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/Temp/tf_pair_cooperativity_index_k562_{ci_suffix}.csv")
-if mode=="cooperativity_index":
-    df_coop=df_coop[df_coop["c_sum"]>1].reset_index(drop=True)
-if mode=="linearity_index":
-    df_coop=assign_cooperativity(df_coop,redundancy_threshold,codependent_threshold)
+df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_k562_{ci_suffix}.csv")
+df_coop=assign_cooperativity(df_coop,redundancy_threshold,codependent_threshold)
 df_coop=df_coop[df_coop["protein2"].isin(["BACH1","MAFG","IKZF1","RREB1","RFX5"])].reset_index(drop=True)
-
 
 
 # pool

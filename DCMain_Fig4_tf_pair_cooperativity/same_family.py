@@ -4,15 +4,22 @@ import pandas as pd
 from scipy.stats import mannwhitneyu
 # Do TF pair coming from same family have lower cooperativity ratio?
 
+import sys
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
+from tf_cooperativity import assign_cooperativity
+
+
+
 
 import matplotlib
 matplotlib.rcParams['pdf.fonttype']=42
 
-cell_line="hepg2"
+
 
 for cell_line in ["hepg2","k562"]:
-    df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell_line}.csv")
-    df=df[df["c_sum"]>5].reset_index(drop=True)
+    df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell_line}_pe.csv")
+    df=assign_cooperativity(df,0.3,0.7)
+    df=df[df["cooperativity"]!="Linear"].reset_index(drop=True)
     df_family=pd.read_csv("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2024_CORE_tf_family.csv")
     df_family["ID"]=df_family["ID"].str.upper()
 

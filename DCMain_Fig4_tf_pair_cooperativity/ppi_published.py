@@ -22,23 +22,19 @@ for cell_line in ["hepg2", "k562"]:
     
     df_coop = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell_line}_pe.csv")
     df_coop =assign_cooperativity(df_coop,0.3,0.7)
-
-    # protPair is combination of two protein names ordered alphabetically
-    df_coop["protPair"]=df_coop.apply(lambda x: '_'.join(sorted([x["protein1"], x["protein2"]])), axis=1)
-    # group by protPair and avg c_sum and cooperativity_index
-    df_coop = df_coop.groupby("protPair").agg({"cooperativity_index": "mean", 
-                                                "c_sum": "mean",
-                                                "linearity_index": "mean"
-                                                }).reset_index()
-    
+        
     # read ppi
-    df_ppi = pd.read_csv(f"Pd1_Petra_data/2025-03-07_s10_PublishedPPIandProtComplexes_{cell_line}_pe.txt", sep='\t')
-    df_ppi.rename(columns={'SWI/SNF': 'SWI_SNF'}, inplace=True)
-    df = pd.merge(df_coop, df_ppi, on="protPair", how="inner")
+    df_ppi1 = pd.read_csv(f"Pd1_Petra_data/2025-03-07_s10_PublishedPPIandProtComplexes_{cell_line}_pe.txt", sep='\t')
+    df_ppi1.rename(columns={'SWI/SNF': 'SWI_SNF'}, inplace=True)
+    # swap protein1 protein2
+    df_ppi2 = df_ppi1[["protein2", "protein1", "Reported_PPI"]].copy()
+    df_ppi2.rename(columns={'protein2': 'protein1', 'protein1': 'protein2'}, inplace=True)
+    df_ppi = pd.concat([df_ppi1, df_ppi2], ignore_index=True)
+    df = pd.merge(df_coop, df_ppi, on=["protein1", "protein2"], how="inner")
     # Plot 1: Reported_PPI
     # make Reported_PPI categorical
     df["Reported_PPI"] = pd.Categorical(df["Reported_PPI"], categories=["No", "Yes"], ordered=True)
-   
+
     plot_violin_with_statistics(
         # select non-nan cooperativity_index
         df=df[df["cooperativity_index"].notna()],

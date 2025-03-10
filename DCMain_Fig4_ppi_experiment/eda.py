@@ -13,21 +13,14 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from tf_cooperativity import assign_cooperativity
 
 
-mode = "linearity_index"
-
 
 for bait in ["BACH1", "RFX5", "IKZF1", "MAFG", "RREB1"]:
     for mode in ["linearity_index", "cooperativity_index"]:
         # preprocess
-        df_coop = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/Temp/tf_pair_cooperativity_index_k562_pe.csv")
-        if mode == "linearity_index":
-            df_coop = assign_cooperativity(df_coop,0.3,0.7)
-        if mode=="cooperativity_index":
-            df_coop = df_coop[df_coop["c_sum"] > 1].reset_index(drop=True)
-        
-        
-        df_coop["c_redundancy"] = df_coop["c_redundancy"].abs()
-        df_ppi = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/DCMain_Fig4_tf_pair_cooperativity/Pd1_Petra_data/2025-01-09_s10_PublishedPPIandProtComplexes_0.5_0.1_k562.txt", sep='\t')
+        df_coop = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_k562_pe.csv")
+        df_coop = assign_cooperativity(df_coop,0.3,0.7)
+
+        df_ppi = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/DCMain_Fig4_tf_pair_cooperativity/Pd1_Petra_data/2025-03-07_s10_PublishedPPIandProtComplexes_k562_pe.txt", sep='\t')
         df_ppi.rename(columns={'SWI/SNF': 'SWI_SNF'}, inplace=True)
         df_coop = pd.merge(df_coop, df_ppi, on=["protein1", "protein2"], how="left")
         
@@ -54,10 +47,9 @@ for bait in ["BACH1", "RFX5", "IKZF1", "MAFG", "RREB1"]:
         plt.gca().spines['right'].set_linewidth(0.5)
         plt.gca().spines['bottom'].set_linewidth(0.5)
         plt.gca().spines['left'].set_linewidth(0.5)
-        
-
+        # violin
         sns.violinplot(x="Reported_PPI", y=mode, data=df_coop_bait, inner="quartile",linewidth=0.5)
-            
+    
         # Annotate with protein names for the found candidates
         texts = []
         for _, row in df_coop_bait_found.iterrows():
