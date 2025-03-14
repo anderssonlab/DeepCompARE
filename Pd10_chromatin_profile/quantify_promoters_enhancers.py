@@ -16,7 +16,7 @@ def calculate_average_bw(bw, region):
 
 
 def annotate(df,cell_line,out_path):
-    for histone_modification in ['H2AFZ', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K9ac', 'H3K27ac', 'H3K27me3', 'H3K36me3', 'H3K79me2', 'H4K20me1']:
+    for histone_modification in ['ATAC','H2AFZ', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K9ac', 'H3K27ac', 'H3K27me3', 'H3K36me3', 'H3K79me2', 'H4K20me1']:
         bw = pyBigWig.open(f"Bigwig_data/{histone_modification}_{cell_line}.bigwig")
         df[f'log_signal_{histone_modification}'] = df.apply(lambda row: calculate_average_bw(bw, (row[0], row[1], row[2])), axis=1)
         logger.info(f'Done with {histone_modification}')

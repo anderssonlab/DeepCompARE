@@ -12,14 +12,13 @@ from utils import split_dimer
 from tf_cooperativity import assign_cooperativity
 
 
+# Use a fixed colormap
+norm = mpl.colors.Normalize(vmin=0, vmax=1)
+cmap = mpl.cm.coolwarm
 
 
 
 
-
-norm = mpl.colors.Normalize(vmin=0.1, vmax=1)
-sm = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.coolwarm)
-sm.set_array([])
 
 bait_list = ["BACH1", "IKZF1", "MAFG", "RFX5", "RREB1"]
 
@@ -39,7 +38,6 @@ for bait in bait_list:
     # determine if TF is linear or nonlinear
     df_nonlinear = df_coop[df_coop["cooperativity"]!="Linear"].reset_index(drop=True)
     df_linear = df_coop[df_coop["cooperativity"]=="Linear"].reset_index(drop=True)
-    
     df_bait["is_tf"] = df_bait["gene"].isin(df_htfs["HGNC symbol"])
     df_bait["is_nonlinear"] = df_bait["gene"].isin(df_nonlinear["protein1"])
     df_bait["is_linear"] = df_bait["gene"].isin(df_linear["protein1"])
@@ -57,7 +55,6 @@ for bait in bait_list:
         data=df_bait,
         x="logFC",
         y="-log10_pvalue",
-        style="is_nonlinear",
         s=5,
         color="LightGray",
         legend=False,
@@ -82,16 +79,20 @@ for bait in bait_list:
     
     # Plot nonlinear TFs with hue based on cooperativity_index
     df_nonlinear=pd.merge(df_nonlinear,df_bait,how="inner",left_on="protein1",right_on="gene")
+    # Create scatter plot
     sns.scatterplot(
         data=df_nonlinear,
         x="logFC",
         y="-log10_pvalue",
         hue="cooperativity_index",
-        palette="coolwarm",
+        palette=cmap,  # Use the fixed colormap
+        hue_norm=norm,  # Apply fixed normalization
         s=5,
+        edgecolor=None,
         legend=False
     )
-    
+
+        
     # Add gene names for investigated TFs
     texts = []
     for i in range(len(df_nonlinear)):
@@ -111,8 +112,10 @@ for bait in bait_list:
     plt.legend(fontsize=5)
     plt.title(f"{bait}", fontsize=7)
     # Add the same coolwarm color bar to each plot
+    sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
     cbar = plt.colorbar(sm)
-    cbar.set_label("Cooperativity Index", fontsize=5)
+    cbar.set_label("Cooperativity Index", fontsize=5)  # Adjust colorbar title size
+    cbar.ax.tick_params(labelsize=5)  # Adjust colorbar tick size 
     plt.tight_layout()
     plt.savefig(f"volcano_{bait}.pdf")
     plt.close()

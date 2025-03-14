@@ -8,7 +8,9 @@ from utils import split_dimer
 from stat_tests import fisher_exact_with_ci
 from tf_cooperativity import assign_cooperativity
 
-# TODO: add dimers maybe?
+# TODO: add dimers 
+
+# TODO: use utils_ppi
 
 def match_dfs_nearest_neighbor(df_small, df_large, small_col='distance', large_col='median_abs', remove_matched=False):
     # Make a copy of df_large so that we can remove rows if needed without modifying the original DataFrame.

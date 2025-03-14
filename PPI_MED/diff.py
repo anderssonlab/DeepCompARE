@@ -7,46 +7,50 @@ from scipy.stats import pearsonr
 from loguru import logger
 
 
+re="promoters"
 
-# re="enhancers"
-
-# df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_{re}_k562.csv")
-
-# df["diff_activity_probability_cage"]=df["isa_track1"]-df["isa_track9"]
-# df["diff_activity_probability_dhs"]=df["isa_track3"]-df["isa_track11"]
-# df["diff_activity_probability_starr"]=df["isa_track5"]-df["isa_track13"]
-# df["diff_activity_probability_sure"]=df["isa_track7"]-df["isa_track15"]
-# df["diff_cage_sure"]=df["isa_track1"]-df["isa_track7"]
-
-# # group by protein, and get the mean of the differences
-# df_grouped=df[['diff_activity_probability_cage', 
-#                'diff_activity_probability_dhs', 
-#                'diff_activity_probability_starr', 
-#                'diff_activity_probability_sure', 
-#                'diff_cage_sure', 
-#                'protein']].groupby('protein').mean()
+df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_{re}_k562.csv")
+# subset for proper background TFs
+proteins_background=pd.read_csv('MED_experiment_K562proteomics.txt', sep='\t',header=None)[0].tolist()
+df=df[df['protein'].isin(proteins_background)].reset_index(drop=True)
 
 
-# df_med=pd.read_csv(f"2024-08-07_MED-TF_interactions.txt",sep="\t")
-# df_med=df_med[df_med["significant"]].reset_index(drop=True)
-# tfs=df_med["gene"].unique().tolist()
+
+df["diff_activity_probability_cage"]=df["isa_track1"]-df["isa_track9"]
+df["diff_activity_probability_dhs"]=df["isa_track3"]-df["isa_track11"]
+df["diff_activity_probability_starr"]=df["isa_track5"]-df["isa_track13"]
+df["diff_activity_probability_sure"]=df["isa_track7"]-df["isa_track15"]
+df["diff_cage_sure"]=df["isa_track1"]-df["isa_track7"]
+
+# group by protein, and get the mean of the differences
+df_grouped=df[['diff_activity_probability_cage', 
+               'diff_activity_probability_dhs', 
+               'diff_activity_probability_starr', 
+               'diff_activity_probability_sure', 
+               'diff_cage_sure', 
+               'protein']].groupby('protein').mean()
 
 
-# df_grouped["in_med"]=df_grouped.index.isin(tfs).astype(int)
+df_med=pd.read_csv(f"2024-08-07_MED-TF_interactions.txt",sep="\t")
+df_med=df_med[df_med["significant"]].reset_index(drop=True)
+tfs=df_med["gene"].unique().tolist()
 
 
-# # kde plot
-# for col in df_grouped.columns[:-1]:
-#     plt.figure()
-#     sns.kdeplot(data=df_grouped[df_grouped["in_med"]==1][col],label="Mediator interactors")
-#     sns.kdeplot(data=df_grouped[df_grouped["in_med"]==0][col],label="Not interactors")
-#     # add p value of mann whitney u test
-#     u,p=mannwhitneyu(df_grouped[df_grouped["in_med"]==1][col],df_grouped[df_grouped["in_med"]==0][col])
-#     plt.text(0.5,0.5,f"p={p:.3f}",transform=plt.gca().transAxes)
-#     plt.title(col)
-#     plt.legend()
-#     plt.savefig(f"kde_{col}_{re}.png")
-#     plt.close()
+df_grouped["in_med"]=df_grouped.index.isin(tfs).astype(int)
+
+
+# kde plot
+for col in df_grouped.columns[:-1]:
+    plt.figure()
+    sns.kdeplot(data=df_grouped[df_grouped["in_med"]==1][col],label="Mediator interactors")
+    sns.kdeplot(data=df_grouped[df_grouped["in_med"]==0][col],label="Not interactors")
+    # add p value of mann whitney u test
+    u,p=mannwhitneyu(df_grouped[df_grouped["in_med"]==1][col],df_grouped[df_grouped["in_med"]==0][col])
+    plt.text(0.5,0.5,f"p={p:.3f}",transform=plt.gca().transAxes)
+    plt.title(col)
+    plt.legend()
+    plt.savefig(f"kde_{col}_{re}.png")
+    plt.close()
 
 
 
@@ -56,8 +60,6 @@ from loguru import logger
 # is the difference related to histone modifications?
 #---------------------------------------
 
-
-re="enhancers"
 
 df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_{re}_k562.csv")
 

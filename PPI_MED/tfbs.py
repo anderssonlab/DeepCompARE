@@ -3,12 +3,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from loguru import logger
 
-re="enhancers"
+re="promoters"
 
 
 # Major confounder: Only investigated high quality TFBS, not bound TFBSs
 # TODO: subset using chip seq to contain only bound regions
-
+# TODO: annotate number. group minority groups
+# TODO: add pearson r and p
+# TODO: overall correlation between the histone modifications, is corr(ATAC,H2AC)<0
 
 def count_mediator_interactors_per_region(df_med,mediator,df_tfbs):
     if mediator is not "all":
@@ -46,7 +48,12 @@ df_histone=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd10_chromatin_p
 df_histone["end"]=df_histone["end"]-1
 # add region in format chr:start-end
 df_histone["region"]=df_histone["chrom"].astype(str)+":"+df_histone["start"].astype(str)+"-"+df_histone["end"].astype(str)
+
 df_tfbs=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_{re}_k562.csv")
+# subset for proper background TFs
+proteins_background=pd.read_csv('MED_experiment_K562proteomics.txt', sep='\t',header=None)[0].tolist()
+df_tfbs=df_tfbs[df_tfbs['protein'].isin(proteins_background)].reset_index(drop=True)
+
 df_med=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/PPI_MED/2024-08-07_MED-TF_interactions.txt",sep="\t")
 df_med=df_med[df_med["significant"]].reset_index(drop=True)
 for mediator in df_med["bait"].unique().tolist()+["all"]:
