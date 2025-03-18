@@ -6,10 +6,19 @@ import matplotlib as mpl
 from adjustText import adjust_text
 
 
+from utils_ppi import get_htfs_list
+
+
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
-from utils import split_dimer
 from tf_cooperativity import assign_cooperativity
+
+
+
+
+
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
 
 
 # Use a fixed colormap
@@ -25,20 +34,19 @@ bait_list = ["BACH1", "IKZF1", "MAFG", "RFX5", "RREB1"]
 for bait in bait_list:
     print(bait)
     df_bait = pd.read_csv(f"Pd1_PPI_experiment/250107.{bait}.K562.Taplin.GenoppiStats.txt", sep='\t')
-    df_htfs = pd.read_csv(f"/isdata/alab/people/pcr980/Resource/Human_transcription_factors/DatabaseExtract_v_1.01.csv", index_col=0)
-    df_htfs=df_htfs[df_htfs["Is TF?"]=="Yes"].reset_index(drop=True)
+    htfs=get_htfs_list()
     # select K562 expressed TFs
     proteins_expressed=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_k562.tsv",sep='\t',header=None).iloc[:,0].values
-    df_htfs=df_htfs[df_htfs["HGNC symbol"].isin(proteins_expressed)].reset_index(drop=True)
+    htfs=list(set(htfs).intersection(proteins_expressed))
     # read cooperativity
     df_coop = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_k562_pe.csv")
-    df_coop = assign_cooperativity(df_coop, 0.3, 0.7)
+    df_coop = assign_cooperativity(df_coop, 1, 0.9, 0.3, 0.7)
     # select baits
     df_coop = df_coop[df_coop["protein2"] == bait].reset_index(drop=True)
     # determine if TF is linear or nonlinear
     df_nonlinear = df_coop[df_coop["cooperativity"]!="Linear"].reset_index(drop=True)
     df_linear = df_coop[df_coop["cooperativity"]=="Linear"].reset_index(drop=True)
-    df_bait["is_tf"] = df_bait["gene"].isin(df_htfs["HGNC symbol"])
+    df_bait["is_tf"] = df_bait["gene"].isin(htfs)
     df_bait["is_nonlinear"] = df_bait["gene"].isin(df_nonlinear["protein1"])
     df_bait["is_linear"] = df_bait["gene"].isin(df_linear["protein1"])
     df_bait["is_not_investigated"] = ~df_bait["gene"].isin(df_coop["protein1"])
@@ -50,7 +58,7 @@ for bait in bait_list:
     for spine in plt.gca().spines.values():
         spine.set_linewidth(0.5)
     
-    # Plot everything as background
+    # Plot all tfs as light gray dots
     sns.scatterplot(
         data=df_bait,
         x="logFC",
@@ -61,7 +69,7 @@ for bait in bait_list:
         alpha=0.3
     )
     
-    # Plot uninvestigated TFs
+    # Plot uninvestigated TFs as black dots
     df_bait_tfs = df_bait[(df_bait["is_tf"]) & (df_bait["is_not_investigated"])].reset_index(drop=True)
     sns.scatterplot(
         data=df_bait_tfs,
@@ -73,9 +81,9 @@ for bait in bait_list:
         alpha=0.3
     )
     
-    # plot lineari TFs 
+    # plot linear TFs as black x
     df_linear=pd.merge(df_linear,df_bait,how="inner",left_on="protein1",right_on="gene")
-    sns.scatterplot(data=df_linear,x="logFC",y="-log10_pvalue",s=5,color="black",label="Linear TFs",marker="x")
+    sns.scatterplot(data=df_linear,x="logFC",y="-log10_pvalue",s=5,color="black",label="Linear TF partner",marker="x")
     
     # Plot nonlinear TFs with hue based on cooperativity_index
     df_nonlinear=pd.merge(df_nonlinear,df_bait,how="inner",left_on="protein1",right_on="gene")

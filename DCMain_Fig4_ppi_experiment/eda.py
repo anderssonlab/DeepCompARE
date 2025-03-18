@@ -10,8 +10,13 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from tf_cooperativity import assign_cooperativity
 
 
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
 
 
+
+
+suffix="pe"
 
 df_bait_pooled=read_pooled_found_tf_pairs()
 
@@ -19,8 +24,8 @@ df_bait_pooled=read_pooled_found_tf_pairs()
 for bait in ["BACH1", "RFX5", "IKZF1", "MAFG", "RREB1"]:
     for mode in ["linearity_index", "cooperativity_index"]:
         # read cooperativity index
-        df_coop = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_k562_pe.csv")
-        df_coop = assign_cooperativity(df_coop,0.3,0.7)
+        df_coop = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_k562_{suffix}.csv")
+        df_coop = assign_cooperativity(df_coop,1,0.9,0.3,0.7)
         
         # read published PPI
         df_ppi = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/DCMain_Fig4_tf_pair_cooperativity/Pd1_Petra_data/2025-03-07_s10_PublishedPPIandProtComplexes_k562_pe.txt", sep='\t')
@@ -63,7 +68,7 @@ for bait in ["BACH1", "RFX5", "IKZF1", "MAFG", "RREB1"]:
         plt.xticks(fontsize=5)
         plt.yticks(fontsize=5)
         plt.tight_layout()
-        plt.savefig(f"eda_{mode}_{bait}.pdf")
+        plt.savefig(f"eda_{mode}_{bait}_{suffix}.pdf")
         plt.close()
     
         

@@ -7,6 +7,10 @@ from scipy.stats import mannwhitneyu
 import numpy as np
 
 
+import sys
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
+from tf_cooperativity import assign_cooperativity 
+
 
 import matplotlib
 matplotlib.rcParams['pdf.fonttype']=42
@@ -19,19 +23,17 @@ def read_df_add_tf_coop(prefix,file_name):
     df=pd.read_csv(f"{prefix}_{file_name}.csv",index_col=0)
     if "hepg2" in file_name:
         cell_line="hepg2"
+        thresh_redun=0.48
+        thresh_codep=0.76
     elif "k562" in file_name:
         cell_line="k562"
+        thresh_redun=0.44
+        thresh_codep=0.81
     else:
         raise ValueError("cell line not found")
-    tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}_dhs.txt",header=None).iloc[:,0].tolist()
-    tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}_dhs.txt",header=None).iloc[:,0].tolist()
-    df["tf_type"]="intermediate"
-    df.loc[df["protein"].isin(tfs_codependent),"tf_type"]="codependent"
-    df.loc[df["protein"].isin(tfs_redundant),"tf_type"]="redundant"
     # add tf ci
     df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}_dhs.csv")
-    df_coop=df_coop[df_coop["c_sum"]>1].reset_index(drop=True)
-    df_coop=df_coop[["protein2","cooperativity_index"]]
+    df_coop=assign_cooperativity(df_coop,5,0.95,thresh_redun,thresh_codep)
     df_coop.rename(columns={"protein2":"protein"},inplace=True)
     df=pd.merge(df,df_coop,on="protein",how="inner")
     return df
@@ -40,9 +42,11 @@ def read_df_add_tf_coop(prefix,file_name):
 
 def count_tf(df,file_name):
     # count number of redundant and codependent TFs in each region
-    df=df.groupby(["region","tf_type"]).size().unstack(fill_value=0).reset_index()
-    df.rename(columns={"codependent":"codependent_tf_count","redundant":"redundant_tf_count","intermediate":"intermediate_tf_count"},inplace=True)
-    # remove rows with nan
+    df=df.groupby(["region","cooperativity"]).size().unstack(fill_value=0).reset_index()
+    df.rename(columns={"Codependent":"codependent_tf_count",
+                       "Redundant":"redundant_tf_count",
+                       "Intermediate":"intermediate_tf_count",
+                       "Linear":"linear_tf_count"},inplace=True)
     df["region_type"]=file_name
     return df
 
@@ -116,12 +120,13 @@ neighbor_pairs = [
 color_map = {
     "redundant_tf_count": "dodgerblue",
     "codependent_tf_count": "orangered",
-    "intermediate_tf_count": "grey"
+    "intermediate_tf_count": "grey",
+    "linear_tf_count": "black"
 }
 
 for cell_line in ["k562", "hepg2"]:
     df_sub = df[df["cell_line"] == cell_line].reset_index(drop=True)
-    for col in ["redundant_tf_count", "codependent_tf_count", "intermediate_tf_count"]:
+    for col in ["redundant_tf_count", "codependent_tf_count", "intermediate_tf_count", "linear_tf_count"]:
         col_color = color_map[col]
         logger.info(f"Plotting {col} for {cell_line}")
         plt.figure(figsize=(2.3, 2.3))
@@ -131,19 +136,32 @@ for cell_line in ["k562", "hepg2"]:
             spine.set_linewidth(0.5)
         #
         # box plot with colored boxes and thin lines  
-        sns.boxplot(
-            x="region_type", 
-            y=col, 
-            data=df_sub, 
-            color=col_color,  # this sets the default color
-            boxprops={'facecolor': col_color, 'alpha': 0.3},  # add some transparency if desired
-            whiskerprops={'color': "black"},
-            capprops={'color': "black"},
-            medianprops={'color': col_color},
-            showfliers=False,
-            linewidth=0.5
-        )
-        plt.xticks(rotation=30)
+        if col!="linear_tf_count":
+            sns.boxplot(
+                x="region_type", 
+                y=col, 
+                data=df_sub, 
+                color=col_color,  # this sets the default color
+                boxprops={'facecolor': col_color, 'alpha': 0.3},  # add some transparency if desired
+                whiskerprops={'color': "black"},
+                capprops={'color': "black"},
+                medianprops={'color': col_color},
+                showfliers=False,
+                linewidth=0.5
+            )
+        else:
+            sns.boxplot(
+                x="region_type", 
+                y=col,
+                data=df, 
+                boxprops={'facecolor': 'none'},  
+                whiskerprops={'color': "black"},
+                capprops={'color': "black"},
+                medianprops={'color': col_color},
+                showfliers=True,  # Ensure outliers are shown
+                linewidth=0.5,
+                flierprops={'marker': 'o', 'markersize': 3, 'markerfacecolor': 'black', 'markeredgewidth': 0}  # Small black dots
+            )
         #
         # Calculate and annotate Mann-Whitney U test p-values
         for pair in neighbor_pairs:
@@ -161,10 +179,10 @@ for cell_line in ["k562", "hepg2"]:
             plt.plot([x1, x2], [y_position, y_position], lw=0.2, color='black')
             plt.text((x1 + x2) / 2, y_position * 1.05, f"p={p_value:.2e}",
                      ha='center', va='bottom', fontsize=5)
-            #
+        #
         plt.xlabel("Region type", fontsize=7)
         plt.ylabel(f"{col} count", fontsize=7)
-        plt.xticks(fontsize=5)
+        plt.xticks(fontsize=5,rotation=30)
         plt.yticks(fontsize=5)
         plt.tight_layout()
         plt.savefig(f"{col}_{cell_line}.pdf")
@@ -214,7 +232,7 @@ df=pd.concat([df_proximal_hepg2.assign(dataset="proximal_hepg2"),
 
 
 # select tf_type=="intermediate"
-# df=df[df["tf_type"]=="intermediate"].reset_index(drop=True)
+df=df[df["cooperativity"]=="Intermediate"].reset_index(drop=True)
 df=assign_region_type(df)
 df=df[["region_type","cooperativity_index","cell_line"]]
 
@@ -266,7 +284,7 @@ for cell in ["hepg2", "k562"]:
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
     plt.tight_layout()
-    plt.savefig(f"tf_ci_by_region_type_{cell}.pdf")
+    plt.savefig(f"intermediate_tf_ci_by_region_type_{cell}.pdf")
     plt.close()
 
 

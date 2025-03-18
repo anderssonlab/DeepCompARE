@@ -23,9 +23,11 @@ def annotate(df,cell_line,out_path):
     df.to_csv(out_path,index=False)
 
 
-for re in ["promoters", "enhancers"]:
+# for re in ["promoters", "enhancers"]:
+for re in ["proximal", "distal"]:
     for cell_line in ["hepg2","k562"]:
-        df=pd.read_csv(f'/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/{re}_{cell_line}.bed', sep='\t', header=None)
+        #df=pd.read_csv(f'/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/{re}_{cell_line}.bed', sep='\t', header=None)
+        df=pd.read_csv(f'/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/dhs_{re}_{cell_line}.tsv', sep=' ')
         # retain first 3 columns
         df = df.iloc[:, :3]
         df.columns = ['chrom', 'start', 'end']

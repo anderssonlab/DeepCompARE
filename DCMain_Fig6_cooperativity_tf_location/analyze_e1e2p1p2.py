@@ -8,6 +8,11 @@ import numpy as np
 
 
 
+import sys
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
+from tf_cooperativity import assign_cooperativity 
+
+
 import matplotlib
 matplotlib.rcParams['pdf.fonttype']=42
 
@@ -17,17 +22,11 @@ matplotlib.rcParams['pdf.fonttype']=42
 
 def read_df_add_tf_coop(prefix,file_name):
     df=pd.read_csv(f"{prefix}_{file_name}_k562.csv",index_col=0)
-    tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_k562_dhs.txt",header=None).iloc[:,0].tolist()
-    tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_k562_dhs.txt",header=None).iloc[:,0].tolist()
-    df["tf_type"]="intermediate"
-    df.loc[df["protein"].isin(tfs_codependent),"tf_type"]="codependent"
-    df.loc[df["protein"].isin(tfs_redundant),"tf_type"]="redundant"
     # add tf ci
     df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_k562_dhs.csv")
-    df_coop=df_coop[df_coop["c_sum"]>1].reset_index(drop=True)
-    df_coop=df_coop[["protein2","cooperativity_index"]]
+    df_coop=assign_cooperativity(df_coop,5,0.95,0.44,0.81)
     df_coop.rename(columns={"protein2":"protein"},inplace=True)
-    df=pd.merge(df,df_coop,on="protein",how="inner")
+    df=pd.merge(df,df_coop,on="protein",how="left")
     df["region_type"]=file_name
     return df
 
@@ -35,8 +34,12 @@ def read_df_add_tf_coop(prefix,file_name):
 
 def count_tf(df,file_name):
     # count number of redundant and codependent TFs in each region
-    df=df.groupby(["region","tf_type"]).size().unstack(fill_value=0).reset_index()
-    df.rename(columns={"codependent":"codependent_tf_count","redundant":"redundant_tf_count","intermediate":"intermediate_tf_count"},inplace=True)
+    df=df.groupby(["region","cooperativity"]).size().unstack(fill_value=0).reset_index()
+    df.rename(columns={"Codependent":"codependent_tf_count",
+                       "Redundant":"redundant_tf_count",
+                       "Intermediate":"intermediate_tf_count",
+                       "Linear":"linear_tf_count"
+                       },inplace=True)
     df["region_type"]=file_name
     return df
 
@@ -80,39 +83,51 @@ neighbor_pairs = [
 color_map = {
     "redundant_tf_count": "dodgerblue",
     "codependent_tf_count": "orangered",
-    "intermediate_tf_count": "grey"
+    "intermediate_tf_count": "grey",
+    "linear_tf_count": "black"
 }
 
 
-for col in ["redundant_tf_count", "codependent_tf_count", "intermediate_tf_count"]:
+
+for col in ["redundant_tf_count", "codependent_tf_count", "intermediate_tf_count", "linear_tf_count"]:
     col_color = color_map[col]
-    logger.info(f"Plotting {col}")
     plt.figure(figsize=(2.3, 2.3))
     ax = plt.gca()
     # thin frame  
     for spine in ax.spines.values():
         spine.set_linewidth(0.5)
-    #
-    # box plot with colored boxes and thin lines  
-    sns.boxplot(
-        x="region_type", 
-        y=col, 
-        data=df, 
-        color=col_color,  # this sets the default color
-        boxprops={'facecolor': col_color, 'alpha': 0.3},  # add some transparency if desired
-        whiskerprops={'color': "black"},
-        capprops={'color': "black"},
-        medianprops={'color': col_color},
-        showfliers=False,
-        linewidth=0.5
-    )
-    plt.xticks(rotation=30)
-    #
+    
+    if col != "linear_tf_count":
+        sns.boxplot(
+            x="region_type", 
+            y=col, 
+            data=df, 
+            color=col_color,  # this sets the default color
+            boxprops={'facecolor': col_color, 'alpha': 0.3},  # add some transparency if desired
+            whiskerprops={'color': "black"},
+            capprops={'color': "black"},
+            medianprops={'color': col_color},
+            showfliers=False,
+            linewidth=0.5,
+        )
+    if col == "linear_tf_count":
+        sns.boxplot(
+            x="region_type", 
+            y="linear_tf_count",
+            data=df, 
+            boxprops={'facecolor': 'none'},  
+            whiskerprops={'color': "black"},
+            capprops={'color': "black"},
+            medianprops={'color': col_color},
+            showfliers=True,  # Ensure outliers are shown
+            linewidth=0.5,
+            flierprops={'marker': 'o', 'markersize': 3, 'markerfacecolor': 'black', 'markeredgewidth': 0}  # Small black dots
+        )
+
     # Calculate and annotate Mann-Whitney U test p-values
     for pair in neighbor_pairs:
         group1 = df[df["region_type"] == pair[0]][col]
         group2 = df[df["region_type"] == pair[1]][col]
-        #
         stat, p_value = mannwhitneyu(group1, group2, alternative='two-sided')
         # Add p-value annotation at 95 percentile
         y_max = max(group1.quantile(0.95), group2.quantile(0.95))
@@ -124,7 +139,7 @@ for col in ["redundant_tf_count", "codependent_tf_count", "intermediate_tf_count
         plt.plot([x1, x2], [y_position, y_position], lw=0.2, color='black')
         plt.text((x1 + x2) / 2, y_position * 1.05, f"p={p_value:.2e}",
                     ha='center', va='bottom', fontsize=5)
-        #
+        
     plt.xlabel("Region type", fontsize=7)
     plt.ylabel(f"{col} count", fontsize=7)
     plt.xticks(fontsize=5)
@@ -132,16 +147,6 @@ for col in ["redundant_tf_count", "codependent_tf_count", "intermediate_tf_count
     plt.tight_layout()
     plt.savefig(f"e1e2p1p2_{col}.pdf")
     plt.close()
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -170,8 +175,8 @@ df_e2=read_df_add_tf_coop(prefix,"E2")
 
 df=pd.concat([df_p1,df_p2,df_e1,df_e2],axis=0)
 
-# select tf_type=="intermediate"
-df=df[df["tf_type"]=="intermediate"].reset_index(drop=True)
+# select cooperativity=="intermediate"
+df=df[df["cooperativity"]=="Intermediate"].reset_index(drop=True)
 df=df[["region_type","cooperativity_index"]]
 df["region_type"]=pd.Categorical(df["region_type"],categories=["E1","E2","P2","P1"],ordered=True)
 

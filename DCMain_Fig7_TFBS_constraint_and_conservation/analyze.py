@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
 from scipy.stats import mannwhitneyu,pearsonr
 from loguru import logger
 
@@ -10,6 +12,9 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from utils import get_track_num
 from seq_ops import SeqExtractor
 from mutational_constraints import calc_constraint
+from tf_cooperativity import assign_cooperativity 
+
+
 
 
 seq_extractor=SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
@@ -25,19 +30,22 @@ matplotlib.rcParams['pdf.fonttype']=42
 #-------------------
 
 
-# add mediator info to compare conservation
 
 
 def add_tf_cooperativity(df,cell_line):
-    tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}_dhs.txt", header=None).iloc[:,0].tolist()
-    tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}_dhs.txt", header=None).iloc[:,0].tolist()
-    df_tf_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}_dhs.csv")
-    df_tf_coop=df_tf_coop[df_tf_coop["c_sum"]>1].reset_index(drop=True)
-    df_tf_coop.rename(columns={"protein2":"protein"}, inplace=True)
-    df["cooperativity"]="intermediate"
-    df.loc[df["protein"].isin(tfs_codependent), "cooperativity"]="codependent"
-    df.loc[df["protein"].isin(tfs_redundant), "cooperativity"]="redundant"
-    df=df.merge(df_tf_coop, on="protein", how="inner")
+    if cell_line=="hepg2":
+        thresh_redun=0.48
+        thresh_codep=0.76
+    elif cell_line=="k562":
+        thresh_redun=0.44
+        thresh_codep=0.81
+    else:
+        raise ValueError("cell line not found")
+    # add tf ci
+    df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}_dhs.csv")
+    df_coop=assign_cooperativity(df_coop,5,0.95,thresh_redun,thresh_codep)
+    df_coop.rename(columns={"protein2":"protein"},inplace=True)
+    df=pd.merge(df,df_coop,on="protein",how="inner")
     return df
 
 
@@ -158,11 +166,8 @@ df_distal_k562_gnocchi=preprocess("distal_k562")
 df_gnocchi=pd.concat([df_proximal_hepg2_gnocchi,df_proximal_k562_gnocchi,df_distal_hepg2_gnocchi,df_distal_k562_gnocchi], axis=0, ignore_index=True)
 df_gnocchi["cell_line"]=df_gnocchi["dataset"].apply(lambda x: x.split("_")[1])
 df_gnocchi["re"]=df_gnocchi["dataset"].apply(lambda x: x.split("_")[0])
-# turn cooperativity into category, order: redudant, codependent
-df_gnocchi["cooperativity"]=pd.Categorical(df_gnocchi["cooperativity"], categories=["redundant","intermediate","codependent"], ordered=True)
 # turn dataset into category, order: proximal_hepg2, distal_hepg2, proximal_k562, distal_k562
 df_gnocchi["dataset"]=pd.Categorical(df_gnocchi["dataset"], categories=["proximal_hepg2","distal_hepg2","proximal_k562","distal_k562"], ordered=True)
-
 
 
 
@@ -188,15 +193,26 @@ for file in df_gnocchi["dataset"].unique():
     plt.gca().spines['right'].set_linewidth(0.5)
     plt.gca().spines['bottom'].set_linewidth(0.5)
     plt.gca().spines['left'].set_linewidth(0.5)
-    scatter = sns.scatterplot(
+    sns.scatterplot(
         x="z",
         y="241way_max",
         data=df_sub,
         hue="cooperativity_index",
         palette="coolwarm",
-        s=8,
+        s=5,
         legend=False
     )
+    # plot linear TFs with cooperatvitiy nan
+    sns.scatterplot(
+        x="z",
+        y="241way_max",
+        data=df_sub[df_sub["cooperativity_index"].isnull()],
+        marker="$\circ$",
+        s=9,
+        color="black",
+        label="Linear TFs"
+    )
+    
     # Create a colorbar
     norm = plt.Normalize(df_sub["cooperativity_index"].min(), df_sub["cooperativity_index"].max())
     sm = plt.cm.ScalarMappable(cmap="coolwarm", norm=norm)
@@ -206,14 +222,17 @@ for file in df_gnocchi["dataset"].unique():
     cbar.ax.tick_params(labelsize=5)
     #
     # Add Pearson r and p-value to the plot (top-left)
-    plt.text(0.05, 0.95, f"Pearson R = {r:.2f}\np = {p_value:.2e}", fontsize=6, 
+    plt.text(0.05, 0.65, f"Pearson R = {r:.2f}\np = {p_value:.2e}", fontsize=5, 
              transform=plt.gca().transAxes, verticalalignment='top', horizontalalignment='left')
     #
-    plt.tight_layout()
-    plt.xlabel("z", fontsize=7)
+    # add a invisible solid gray dot for legend: Nonlinear TFs
+    plt.scatter([], [], c="black", label="Nonlinear TFs", s=20)
+    plt.legend(fontsize=5, title="TF type", title_fontsize=5, markerscale=0.8)
+    plt.xlabel("Constraint z", fontsize=7)
     plt.ylabel("241way_max", fontsize=7)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
+    plt.tight_layout()
     plt.savefig(f"scatter_z_241way_max_{file}.pdf")
     plt.close()
 
@@ -224,29 +243,44 @@ for file in df_gnocchi["dataset"].unique():
 #----------------------------------
 
 
-for col in ["241way_max","241way_mean","241way_min"]:
-    plt.figure(figsize=(2.6,2.3))
-    # thin frame
+# Define color mapping
+color_mapping = {
+    "Linear": "white",
+    "Redundant": "#1f77b4",  # cool color
+    "Intermediate": "#7f7f7f",  # gray
+    "Codependent": "#d62728"  # warm color
+}
+
+for col in ["241way_max", "241way_mean", "241way_min"]:
+    plt.figure(figsize=(3, 3))
+    # Thin frame
     plt.gca().spines['top'].set_linewidth(0.5)
     plt.gca().spines['right'].set_linewidth(0.5)
     plt.gca().spines['bottom'].set_linewidth(0.5)
     plt.gca().spines['left'].set_linewidth(0.5)
+    # Flier properties
     flierprops = {
-        'marker': 'o',        # marker style
-        'markersize': 1,      # marker size
-        'markerfacecolor': 'gray',  # marker face color
-        'markeredgecolor': 'gray'  # marker edge color
+        'marker': 'o',
+        'markersize': 1,
+        'markerfacecolor': 'gray',
+        'markeredgecolor': 'gray'
     }
-    sns.boxplot(data=df_gnocchi, x="dataset", y=col, hue="cooperativity", palette="coolwarm",linewidth=0.5, flierprops=flierprops)
-    # x rotation 30 degrees
-    plt.xticks(rotation=30,fontsize=5)
+    # Custom palette mapping
+    palette = {key: color_mapping[key] for key in df_gnocchi["cooperativity"].unique()}
+    #
+    sns.boxplot(data=df_gnocchi, x="dataset", y=col, hue="cooperativity", 
+                palette=palette, linewidth=0.5, flierprops=flierprops)
+    plt.xticks(rotation=30, fontsize=5)
     plt.yticks(fontsize=5)
     plt.xlabel("Regulatory element", fontsize=7)
     plt.ylabel(col, fontsize=7)
-    plt.legend(title="TF Cooperativity", fontsize=5, title_fontsize=5, loc="upper right")
+    plt.legend(title="TF type", fontsize=5, title_fontsize=5, loc="upper right")
+    # Layout and save
     plt.tight_layout()
     plt.savefig(f"box_{col}_vs_cooperativity.pdf")
     plt.close()
+
+
 
 
 
@@ -291,6 +325,7 @@ mannwhitneyu(df_k562_distal[df_k562_distal["cooperativity"]=="redundant"]["241wa
 # Iterate over dict_files and variable pairs
 for file in df_gnocchi["dataset"].unique():
     df_sub = df_gnocchi[df_gnocchi["dataset"] == file].reset_index(drop=True)
+    df_sub=df_sub.dropna(subset=["cooperativity_index"]).reset_index(drop=True)
     for x_var in["z","241way_max"]:
         # Calculate Pearson correlation
         r, p_value = pearsonr(df_sub[x_var], df_sub["cooperativity_index"])
@@ -331,15 +366,13 @@ for file in df_gnocchi["dataset"].unique():
 #-------------------------------------------------------------------------------------------------------------------------------
 # Define a custom color palette for cooperativity categories
 
-from matplotlib.lines import Line2D
 
 custom_palette = {
-    "codependent": "orangered",  # warm color
-    "redundant": "dodgerblue",   # cool color
+    "Codependent": "#d62728",  # warm color
+    "Redundant": "#1f77b4",   # cool color
 }
 for cell in ["hepg2", "k562"]:
-    # for col in ["z", "have_common_variants"]:
-    for col in ["z"]:
+    for col in ["z", "have_common_variants","241way_max", "241way_mean", "241way_min"]:
         # Subset the data to only constrained TFs for one cell line
         df_sub = df_gnocchi[df_gnocchi["cell_line"] == cell].reset_index(drop=True)
         df_pivot = df_sub.pivot(index="protein", columns="re", values=col).dropna().reset_index()
@@ -354,10 +387,15 @@ for cell in ["hepg2", "k562"]:
         df_pivot=df_pivot[df_pivot["z"]>0].reset_index(drop=True)
         # Add cooperativity information
         df_pivot = add_tf_cooperativity(df_pivot, cell)
-        df_redundant = df_pivot[df_pivot["cooperativity"] == "redundant"].reset_index(drop=True)
-        df_codependent = df_pivot[df_pivot["cooperativity"] == "codependent"].reset_index(drop=True)
+        df_pivot["cooperativity"] = df_pivot["cooperativity"].astype("str")
+        # report the number of proteins where enhancers>promoters
+        df_redundant = df_pivot[df_pivot["cooperativity"] == "Redundant"].reset_index(drop=True)
+        df_codependent = df_pivot[df_pivot["cooperativity"] == "Codependent"].reset_index(drop=True)
         logger.info(f"Number of proteins where enhancers>promoters (redundant tfs): {np.mean(df_redundant['distal'] > df_redundant['proximal'])}")
         logger.info(f"Number of proteins where enhancers>promoters (codependent tfs): {np.mean(df_codependent['distal'] > df_codependent['proximal'])}")
+        if col=="241way_max":         # get proximal>4 and distal>4
+            df_outlier=df_pivot[(df_pivot["proximal"]>4) & (df_pivot["distal"]>4)].reset_index(drop=True)   
+            logger.info(f"Number of proteins where enhancers>4 and promoters>4: {df_outlier.protein.tolist()}")
         # Create the plot
         plt.figure(figsize=(2.3, 2.2))
         ax = plt.gca()
@@ -365,8 +403,10 @@ for cell in ["hepg2", "k562"]:
             spine.set_linewidth(0.5)
         #
         # Use the custom palette in the scatterplot
-        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"]!="intermediate"], hue="cooperativity", s=5, palette=custom_palette)
-        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"]=="intermediate"], hue="cooperativity_index", s=5, palette="coolwarm",legend=False,marker="x")
+        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"].isin(["Redundant", "Codependent"])], hue="cooperativity", s=5, palette=custom_palette,legend=False)
+        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"]=="Intermediate"], hue="cooperativity_index", s=5, palette="coolwarm",legend=False,marker="x")
+        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"]=="Linear"], color="black", s=9, label="Linear",marker="$\circ$")
+        #
         min_val = min(df_pivot["proximal"].min(), df_pivot["distal"].min())
         max_val = max(df_pivot["proximal"].max(), df_pivot["distal"].max())
         plt.plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.3)
@@ -377,13 +417,13 @@ for cell in ["hepg2", "k562"]:
                       markersize=5,
                       linestyle='None',
                       markeredgewidth=0.5,
-                      label='intermediate')
+                      label='Intermediate')
         #   
         # Get current handles and labels, and append the dummy handle:
         handles, labels = ax.get_legend_handles_labels()
         handles.append(dummy_handle)
-        labels.append("intermediate")
-        ax.legend(handles=handles, labels=labels, title="TF Cooperativity", fontsize=5, title_fontsize=5,markerscale=0.5)
+        labels.append("Intermediate")
+        ax.legend(handles=handles, labels=labels, title="TF Type", fontsize=5, title_fontsize=5,markerscale=0.5)
         #
         plt.xlabel(f"{col} at proximal", fontsize=7)
         plt.ylabel(f"{col} at distal", fontsize=7)
@@ -393,84 +433,4 @@ for cell in ["hepg2", "k562"]:
         plt.savefig(f"scatter_proximal_vs_distal_{col}_{cell}.pdf")
         plt.close()
 
-
-
-#--------------------------------------------------------------
-# 5: separate by cooperativity, compare proximal and distal
-#--------------------------------------------------------------
-
-for cell in ["hepg2", "k562"]:
-    for col in ["241way_max", "241way_mean", "241way_min"]:
-        # Subset the data to only constrained TFs for one cell line
-        df_sub = df_gnocchi[df_gnocchi["cell_line"] == cell].reset_index(drop=True)
-        df_pivot = df_sub.pivot(index="protein", columns="re", values=col).dropna().reset_index()
-        # merge 
-        if cell=="hepg2":
-            df_pivot=df_pivot.merge(df_gnocchi_hepg2[["protein","z","p_val_241way_max","p_val_241way_mean","p_val_241way_min"]], on="protein", how="inner")
-        elif cell=="k562":
-            df_pivot=df_pivot.merge(df_gnocchi_k562[["protein","z","p_val_241way_max","p_val_241way_mean","p_val_241way_min"]], on="protein", how="inner")
-        else:
-            raise ValueError("cell line not found")
-        #
-        df_pivot=df_pivot[df_pivot["z"]>0].reset_index(drop=True)
-        # Add cooperativity information
-        df_pivot = add_tf_cooperativity(df_pivot, cell)
-        # determine alpha: if f"p_val_{col}"<0.05, alpha=1, else alpha=0.3
-        df_pivot["alpha"]=df_pivot.apply(lambda x: 1 if x[f"p_val_{col}"]<0.05 else 0.3, axis=1)
-        df_redundant = df_pivot[df_pivot["cooperativity"] == "redundant"].reset_index(drop=True)
-        df_codependent = df_pivot[df_pivot["cooperativity"] == "codependent"].reset_index(drop=True)
-        logger.info(f"Number of proteins where enhancers>promoters (redundant tfs): {np.mean(df_redundant['distal'] > df_redundant['proximal'])}")
-        logger.info(f"Number of proteins where enhancers>promoters (codependent tfs): {np.mean(df_codependent['distal'] > df_codependent['proximal'])}")
-        # Create the plot
-        plt.figure(figsize=(2.3, 2.2))
-        ax = plt.gca()
-        for spine in ax.spines.values():
-            spine.set_linewidth(0.5)
-        #
-        # Use the custom palette in the scatterplot
-        sns.scatterplot(
-            x="proximal", 
-            y="distal", 
-            data=df_pivot[df_pivot["cooperativity"] != "intermediate"],
-            hue="cooperativity", 
-            s=5, 
-            palette=custom_palette, 
-            alpha=df_pivot[df_pivot["cooperativity"] != "intermediate"]["alpha"]
-        )
-        #
-        sns.scatterplot(
-            x="proximal", 
-            y="distal", 
-            data=df_pivot[df_pivot["cooperativity"] == "intermediate"],
-            hue="cooperativity_index", 
-            s=5, 
-            palette="coolwarm",
-            legend=False,
-            marker="x", 
-            alpha=df_pivot[df_pivot["cooperativity"] == "intermediate"]["alpha"]
-        )
-        min_val = min(df_pivot["proximal"].min(), df_pivot["distal"].min())
-        max_val = max(df_pivot["proximal"].max(), df_pivot["distal"].max())
-        plt.plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.3)
-        #
-        dummy_handle = Line2D([], [],
-                      marker='x',
-                      color='black',
-                      markersize=5,
-                      linestyle='None',
-                      markeredgewidth=0.5,
-                      label='intermediate')
-        #   
-        # Get current handles and labels, and append the dummy handle:
-        handles, labels = ax.get_legend_handles_labels()
-        handles.append(dummy_handle)
-        labels.append("intermediate")
-        ax.legend(handles=handles, labels=labels, title="TF Cooperativity", fontsize=5, title_fontsize=5,markerscale=0.5)
-        plt.xlabel(f"{col} at proximal", fontsize=7)
-        plt.ylabel(f"{col} at distal", fontsize=7)
-        plt.xticks(fontsize=5)
-        plt.yticks(fontsize=5)
-        plt.tight_layout()
-        plt.savefig(f"scatter_proximal_vs_distal_{col}_{cell}.pdf")
-        plt.close()
 

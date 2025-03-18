@@ -12,6 +12,10 @@ matplotlib.rcParams['pdf.fonttype']=42
 
 prefix='/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_'
 
+
+seq_extractor=SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
+
+
 for cell_line in ["hepg2","k562"]:
     
     df_promoters=pd.read_csv(f'{prefix}promoters_{cell_line}.csv')
@@ -21,21 +25,23 @@ for cell_line in ["hepg2","k562"]:
                 df_enhancers.assign(dataset="enhancers")])
 
 
-    seq_extractor=SeqExtractor("/isdata/alab/people/pcr980/Resource/hg38.fa")
-
-
     df["motif"]=df.apply(lambda row: seq_extractor.get_seq((row["chromosome"],row["start"],row["end"])), axis=1)
     df["gc_content"]=df.motif.apply(lambda x: (x.count("G")+x.count("C"))/len(x))
 
 
     # get redundant and codependent tfs
-    tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}.txt",header=None).iloc[:,0].tolist()
-    tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}.txt",header=None).iloc[:,0].tolist()
-
-    df["tf_type"]="other"
-    df.loc[df["protein"].isin(tfs_redundant),"tf_type"]="redundant"
-    df.loc[df["protein"].isin(tfs_codependent),"tf_type"]="codependent"
-    df["tf_type"]=pd.Categorical(df["tf_type"],categories=["redundant","other","codependent"],ordered=True)
+    tfs_redundant=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_redundant_{cell_line}_pe.txt",header=None).iloc[:,0].tolist()
+    tfs_codependent=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_codependent_{cell_line}_pe.txt",header=None).iloc[:,0].tolist()
+    tfs_linear=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_linear_{cell_line}_pe.txt",header=None).iloc[:,0].tolist()
+    tfs_intermediate=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tfs_intermediate_{cell_line}_pe.txt",header=None).iloc[:,0].tolist()
+    
+    df.loc[df["protein"].isin(tfs_redundant),"tf_type"]="Redundant"
+    df.loc[df["protein"].isin(tfs_codependent),"tf_type"]="Codependent"
+    df.loc[df["protein"].isin(tfs_linear),"tf_type"]="Linear"
+    df.loc[df["protein"].isin(tfs_intermediate),"tf_type"]="Intermediate"
+    
+    df=df.dropna(subset=["tf_type"])
+    df["tf_type"]=pd.Categorical(df["tf_type"],categories=["Linear","Redundant","Intermediate","Codependent"],ordered=True)
 
 
 

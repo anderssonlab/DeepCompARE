@@ -19,13 +19,13 @@ def plot_hist(df,cell,col,xlabel,outpath):
     # font size 5-7
     plt.xlabel(xlabel, fontsize=7)
     plt.ylabel('Frequency', fontsize=7)
-    plt.title(f'Linearity Index Distribution ({cell})', fontsize=7)
+    plt.title(f'Linearity index distribution ({cell})', fontsize=7)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
     plt.tight_layout()
     plt.savefig(outpath)
     plt.close()
-    
+
 
 
 def plot_linear_nonlinear_distance(df,cell):
@@ -53,9 +53,9 @@ def plot_linear_nonlinear_distance(df,cell):
 
 
 
-#-------------------------
-# TF pair linearity
-#-------------------------
+#------------------------------------------------
+# Pairwise linearity, index distribution and distance comparison
+#------------------------------------------------
 for cell in ['k562','hepg2']:
     df=pd.read_csv(f'/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell}_pe.csv')
     df["total_count"]=df["nonlinear_count"]+df["linear_count"]
@@ -71,9 +71,9 @@ for cell in ['k562','hepg2']:
 
 
 
-#-------------------------
-# Do linearity differ between enhancer and promoter?
-#--------------------------
+#------------------------------------------------
+# Do pairwise linearity differ between enhancer and promoter?
+#-------------------------------------------------
 
 for cell in ['hepg2','k562']:
     df_promoter=pd.read_csv(f'/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell}_promoter_pe.csv')
@@ -104,3 +104,12 @@ for cell in ['hepg2','k562']:
     plt.close()   
 
 
+
+#------------------------------------------------
+# TF level linearity index distribution
+#-------------------------------------------------
+cell='hepg2'
+df=pd.read_csv(f'/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell}_pe.csv')
+df["total_count"]=df["nonlinear_count"]+df["linear_count"]
+df=df[df["total_count"]>10].reset_index(drop=True)
+plot_hist(df,cell,"linearity_index","Linearity index",f'hist_tf_li_{cell}.pdf')

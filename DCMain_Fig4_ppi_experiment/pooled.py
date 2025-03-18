@@ -11,15 +11,31 @@ from tf_cooperativity import assign_cooperativity
 from stat_tests import fisher_exact_with_ci
 
 
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
 
-ci_suffix="pe"
-redundancy_threshold=0.3 # 0.46
-codependent_threshold=0.7 # 0.83
+ci_suffix="dhs"
+redundancy_threshold=0.44
+codependent_threshold=0.81
+
+
+
+# ci_suffix="pe"
+# redundancy_threshold=0.3 
+# codependent_threshold=0.7
+
+
+
+
 mode="cooperativity_index"
 
 
+
+
+
+
 df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_k562_{ci_suffix}.csv")
-df_coop=assign_cooperativity(df_coop,redundancy_threshold,codependent_threshold)
+df_coop=assign_cooperativity(df_coop,1,0.9,redundancy_threshold,codependent_threshold)
 df_coop=df_coop[df_coop["protein2"].isin(["BACH1","MAFG","IKZF1","RREB1","RFX5"])].reset_index(drop=True)
 
 # subset for proper background TFs (proteomics detectable), 
@@ -93,14 +109,15 @@ df_coop=df_coop[df_coop["prediction_state"]!="not_predicted"].reset_index(drop=T
 
 df_res=pd.DataFrame()
 for class_label in ["Linear","Redundant","Intermediate","Codependent"]:
+    df_coop_copy=df_coop.copy()
     # stringent version: "experiment_state"=="found" only if "experiment_state"=="significant"
-    df_coop.loc[df_coop["experiment_state"]=="significant","experiment_state"]="found"
-    df_res_class=fisher_exact_test(df_coop, class_label)
+    df_coop_copy.loc[df_coop_copy["experiment_state"]=="significant","experiment_state"]="found"
+    df_res_class=fisher_exact_test(df_coop_copy, class_label)
     df_res_class["method"]="stringent"
     df_res=pd.concat([df_res,df_res_class],axis=0).reset_index(drop=True)
     # lenient version: "experiment_state"=="found" if "experiment_state"=="significant" or "experiment_state"=="subthreshold"
-    df_coop.loc[df_coop["experiment_state"]=="subthreshold","experiment_state"]="found"
-    df_res_class=fisher_exact_test(df_coop, class_label)
+    df_coop_copy.loc[df_coop_copy["experiment_state"]=="subthreshold","experiment_state"]="found"
+    df_res_class=fisher_exact_test(df_coop_copy, class_label)
     df_res_class["method"]="lenient"
     df_res=pd.concat([df_res,df_res_class],axis=0).reset_index(drop=True)
     
@@ -139,7 +156,7 @@ plt.xlabel('Class of TF partner', fontsize=7)
 plt.ylabel('Odds ratio', fontsize=7)
 plt.legend(fontsize=5)
 plt.tight_layout()
-plt.savefig("pooled_enrichment.pdf")
+plt.savefig(f"pooled_enrichment_{ci_suffix}.pdf")
 plt.close()
 
 

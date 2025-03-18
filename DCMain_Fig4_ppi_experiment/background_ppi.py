@@ -20,7 +20,7 @@ codependent_threshold=0.7 # 0.83
 
 for mode in ["linearity_index","cooperativity_index"]:
     df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_k562_{ci_suffix}.csv")
-    df_coop=assign_cooperativity(df_coop,redundancy_threshold,codependent_threshold)
+    df_coop=assign_cooperativity(df_coop,1,0.9,redundancy_threshold,codependent_threshold)
     df_coop=df_coop[df_coop["protein2"].isin(["BACH1","MAFG","IKZF1","RREB1","RFX5"])].reset_index(drop=True)
 
     # subset for proper background TFs (proteomics detectable), because TFs detected in proteomics tend to have lower ci

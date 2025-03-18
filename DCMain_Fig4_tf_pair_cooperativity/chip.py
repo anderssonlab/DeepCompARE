@@ -15,7 +15,7 @@ matplotlib.rcParams['pdf.fonttype']=42
 
 for cell_line in ["hepg2","k562"]:
     df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell_line}_pe.csv")
-    df=assign_cooperativity(df,0.3,0.7)
+    df=assign_cooperativity(df,1,0.9, 0.3,0.7)
     df_chip_coloc=pd.read_csv(f"/isdata/alab/people/pcr980/Resource/ReMap2022/Colocolization/colocolization_{cell_line}_summary.csv")
     df_chip_coloc.rename(columns={'tf1':'protein1','tf2':'protein2'},inplace=True)
 

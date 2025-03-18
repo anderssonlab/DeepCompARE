@@ -22,8 +22,6 @@ for cell_line in ['hepg2','k562']:
                     suffixes=('_pe','_dhs'),
                         how='inner')
     df_merge['c_sum_pe_clipped'] = df_merge['c_sum_pe'].clip(upper=50)
-     # are the ranks preserved? Wilcoxon signed-rank test
-    wilcoxon(df_merge['cooperativity_index_pe'],df_merge['cooperativity_index_dhs'])
     plt.figure(figsize=(2.3, 2.3))
     # thin frame
     plt.gca().spines['top'].set_linewidth(0.5)
@@ -34,7 +32,8 @@ for cell_line in ['hepg2','k562']:
                     x='cooperativity_index_pe',
                     y='cooperativity_index_dhs',
                     hue="c_sum_pe_clipped",
-                    s=5)
+                    s=2,
+                    alpha=0.5)
     plt.legend(fontsize=5,title='Sum(cooperativity)',title_fontsize=5,markerscale=0.5)
     plt.xlabel('CI defined by promoter + enhancer',fontsize=7)
     plt.ylabel('CI defined by DHS', fontsize=7)
@@ -69,7 +68,6 @@ for cell_line in ['hepg2', 'k562']:
     # Merge datasets on protein2
     df_merge = pd.merge(df_pe, df_dhs, on=['protein2'],
                         suffixes=('_pe', '_dhs'), how='inner')
-    wilcoxon(df_merge['cooperativity_index_pe'],df_merge['cooperativity_index_dhs'])
     # Clip c_sum_pe to an upper limit (here 50)
     df_merge['c_sum_pe'] = df_merge['c_sum_pe'].clip(upper=50)
     # Create the scatter plot with hue

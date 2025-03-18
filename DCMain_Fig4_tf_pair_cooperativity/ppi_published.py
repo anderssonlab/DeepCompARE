@@ -21,7 +21,7 @@ cell_line = "hepg2"
 for cell_line in ["hepg2", "k562"]:
     
     df_coop = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell_line}_pe.csv")
-    df_coop =assign_cooperativity(df_coop,0.3,0.7)
+    df_coop =assign_cooperativity(df_coop,1,0.9, 0.3,0.7)
         
     # read ppi
     df_ppi1 = pd.read_csv(f"Pd1_Petra_data/2025-03-07_s10_PublishedPPIandProtComplexes_{cell_line}_pe.txt", sep='\t')
