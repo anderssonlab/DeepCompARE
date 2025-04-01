@@ -19,14 +19,14 @@ THRESHOLD=500
 
 def main(file_name,device):
     # Load data and tools
-    df_regions=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/{file_name}.tsv",sep=" ").iloc[:,0:3]
+    df_regions=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd1_bed_processed/{file_name}.tsv",sep=" ").iloc[:,0:3]
     df_regions.columns=["chromosome","start","end"]
-    # df_regions["end"]=df_regions["end"]-1
+    df_regions["end"]=df_regions["end"]-2
     # select chromosomes
     df_regions=df_regions[df_regions["chromosome"].apply(lambda x: x in [f"chr{i}" for i in list(range(1,23))+["X","Y"]])].reset_index(drop=True)
     
     # Step 1: Annotate motif info
-    if "hepg2" in file_name:
+    if "hepg2" in file_name.lower():
         chip_file="/isdata/alab/people/pcr980/Resource/ReMap2022/ReMap2022_hg38_hepg2.bed"
         rna_file="/isdata/alab/people/pcr980/DeepCompare/RNA_expression/expressed_tf_list_hepg2.tsv"
     if "k562" in file_name:
@@ -49,9 +49,9 @@ def main(file_name,device):
     # step 3: annotate with conservation and feature importance
     df_motif=pd.read_csv(f"{file_name}_temp2.csv")
     phylop_annotator=phylopAnnotator(f"/isdata/alab/people/pcr980/Resource/Conservation/hg38.phyloP241way.bw")
-    # gradxinp_annotator=baseImpAnnotator(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/gradxinp_{file_name}.csv")
-    # ism_annotator=baseImpAnnotator(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/ism_{file_name}.csv")
-    # isa_annotator=baseImpAnnotator(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/isa_{file_name}.csv")
+    gradxinp_annotator=baseImpAnnotator(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/gradxinp_{file_name}.csv")
+    ism_annotator=baseImpAnnotator(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/ism_{file_name}.csv")
+    isa_annotator=baseImpAnnotator(f"/isdata/alab/people/pcr980/DeepCompare/Pd4_promoters_enhancers_and_featimp/isa_{file_name}.csv")
     
     for chr_num in list(range(1,23))+["X","Y"]: 
         logger.info(f"Working on chromosome {chr_num}")
@@ -61,11 +61,11 @@ def main(file_name,device):
         gnomad_annotator=gnomadAnnotator(chr_num)
         df_chr = gnomad_annotator.annotate(df_chr)
         df_chr["phylop_241way"] = df_chr.apply(lambda row: phylop_annotator.annotate((row['chromosome'],row['start'],row['end'])), axis=1)
-        # for track_num in range(8):
-        #     logger.info(f"Working on track {track_num}")
-        #     df_chr[f"gradxinp_{track_num}"]=df_chr.apply(lambda row: gradxinp_annotator.annotate(row['region'],track_num,row['start_rel'],row['end_rel']), axis=1)
-        #     df_chr[f"ism_{track_num}"]=df_chr.apply(lambda row: ism_annotator.annotate(row['region'],track_num,row['start_rel'],row['end_rel']), axis=1)
-        #     df_chr[f"isa_{track_num}"]=df_chr.apply(lambda row: isa_annotator.annotate(row['region'],track_num,row['start_rel'],row['end_rel']), axis=1)
+        for track_num in range(8):
+            logger.info(f"Working on track {track_num}")
+            df_chr[f"gradxinp_{track_num}"]=df_chr.apply(lambda row: gradxinp_annotator.annotate(row['region'],track_num,row['start_rel'],row['end_rel']), axis=1)
+            df_chr[f"ism_{track_num}"]=df_chr.apply(lambda row: ism_annotator.annotate(row['region'],track_num,row['start_rel'],row['end_rel']), axis=1)
+            df_chr[f"isa_{track_num}"]=df_chr.apply(lambda row: isa_annotator.annotate(row['region'],track_num,row['start_rel'],row['end_rel']), axis=1)
         # if the file doesn't exist, write header
         out_name=f"motif_info_thresh_{THRESHOLD}_{file_name}.csv"
         if not os.path.isfile(out_name):

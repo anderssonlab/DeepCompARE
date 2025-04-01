@@ -4,80 +4,89 @@ import seaborn as sns
 from loguru import logger
 
 from scipy.stats import pearsonr
+from scipy.stats import fisher_exact
 
 
 
 re="distal"
 
 
-# Major confounder: Only investigated high quality TFBS, not bound TFBSs
-# TODO: subset using chip seq to contain only bound regions
-
-
-def count_mediator_interactors_per_region(df_med,mediator,df_tfbs):
+def group_mediator_interactors_per_region(df_med,mediator,df_tfbs):
     if mediator is not "all":
         df_med=df_med[df_med["bait"]==mediator].reset_index(drop=True)
     # is protein in df_med.gene
     df=df_tfbs.copy()
-    df["mediator"]=df["protein"].apply(lambda x: x in df_med["gene"].values.tolist())
-    df["mediator"]=df["mediator"].astype(int)
+    df[mediator]=df["protein"].apply(lambda x: x in df_med["gene"].values.tolist())
     # group by region, and count the number of mediator, get the mean gc content
-    df=df.groupby("region").agg({"mediator":"sum"}).reset_index()
+    df=df.groupby("region").agg({mediator:"sum"}).reset_index()
+    df[mediator] = pd.cut(df[mediator], bins=[-1, 0, 1, 2, 3, 100], labels=["0", "1", "2", "3", "3+"])
     return df
 
 
 
-def analyze_tfbs(df_histone, df_tfbs, df_med, mediator, re):
-    # count number of mediator-interactor TFBSs per region
-    df_res = count_mediator_interactors_per_region(df_med, mediator, df_tfbs)
-    df_res = pd.merge(df_res, df_histone, on="region", how="inner")
-    # plot distribution of columns starting with "log_signal"
-    log_signal_cols = [col for col in df_histone.columns if "log_signal" in col]
-    log_signal_cols = [col.replace("log_signal_", "") for col in log_signal_cols]
-    for col in log_signal_cols:
-        logger.info(f"plotting {col}")
-        plt.figure(figsize=(3, 2.5))
-        # calculate pearson correlation and p-value
-        r, p = pearsonr(df_res["mediator"], df_res["log_signal_" + col])
-        sns.boxplot(x="mediator", y="log_signal_" + col, data=df_res, fliersize=0, linewidth=0.5)
-        # Count occurrences of each x category
-        category_counts = df_res["mediator"].value_counts().sort_index()
-        # Modify x-tick labels to include counts
-        xtick_labels = [f"{x} (n={category_counts[x]})" for x in category_counts.index]
-        plt.xticks(ticks=range(len(category_counts)), labels=xtick_labels,rotation=45, fontsize=5)
-        plt.yticks(fontsize=5)
-        plt.title(f"{col}, {re}, r={r:.2f}, p={p:.2f}", fontsize=7)
-        plt.xlabel(f"# {mediator}-interactors TFBSs",fontsize=7)
-        plt.ylabel(f"log {col}",fontsize=7)
-        plt.tight_layout()
-        plt.savefig(f"{col}_{mediator}_{re}.pdf")
-        plt.close()
-        
-        
-        
-        
+def calc_percentage_above_thresh_signal(df,mediator,col):
+    # get 75 percentile
+    thresh_signal=df["log1p_"+col].quantile(0.75)
+    df["above_thresh_signal"]=df["log1p_"+col]>thresh_signal
+    # fisher exact of above median signal within each mediator-interactor group
+    contingency_table=pd.crosstab(df[mediator],df["above_thresh_signal"])
+    # add column "percentage>median"
+    contingency_table["percentage>median"]=contingency_table[True]/(contingency_table[True]+contingency_table[False])
+    contingency_table["mediator"]=mediator
+    return contingency_table
+
+
+
+
+def get_ctables(df,df_med,col):
+    ctables=pd.DataFrame()
+    for mediator in df_med["bait"].unique().tolist()+["all"]:
+        df_temp=calc_percentage_above_thresh_signal(df,mediator,col)
+        if ctables.empty:
+            ctables=df_temp
+        else:
+            ctables=pd.concat([ctables,df_temp],axis=0)
+    return ctables.reset_index()
+
+
+
+
+def plot(ctables,col):
+    plt.figure(figsize=(4, 3))
+    sns.lineplot(x="index",y="percentage>median",data=ctables,marker="o",hue="mediator")
+    plt.xticks(fontsize=5)
+    plt.yticks(fontsize=5)
+    plt.xlabel("# mediator-interactor TFBSs",fontsize=7)
+    plt.ylabel("fraction of above median regions",fontsize=7)
+    plt.title(f"{col},{re}",fontsize=7)
+    plt.tight_layout()
+    plt.legend(fontsize=5)
+    plt.savefig(f"{col}_{re}.pdf")
+    plt.close()
+
 
 
 
 # read histone marks
 df_histone=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd10_chromatin_profile/{re}_k562.csv")
 # TODO: choose to -1 or not
-# df_histone["end"]=df_histone["end"]-1
+df_histone["end"]=df_histone["end"]
 # add region in format chr:start-end
 df_histone["region"]=df_histone["chrom"].astype(str)+":"+df_histone["start"].astype(str)+"-"+df_histone["end"].astype(str)
 
 
 
-# plot correlation between histone marks
-corr_map=df_histone.iloc[:,3:].corr()
-# rename columns: remove log_signal_
-corr_map.columns=[col.replace("log_signal_","") for col in corr_map.columns]
-corr_map.index=[col.replace("log_signal_","") for col in corr_map.index]
-# plot clustermap
-plt.figure()
-sns.clustermap(corr_map)
-plt.savefig(f"clustermap_histone_{re}.pdf")
-plt.close()
+# # plot correlation between histone marks
+# corr_map=df_histone.iloc[:,3:].corr()
+# # rename columns: remove log1p_
+# corr_map.columns=[col.replace("log1p_","") for col in corr_map.columns]
+# corr_map.index=[col.replace("log1p_","") for col in corr_map.index]
+# # plot clustermap
+# plt.figure()
+# sns.clustermap(corr_map)
+# plt.savefig(f"clustermap_histone_{re}.pdf")
+# plt.close()
+
 
 
 
@@ -93,13 +102,54 @@ df_tfbs=df_tfbs[df_tfbs['protein'].isin(proteins_background)].reset_index(drop=T
 df_med=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/PPI_MED/2024-08-07_MED-TF_interactions.txt",sep="\t")
 df_med=df_med[df_med["significant"]].reset_index(drop=True)
 
+# output the "gene" in text format
+import numpy as np
+pd.Series(np.sort(df_med["gene"].unique())).to_csv("mediator_interactors.txt",index=False,header=False)
 
-# analyze # mediator interactors v.s. histone marks
+
+# count number of mediator-interactor TFBSs per region
+df_counts=pd.DataFrame()
 for mediator in df_med["bait"].unique().tolist()+["all"]:
-    analyze_tfbs(df_histone,df_tfbs,df_med,mediator,re)
-    logger.info(f"{mediator} done")
-    
-    
+    df_temp = group_mediator_interactors_per_region(df_med, mediator, df_tfbs)
+    # if df_counts is empty, set df_counts to df_res
+    if df_counts.empty:
+        df_counts=df_temp
+    else:
+        df_counts=pd.merge(df_temp,df_counts,on="region",how="inner")
+
+# merge df_counts with df_histone
+df=pd.merge(df_counts,df_histone,on="region",how="inner")
+
+
+
+
+
+
+log1p_cols = [col for col in df_histone.columns if "log_signal" in col]
+log1p_cols = [col.replace("log1p_", "") for col in log1p_cols]
+
+
+
+for col in log1p_cols:
+    ctables=get_ctables(df,df_med,col)
+    plot(ctables,col)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
