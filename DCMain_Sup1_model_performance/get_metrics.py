@@ -10,9 +10,11 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python/")
 from prediction import write_predictions
 
 dir_models="/isdata/alab/people/pcr980/DeepCompare/Models"
-dir_predictions="/isdata/alab/people/pcr980/DeepCompare/Test/Pd1_model_predictions/"
+dir_predictions="Pd1_model_predictions/"
+
+
 #------------------------------------------------------
-# Task1: write predictions on unified standard test set
+# Task1: generate Pd1_model_predictions/, write predictions on unified standard test set
 #------------------------------------------------------
 # write predictions if the model is well trained
 for model_name in os.listdir(dir_models):
@@ -42,7 +44,7 @@ for model_name in os.listdir(dir_predictions):
         
     
 #------------------------------------------------------
-# Task2: calculate ST
+# Task2: Generate Pd2_metrics/ST_metrics.csv
 #------------------------------------------------------
 # functions
 def split(name):
@@ -76,7 +78,7 @@ res_dict_ST={
     "pcc":[],
     "acc":[]
 }
-for model_name in os.listdir(dir_models):
+for model_name in os.listdir(dir_predictions):
     info_dict=split(model_name)
     if info_dict["task_type"]=="ST":
         pred=pd.read_csv(os.path.join(dir_predictions,model_name,"pred_dat_test.csv"),header=None)
@@ -99,19 +101,23 @@ for model_name in os.listdir(dir_models):
         append_list_in_dict(res_dict_ST,info_dict)            
 
 res_df=pd.DataFrame(res_dict_ST)
-res_df.to_csv("/isdata/alab/people/pcr980/DeepCompare/Test/ST_metrics.csv")
+res_df.to_csv("Pd2_benchmark_metrics/ST_metrics.csv")
 
             
 
 
 #------------------------------------------------------
-# Task3: calculate MT
+# Task3: Generate Pd2_metrics/MT_metrics.csv
 #------------------------------------------------------
+df_truth=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Datasets/Dataset_final_rep/dat_test.csv")
 
 df_truth_reg=df_truth.loc[:,add_suffix(create_colnames(),"_intensity")]
 df_truth_class=df_truth.loc[:,add_suffix(create_colnames(),"_class")]
 
-for model_name in os.listdir(dir_models):
+# write header
+df_metric=pd.DataFrame(columns=['file', 'pcc', 'acc', 'model_name', 'task_type', 'model_type', 'data_dir'])
+df_metric.to_csv("Pd2_benchmark_metrics/MT_metrics.csv",index=False,header=True)
+for model_name in os.listdir(dir_predictions):
     info_dict=split(model_name)
     if info_dict["task_type"]=="MT":
         print(model_name)
@@ -140,4 +146,5 @@ for model_name in os.listdir(dir_models):
         df_metric.loc[:,"model_type"]=info_dict["model_type"]
         df_metric.loc[:,"data_dir"]=info_dict["data_dir"]   
         df_metric=df_metric.loc[:,['file', 'pcc', 'acc', 'model_name', 'task_type', 'model_type', 'data_dir']]
-        df_metric.to_csv("/isdata/alab/people/pcr980/DeepCompare/Test/MT_metrics.csv",mode='a',index=False,header=False)
+        df_metric.to_csv("Pd2_benchmark_metrics/MT_metrics.csv",mode='a',index=False,header=False)
+

@@ -15,6 +15,9 @@ from tf_cooperativity import assign_cooperativity
 import matplotlib
 matplotlib.rcParams['pdf.fonttype']=42
 
+
+# TODO: change "codependent" to "synergistic"
+
 # ----------------------------------------------------
 # Helper functions
 # ----------------------------------------------------

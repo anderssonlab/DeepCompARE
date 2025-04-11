@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pyBigWig
+import os
 
 from loguru import logger
 
@@ -16,10 +17,16 @@ def calculate_average_bw(bw, region):
 
 
 def annotate(df,cell_line,out_path):
-    for histone_modification in ['ATAC','H2AFZ', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K9ac', 'H3K27ac', 'H3K27me3', 'H3K36me3', 'H3K79me2', 'H4K20me1']:
-        bw = pyBigWig.open(f"Bigwig_data/{histone_modification}_{cell_line}.bigwig")
-        df[f'log1p_{histone_modification}'] = df.apply(lambda row: calculate_average_bw(bw, (row[0], row[1], row[2])), axis=1)
-        logger.info(f'Done with {histone_modification}')
+    bw_path="/isdata/alab/people/pcr980/DeepCompare/Pd10_chromatin_profile/Bigwig_data"
+    bw_files=os.listdir(bw_path)
+    # subset for files ending with f"_{cell_line}.bigwig"
+    bw_files=[bw_file for bw_file in bw_files if bw_file.endswith(f"_{cell_line}.bigwig")]
+    # remove f"_{cell_line}.bigwig"
+    chromatin_signatures = [bw_file.split("_")[0] for bw_file in bw_files]
+    for chromatin_signature in chromatin_signatures:
+        bw = pyBigWig.open(f"Bigwig_data/{chromatin_signature}_{cell_line}.bigwig")
+        df[f'log1p_{chromatin_signature}'] = df.apply(lambda row: calculate_average_bw(bw, (row[0], row[1], row[2])), axis=1)
+        logger.info(f'Done with {chromatin_signature}')
     df.to_csv(out_path,index=False)
 
 

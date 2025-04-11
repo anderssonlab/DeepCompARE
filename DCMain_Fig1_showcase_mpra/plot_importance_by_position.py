@@ -2,6 +2,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import pandas as pd
+import matplotlib.ticker as ticker
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
@@ -9,6 +10,7 @@ from seq_ops import SeqExtractor
 from region_ops import resize_region
 from seq_annotators import JasparAnnotator
 from in_silico_mutagenesis import compute_mutagenesis_score, get_motif_isa
+
 
 matplotlib.rcParams['pdf.fonttype']=42
 
@@ -53,7 +55,7 @@ def reduce_protein_names(protein_list):
     protein_list=list(set(protein_list))
     # order alphabetically
     protein_list.sort()
-    # if there are more than 3 proteins sharing same prefix of length > 4
+    # if there are more than 2 proteins sharing same prefix of length > 4
     # only keep the prefix, followed by "s"
     # eg: hoxa9, hoxa9b, hoxa9c -> hoxa9s
     protein_dict={}
@@ -98,7 +100,7 @@ def reduce_motifs(df_motif,window=4):
 
 
 
-def plot_motif_imp(df_motif, ax,ylim=None):
+def plot_motif_imp(df_motif,ax,ylim):
     # only relative position matters
     # Hide spines
     for spine in ax.spines.values():
@@ -117,15 +119,15 @@ def plot_motif_imp(df_motif, ax,ylim=None):
                 # raise ValueError("Annotation overlap cannot be resolved")
         ax.text(current_text_pos,row["isa"], row["protein"], rotation=90, fontsize=5)
         prev_text_pos=current_text_pos
-    # Set title and labels
-    ax.set_title("Motif ISA score",fontsize=7)
+    #  set labels
+    ax.set_xlabel("Motif ISA",fontsize=7,labelpad=0)
     ax.tick_params(axis='y', which='major', labelsize=7)
-    if ylim:
-        ax.set_ylim(ylim)
+    ax.set_xticks([])
+    ax.set_ylim(ylim)
 
 
 
-def plot_base_imp(df,ax,title,ylim=None,xlabel=False):
+def plot_base_imp(df,ax,markersize,xlabel,ylim=None):
     """
     df have columns "position", "base", "imp"
     """
@@ -138,12 +140,10 @@ def plot_base_imp(df,ax,title,ylim=None,xlabel=False):
     color_dict = {"A": "#1f77b4", "C": "#ff7f0e", "G": "#2ca02c", "T": "#d62728"}
     # Plot markers for each base
     for row in df.itertuples():
-        ax.plot(row.position, row.imp, marker="o", color=color_dict[row.base], markersize=1) # 1 for F9, 2 for SORT1
-    # Set title and labels
-    ax.set_title(title,fontsize=7)
-    if xlabel:
-        ax.set_xlabel("Position",fontsize=7)
-    ax.tick_params(axis='both', which='major', labelsize=7)
+        ax.plot(row.position, row.imp, marker="o", color=color_dict[row.base], markersize=markersize)
+    ax.set_xlabel(xlabel,fontsize=7,labelpad=0)
+    ax.tick_params(axis='y', which='major', labelsize=7)
+    ax.set_xticks([])
     #
     # Create legend
     handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
@@ -154,7 +154,7 @@ def plot_base_imp(df,ax,title,ylim=None,xlabel=False):
 
 
 
-def plot_region(seq_extractor,jaspar_annotator, df_truth, element_name, region, track_num, score_threshold):
+def plot_region(seq_extractor,jaspar_annotator, df_truth, element_name, region, track_num, score_threshold, markersize):
     region_resized=resize_region(region,599,fix="center")
     left_shift=region[1]-region_resized[1]
     # get seq
@@ -174,18 +174,21 @@ def plot_region(seq_extractor,jaspar_annotator, df_truth, element_name, region, 
     df_motif["end_rel"]-=left_shift
     ymax=max(max(ism),max(isa))
     ymin=min(min(ism),min(isa))
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True, figsize = (180/25.4, 120/25.4))
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True, figsize = (180/25.4, 110/25.4))
     # Plot ISA score on the first axis
-    plot_motif_imp(df_motif, ax1,ylim=(ymin,ymax))
+    plot_motif_imp(df_motif, ax1,(ymin,ymax))
     # plot isa on the second axis
     df_n= pd.DataFrame({"position":list(range(len(isa))),"base":list(seq),"imp":isa})
-    plot_base_imp(df_n,ax2,"ISA (Base replaced by N)",ylim=(ymin,ymax))
+    plot_base_imp(df_n,ax2,markersize,"ISA (Base replaced by N)",ylim=(ymin,ymax))
     df_a=pd.DataFrame({"position":list(range(len(ism))),"base":list(seq),"imp":ism})
-    plot_base_imp(df_a,ax3,"ISM (Average of 3 alternative bases)",ylim=(ymin,ymax))
+    plot_base_imp(df_a,ax3,markersize,"ISM (Average of 3 alternative bases)",ylim=(ymin,ymax))
     # rename "Position" to "position", "Value" to "imp","Ref" to "base"
     df_truth=df_truth.loc[df_truth["Element"]==element_name,:].reset_index(drop=True)
     df_truth["position"]=df_truth["position"]-region[1]
-    plot_base_imp(df_truth,ax4,"MPRA experiment",xlabel=True)
+    plot_base_imp(df_truth,ax4,markersize,"MPRA experiment",ylim=None)
+    # add supra ticks and labels
+    ax4.xaxis.set_major_locator(ticker.MaxNLocator(nbins=6))
+    ax4.tick_params(axis='both', which='major', labelsize=7)
     plt.tight_layout()
     plt.savefig(f"{element_name}_track{track_num}.pdf",dpi=300)
     plt.close()
@@ -213,18 +216,17 @@ df_truth.Element.unique()
 
 
 
-track_num=6
 for track_num in [6]:
     # F9 promoter: chrX:139530463-139530765
-    plot_region(seq_extractor,jaspar_hepg2_annotator,df_truth,"F9",("chrX",139530463,139530765),track_num,360) # window 4, text space 5
+    plot_region(seq_extractor,jaspar_hepg2_annotator,df_truth,"F9",("chrX",139530463,139530765),track_num,360,1) # window 4, text space 5
     # LDLR promoter: chr19:11,089,231-11,089,548
-    plot_region(seq_extractor,jaspar_hepg2_annotator,df_truth,"LDLR",("chr19",11089231,11089548),track_num,500)
+    plot_region(seq_extractor,jaspar_hepg2_annotator,df_truth,"LDLR",("chr19",11089231,11089548),track_num,500,1) 
 
 
 
 for track_num in [7]:
     # PKLR promoter: chr1:155,301,395-155,301,864
-    plot_region(seq_extractor,jaspar_k562_annotator,df_truth,"PKLR-24h",("chr1",155301395,155301864),track_num,1000)
+    plot_region(seq_extractor,jaspar_k562_annotator,df_truth,"PKLR-24h",("chr1",155301395,155301864),track_num,1000,1)
 
 
 

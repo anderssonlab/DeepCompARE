@@ -7,9 +7,8 @@ from loguru import logger
 from scipy.stats import pearsonr
 import numpy as np
 
-# TODO: add Pol II ChIP-Seq
 
-re="proximal"
+re="distal"
 
 
 
@@ -71,7 +70,7 @@ corr_histone_sum_chip=correlations.loc[correlations.index.str.startswith("sum_ch
 corr_histone_sum_chip=set_insigificant_to_zero(df,corr_histone_sum_chip)
 
 # clustermap
-sns.clustermap(corr_histone_sum_chip,annot=True,figsize=(8,6),fmt=".2f",cmap="coolwarm",vmin=-0.6,vmax=0.6)
+sns.clustermap(corr_histone_sum_chip,annot=True,figsize=(12,6),fmt=".2f",cmap="coolwarm",vmin=-0.6,vmax=0.6)
 plt.title(f"{re}")
 plt.tight_layout()
 plt.savefig(f"chip_corr_histone_sum_chip_{re}.pdf")

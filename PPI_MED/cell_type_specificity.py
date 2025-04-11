@@ -13,7 +13,7 @@ df_med=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/PPI_MED/2024-08-07_M
 df_med=df_med[df_med["significant"]].reset_index(drop=True)
 
 # read cofactors
-df_cof=pd.read_csv(f"/isdata/alab/people/pcr980/Resource/CofactorComplexes.txt",sep="\t")
+list_cof=pd.read_csv(f"/isdata/alab/people/pcr980/Resource/Zhang2022_CoFlist.txt",header=None)[0].tolist()
 
 # read human transcription factors
 def get_htfs_list():
@@ -30,7 +30,7 @@ tf_list=get_htfs_list()
 
 
 df_gini["is_med_interactor"]=df_gini["symbol"].isin(df_med["gene"].unique())
-df_gini["is_cofactor"]=df_gini["symbol"].isin(df_cof["Gene"].unique())
+df_gini["is_cofactor"]=df_gini["symbol"].isin(list_cof)
 df_gini["is_tf"]=df_gini["symbol"].isin(tf_list)
 df_gini["non_med_interactor_tf"]=df_gini["is_tf"] & ~df_gini["is_med_interactor"]
 

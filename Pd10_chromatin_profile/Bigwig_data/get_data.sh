@@ -33,17 +33,23 @@
 # wget "https://www.encodeproject.org/files/ENCFF664EJT/@@download/ENCFF664EJT.bigWig" -O ATAC_hepg2.bigwig
 # echo "ATAC_hepg2.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF761IJZ/@@download/ENCFF761IJZ.bigWig" -O Pol2A_hepg2.bigwig
-echo "Pol2A_hepg2.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF761IJZ/@@download/ENCFF761IJZ.bigWig" -O Pol2A_hepg2.bigwig
+# echo "Pol2A_hepg2.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF940PKN/@@download/ENCFF940PKN.bigWig" -O Pol2APS2_hepg2.bigwig
-echo "Pol2APS2_hepg2.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF940PKN/@@download/ENCFF940PKN.bigWig" -O Pol2APS2_hepg2.bigwig
+# echo "Pol2APS2_hepg2.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF801BXZ/@@download/ENCFF801BXZ.bigWig" -O Pol2APS5_hepg2.bigwig
-echo "Pol2APS5_hepg2.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF801BXZ/@@download/ENCFF801BXZ.bigWig" -O Pol2APS5_hepg2.bigwig
+# echo "Pol2APS5_hepg2.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF682STT/@@download/ENCFF682STT.bigWig" -O Pol2G_hepg2.bigwig
-echo "Pol2G_hepg2.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF682STT/@@download/ENCFF682STT.bigWig" -O Pol2G_hepg2.bigwig
+# echo "Pol2G_hepg2.bigwig downloaded"
+
+
+wget "https://www.encodeproject.org/files/ENCFF094ETW/@@download/ENCFF094ETW.bigWig" -O BRD4_hepg2.bigwig
+echo "BRD4_hepg2.bigwig downloaded"
+
+
 
 
 
@@ -82,33 +88,40 @@ echo "Pol2G_hepg2.bigwig downloaded"
 # wget "https://www.encodeproject.org/files/ENCFF102ARJ/@@download/ENCFF102ARJ.bigWig" -O ATAC_k562.bigwig
 # echo "ATAC_k562.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF806LCJ/@@download/ENCFF806LCJ.bigWig" -O Pol2A_k562.bigwig
-echo "Pol2A_k562.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF806LCJ/@@download/ENCFF806LCJ.bigWig" -O Pol2A_k562.bigwig
+# echo "Pol2A_k562.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF434PYZ/@@download/ENCFF434PYZ.bigWig" -O Pol2APS2_k562.bigwig
-echo "Pol2APS2_k562.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF434PYZ/@@download/ENCFF434PYZ.bigWig" -O Pol2APS2_k562.bigwig
+# echo "Pol2APS2_k562.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF907FLD/@@download/ENCFF907FLD.bigWig" -O Pol2APS5_k562.bigwig
-echo "Pol2APS5_k562.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF907FLD/@@download/ENCFF907FLD.bigWig" -O Pol2APS5_k562.bigwig
+# echo "Pol2APS5_k562.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF331WPU/@@download/ENCFF331WPU.bigWig" -O Pol2B_k562.bigwig
-echo "Pol2B_k562.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF331WPU/@@download/ENCFF331WPU.bigWig" -O Pol2B_k562.bigwig
+# echo "Pol2B_k562.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF923SQO/@@download/ENCFF923SQO.bigWig" -O Pol2G_k562.bigwig
-echo "Pol2G_k562.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF923SQO/@@download/ENCFF923SQO.bigWig" -O Pol2G_k562.bigwig
+# echo "Pol2G_k562.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF828GWR/@@download/ENCFF828GWR.bigWig" -O Pol2H_k562.bigwig
-echo "Pol2H_k562.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF828GWR/@@download/ENCFF828GWR.bigWig" -O Pol2H_k562.bigwig
+# echo "Pol2H_k562.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF355ULG/@@download/ENCFF355ULG.bigWig" -O Pol3A_k562.bigwig
-echo "Pol3A_k562.bigwig downloaded"
+# wget "https://www.encodeproject.org/files/ENCFF355ULG/@@download/ENCFF355ULG.bigWig" -O Pol3A_k562.bigwig
+# echo "Pol3A_k562.bigwig downloaded"
 
-wget "https://www.encodeproject.org/files/ENCFF462VCE/@@download/ENCFF462VCE.bigWig" -O Pol3G_k562.bigwig
-echo "Pol3G_k562.bigwig downloaded"
-
-
+# wget "https://www.encodeproject.org/files/ENCFF462VCE/@@download/ENCFF462VCE.bigWig" -O Pol3G_k562.bigwig
+# echo "Pol3G_k562.bigwig downloaded"
 
 
+
+wget "https://www.encodeproject.org/files/ENCFF251SRH/@@download/ENCFF251SRH.bigWig" -O BRD4_k562.bigwig
+echo "BRD4_k562.bigwig downloaded"
+
+wget "https://www.encodeproject.org/files/ENCFF031VIJ/@@download/ENCFF031VIJ.bigWig" -O BRD9_k562.bigwig
+echo "BRD9_k562.bigwig downloaded"
+
+wget "https://www.encodeproject.org/files/ENCFF537MTV/@@download/ENCFF537MTV.bigWig" -O MED1_k562.bigwig
+echo "MED1_k562.bigwig downloaded"
 
 
 # nohup bash get_data.sh > get_data.out &
