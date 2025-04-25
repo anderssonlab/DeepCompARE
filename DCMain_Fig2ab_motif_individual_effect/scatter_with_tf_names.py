@@ -8,7 +8,7 @@ matplotlib.rcParams['pdf.fonttype']=42
 
 
 
-def plot_scatter_with_bias(data, x_column, y_column, output_filename):
+def plot_scatter_with_bias(data, x_column, y_column, title, output_filename):
     """
     Plots a scatter plot showing bias between two datasets based on specified columns.
     Parameters:
@@ -31,7 +31,7 @@ def plot_scatter_with_bias(data, x_column, y_column, output_filename):
     )
     #
     # Plot setup
-    plt.figure(figsize=(2.8, 2.8))
+    plt.figure(figsize=(2.7,2.8)) # 2.8 for main figure, 3.2 for supplementary
     ax = plt.gca()
     ax.spines['top'].set_linewidth(0.5)
     ax.spines['right'].set_linewidth(0.5)
@@ -52,17 +52,18 @@ def plot_scatter_with_bias(data, x_column, y_column, output_filename):
     for _, row in data.iterrows():
         x = row[x_column]
         y = row[y_column]
-        if abs(x - y) > 0.4 or abs(x + y) > 0.95:  # Opposite signs or large sum of coordinates
+        if x - y > 0.4 or abs(x + y) > 0.95 or y-x>0.3:  # Opposite signs or large sum of coordinates
             texts.append(plt.text(x, y, row["protein"], fontsize=5, alpha=0.7))
     #
     # Adjust text (if `adjust_text` is available)
     adjust_text(texts)
     #
-    # Axes labels and guidelines
-    plt.xlabel(f"Effect on {x_column}", fontsize=7)
-    plt.ylabel(f"Effect on {y_column}", fontsize=7)
-    plt.xticks(fontsize=5)
-    plt.yticks(fontsize=5)
+    # Axes labels and guidelines    
+    plt.xlabel(f"{x_column}", fontsize=7)
+    plt.ylabel(f"{y_column}", fontsize=7)
+    plt.title(title, fontsize=7)
+    plt.xticks(fontsize=7)
+    plt.yticks(fontsize=7)
     plt.axvline(x=0, color="black", linewidth=0.5, linestyle="--")
     plt.axhline(y=0, color="black", linewidth=0.5, linestyle="--")
     # Save the plot
@@ -74,8 +75,8 @@ def plot_scatter_with_bias(data, x_column, y_column, output_filename):
 
 
 # Load datasets
-hepg2_file = '/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_effect_and_constraint/tf_effect_and_constraints_hepg2.csv'
-k562_file = '/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_effect_and_constraint/tf_effect_and_constraints_k562.csv'
+hepg2_file = '/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_effect_and_constraint/tf_effect_and_constraints_hepg2_pe.csv'
+k562_file = '/isdata/alab/people/pcr980/DeepCompare/Pd8_TF_effect_and_constraint/tf_effect_and_constraints_k562_pe.csv'
 
 hepg2_data = pd.read_csv(hepg2_file)
 k562_data = pd.read_csv(k562_file)
@@ -84,20 +85,35 @@ k562_data = pd.read_csv(k562_file)
 merged_data = pd.merge(hepg2_data, k562_data, on="protein", suffixes=("_hepg2", "_k562"), how="inner")
 
 
+
 plot_scatter_with_bias(
     data=merged_data,
     x_column="dstat_isa_cage_activity_hepg2",
     y_column="dstat_isa_cage_activity_k562",
+    title="CAGE: HepG2 vs K562",
     output_filename="scatter_with_tf_names_hepg2_vs_k562.pdf"
 )
 
 
 
+# plot_scatter_with_bias(
+#     data=k562_data,
+#     x_column="dstat_isa_cage_activity",
+#     y_column="dstat_isa_starr_activity",
+#     title="K562: CAGE vs STARR",
+#     output_filename="scatter_with_tf_names_cage_vs_starr.pdf"
+# )
 
-plot_scatter_with_bias(
-    data=k562_data,
-    x_column="dstat_isa_cage_activity",
-    y_column="dstat_isa_starr_activity",
-    output_filename="scatter_with_tf_names_cage_vs_starr.pdf"
-)
+
+
+
+# plot_scatter_with_bias(
+#     data=merged_data,
+#     x_column="dstat_isa_cage_activity_k562",
+#     y_column="dstat_isa_dhs_activity_k562",
+#     title="K562: CAGE vs DHS",
+#     output_filename="scatter_with_tf_names_cage_vs_dhs.pdf"
+# )
+
+
 

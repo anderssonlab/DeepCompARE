@@ -120,14 +120,14 @@ def plot_motif_imp(df_motif,ax,ylim):
         ax.text(current_text_pos,row["isa"], row["protein"], rotation=90, fontsize=5)
         prev_text_pos=current_text_pos
     #  set labels
-    ax.set_xlabel("Motif ISA",fontsize=7,labelpad=0)
+    ax.set_title("Motif ISA",fontsize=7)
     ax.tick_params(axis='y', which='major', labelsize=7)
     ax.set_xticks([])
     ax.set_ylim(ylim)
 
 
 
-def plot_base_imp(df,ax,markersize,xlabel,ylim=None):
+def plot_base_imp(df,ax,markersize=1):
     """
     df have columns "position", "base", "imp"
     """
@@ -141,20 +141,11 @@ def plot_base_imp(df,ax,markersize,xlabel,ylim=None):
     # Plot markers for each base
     for row in df.itertuples():
         ax.plot(row.position, row.imp, marker="o", color=color_dict[row.base], markersize=markersize)
-    ax.set_xlabel(xlabel,fontsize=7,labelpad=0)
-    ax.tick_params(axis='y', which='major', labelsize=7)
-    ax.set_xticks([])
-    #
-    # Create legend
-    handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
-    ax.legend(handles=handles, title="Bases", title_fontsize=5, fontsize=5, loc="upper right")
-    if ylim:
-        ax.set_ylim(ylim)
 
 
 
 
-def plot_region(seq_extractor,jaspar_annotator, df_truth, element_name, region, track_num, score_threshold, markersize):
+def plot_region_4panels(seq_extractor,jaspar_annotator, df_truth, element_name, region, track_num, score_threshold, markersize):
     region_resized=resize_region(region,599,fix="center")
     left_shift=region[1]-region_resized[1]
     # get seq
@@ -179,19 +170,79 @@ def plot_region(seq_extractor,jaspar_annotator, df_truth, element_name, region, 
     plot_motif_imp(df_motif, ax1,(ymin,ymax))
     # plot isa on the second axis
     df_n= pd.DataFrame({"position":list(range(len(isa))),"base":list(seq),"imp":isa})
-    plot_base_imp(df_n,ax2,markersize,"ISA (Base replaced by N)",ylim=(ymin,ymax))
+    plot_base_imp(df_n,ax2)
+    # customize ax2
+    ax2.set_title("ISA (Base replaced by N)",fontsize=7)
+    ax2.tick_params(axis='y', which='major', labelsize=7)
+    ax2.set_ylim((ymin,ymax))
+    # plot ism on the third axis
     df_a=pd.DataFrame({"position":list(range(len(ism))),"base":list(seq),"imp":ism})
-    plot_base_imp(df_a,ax3,markersize,"ISM (Average of 3 alternative bases)",ylim=(ymin,ymax))
-    # rename "Position" to "position", "Value" to "imp","Ref" to "base"
+    plot_base_imp(df_a,ax3)
+    ax3.set_title("ISM (Average of 3 alternative bases)",fontsize=7)
+    ax3.tick_params(axis='y', which='major', labelsize=7)
+    ax3.set_ylim((ymin,ymax))
+    # plot truth on the fourth axis
     df_truth=df_truth.loc[df_truth["Element"]==element_name,:].reset_index(drop=True)
     df_truth["position"]=df_truth["position"]-region[1]
-    plot_base_imp(df_truth,ax4,markersize,"MPRA experiment",ylim=None)
+    plot_base_imp(df_truth,ax4)
     # add supra ticks and labels
     ax4.xaxis.set_major_locator(ticker.MaxNLocator(nbins=6))
     ax4.tick_params(axis='both', which='major', labelsize=7)
+    ax4.set_title("MPRA experiment",fontsize=7)
+    # add legend
+    color_dict = {"A": "#1f77b4", "C": "#ff7f0e", "G": "#2ca02c", "T": "#d62728"}
+    handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
+    ax4.legend(handles=handles, title="Bases", title_fontsize=5, fontsize=5, loc="upper right")
+    fig.text(0.5, 0.01, "Relative position", ha='center', fontsize=7)
     plt.tight_layout()
     plt.savefig(f"{element_name}_track{track_num}.pdf",dpi=300)
     plt.close()
+
+
+
+
+
+
+
+
+
+def plot_region_2panels(seq_extractor,df_truth, element_name, region, track_num,markersize):
+    region_resized=resize_region(region,599,fix="center")
+    left_shift=region[1]-region_resized[1]
+    # get seq
+    seq=seq_extractor.get_seq(region)
+    seq_resized=seq_extractor.get_seq(region_resized)
+    # get base importance
+    isa=compute_mutagenesis_score(seq_resized,"isa","mean").loc[f"Seq0_Track{track_num}",:]
+    isa=isa[left_shift:(left_shift+region[2]-region[1]+1)].reset_index(drop=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize = (130/25.4, 60/25.4))
+    # plot isa on the first axis
+    df_n= pd.DataFrame({"position":list(range(len(isa))),"base":list(seq),"imp":isa})
+    plot_base_imp(df_n,ax1,markersize)
+    # customize the first axis
+    ax1.set_title(element_name,fontsize=7)
+    ax1.set_xlabel("ISA (Base replaced by N)",fontsize=7,labelpad=0)
+    ax2.set_yticks([0, 0.25])
+    ax1.tick_params(axis='both', which='major', labelsize=7)
+    # plot truth on the second axis
+    df_truth=df_truth.loc[df_truth["Element"]==element_name,:].reset_index(drop=True)
+    df_truth["position"]=df_truth["position"]-region[1]
+    plot_base_imp(df_truth,ax2,markersize)
+    # add supra ticks and labels
+    ax2.set_xlabel("MPRA experiment",fontsize=7,labelpad=0)
+    ax2.set_yticks([0, 2.5])
+    ax2.tick_params(axis='both', which='major', labelsize=7)
+    # add legend
+    color_dict = {"A": "#1f77b4", "C": "#ff7f0e", "G": "#2ca02c", "T": "#d62728"}
+    handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
+    ax2.legend(handles=handles, title="Bases", title_fontsize=5, fontsize=5, loc="upper right")
+    fig.text(0.5, 0.01, "Relative position", ha='center', fontsize=7)
+    # supra xlabel
+    plt.tight_layout()
+    plt.savefig(f"{element_name}_track{track_num}.pdf",dpi=300)
+    plt.close()
+
+
 
 
 
@@ -216,17 +267,14 @@ df_truth.Element.unique()
 
 
 
-for track_num in [6]:
-    # F9 promoter: chrX:139530463-139530765
-    plot_region(seq_extractor,jaspar_hepg2_annotator,df_truth,"F9",("chrX",139530463,139530765),track_num,360,1) # window 4, text space 5
-    # LDLR promoter: chr19:11,089,231-11,089,548
-    plot_region(seq_extractor,jaspar_hepg2_annotator,df_truth,"LDLR",("chr19",11089231,11089548),track_num,500,1) 
+# F9 promoter: chrX:139530463-139530765
+plot_region_4panels(seq_extractor,jaspar_hepg2_annotator,df_truth,"F9",("chrX",139530463,139530765),6,360,1) # window 4, text space 5
 
 
-
-for track_num in [7]:
-    # PKLR promoter: chr1:155,301,395-155,301,864
-    plot_region(seq_extractor,jaspar_k562_annotator,df_truth,"PKLR-24h",("chr1",155301395,155301864),track_num,1000,1)
+# LDLR promoter: chr19:11,089,231-11,089,548
+# plot_region_2panels(seq_extractor,jaspar_hepg2_annotator,df_truth,"LDLR",("chr19",11089231,11089548),6,500,1) 
+# PKLR promoter: chr1:155,301,395-155,301,864
+plot_region_2panels(seq_extractor,df_truth,"PKLR-24h",("chr1",155301395,155301864),7,0.8)
 
 
 
@@ -239,19 +287,32 @@ for track_num in [7]:
 
 # SORT1 enhancer: chr1:109,274,652-109,275,251
 
+
 def plot_ism_ref_vs_mut(imp_ref,imp_mut,title_prefix):
-    fig, (ax0, ax1) = plt.subplots(2, 1, sharex=True, figsize=(180/25.4, 100/25.4))
+    fig, (ax0, ax1) = plt.subplots(2, 1, sharex=True, figsize=(150/25.4, 70/25.4))
     # plot ism_ref on the first axis
     df_ref= pd.DataFrame({"position":list(range(len(imp_ref))),"base":list(seq_ref),"imp":imp_ref})
-    plot_base_imp(df_ref,ax0,f"{title_prefix} (reference)")
+    plot_base_imp(df_ref,ax0)
+    ax0.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=1))
+    ax0.set_title(f"{title_prefix} (reference)", fontsize=7)
+    ax0.tick_params(axis='y', which='major', labelsize=7)
+    ax0.set_yticks([-0.05, 0, 0.05])
     # plot ism_mut on the second axis
     df_mut=pd.DataFrame({"position":list(range(len(imp_mut))),"base":list(seq_ref),"imp":imp_mut})
-    plot_base_imp(df_mut,ax1,f"{title_prefix} (109274968:G>T)",xlabel=True)
+    plot_base_imp(df_mut,ax1)
     # add a red box to position 315-323
-    ax0.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=1))
     ax1.add_patch(mpatches.Rectangle((315, -0.1), 9, 0.2, edgecolor='red', facecolor='none', lw=1))
-    plt.xlabel("Relative position",fontsize=7)
-    # legend font size: 7
+    ax1.xaxis.set_major_locator(ticker.MaxNLocator(nbins=6))
+    ax1.tick_params(axis='both', which='major', labelsize=7)
+    ax1.set_title(f"{title_prefix} (109274968:G>T)", fontsize=7)
+    ax1.set_yticks([-0.05, 0, 0.05])
+    # add legend
+    color_dict = {"A": "#1f77b4", "C": "#ff7f0e", "G": "#2ca02c", "T": "#d62728"}
+    handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
+    ax1.legend(handles=handles, title="Bases", title_fontsize=5, fontsize=5, loc="upper right")
+    # add supra labels and title
+    fig.text(0.5, 0.01, "Relative position", ha='center', fontsize=7)
+    plt.suptitle("SORT1 enhancer", fontsize=7)
     plt.tight_layout()
     plt.savefig(f"SORT1_enhancer_mutation_{title_prefix}.pdf",dpi=300)
     plt.close()
@@ -268,13 +329,17 @@ seq_mut=seq_ref[:mut_pos]+"T"+seq_ref[(mut_pos+1):]
 
 # calculate ism and isa
 track_num=4
-isa_ref=compute_mutagenesis_score(seq_ref,"isa","mean").loc[f"Seq0_Track{track_num}",:]
-ism_ref=compute_mutagenesis_score(seq_ref,"ism","mean").loc[f"Seq0_Track{track_num}",:]
-isa_mut=compute_mutagenesis_score(seq_mut,"isa","mean").loc[f"Seq0_Track{track_num}",:]
-ism_mut=compute_mutagenesis_score(seq_mut,"ism","mean").loc[f"Seq0_Track{track_num}",:]
-
+# select first 400bp
+isa_ref=compute_mutagenesis_score(seq_ref,"isa","mean").loc[f"Seq0_Track{track_num}",:399]
+ism_ref=compute_mutagenesis_score(seq_ref,"ism","mean").loc[f"Seq0_Track{track_num}",:399]
+isa_mut=compute_mutagenesis_score(seq_mut,"isa","mean").loc[f"Seq0_Track{track_num}",:399]
+ism_mut=compute_mutagenesis_score(seq_mut,"ism","mean").loc[f"Seq0_Track{track_num}",:399]
+seq_ref=seq_ref[:400]
+seq_mut=seq_mut[:400]
 # plot
-plot_ism_ref_vs_mut(ism_ref,ism_mut,"ISM")
+
+
+# plot_ism_ref_vs_mut(ism_ref,ism_mut,"ISM")
 plot_ism_ref_vs_mut(isa_ref,isa_mut,"ISA")
 
 

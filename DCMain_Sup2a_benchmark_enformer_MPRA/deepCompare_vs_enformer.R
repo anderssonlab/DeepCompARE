@@ -1,12 +1,12 @@
 #-------------------------------------------
-# plot DeepCompare and Enformer results.
+# Compare DeepCompare and Enformer
 #-------------------------------------------
 
 library(reshape2)
 library(dplyr)
 library(ggplot2)
-setwd("~/Documents/DeepCompare/SNP_interpretation_MPRA")
-source("~/Documents/DeepCompare/SNP_interpretation_MPRA/Rcode/function_utils.R")
+setwd("~/Documents/DeepCompare/DCMain_Sup2_benchmarkl_enformer_MPRA")
+source("utils.R")
 
 
 
@@ -80,7 +80,7 @@ correlations$Method <- gsub("cage$","cage_cell_type_matched",correlations$Method
 correlations$Method <- gsub("dhs$","dhs_cell_type_matched",correlations$Method)
 correlations$Method <- gsub("starr$","starr_cell_type_matched",correlations$Method)
 correlations$Method <- gsub("sure$","sure_cell_type_matched",correlations$Method)
-correlations$Model <- gsub("DeepCompare_", "DeepCompare", correlations$Model)
+correlations$Model <- gsub("DeepCompare_", "DeepCompARE", correlations$Model)
 
 
 
@@ -97,27 +97,37 @@ medians <- correlations %>%
 correlations_with_medians <- left_join(correlations, medians, by = c("Element", "Model"))
 
 
-p <- ggplot(correlations_with_medians, aes(x = Model, y = Correlation, color=Model, shape=Method)) + 
+
+p <- ggplot(correlations_with_medians, aes(x = Model, y = Correlation, color = Model, shape = Method)) + 
   geom_errorbar(aes(ymin = median_correlation, ymax = median_correlation), 
-                width = 0.2, position = position_dodge(width = 0.2),linetype = "solid",color="black") +
-  geom_point(position = position_dodge(width = 0.5),size=3) + 
-  scale_shape_manual(values = c(15,16,17,18,4,8))+
-  facet_wrap(~ Element, scales = "free_y", ncol = 2) +  
-  theme(axis.text.x = element_blank(), 
-        axis.text.x.bottom = element_text(),
-        panel.grid.minor = element_blank(),  # Remove minor grid lines
-        panel.background = element_blank(),  # Remove panel background
-        plot.background = element_blank(),
-        #panel.grid.major = element_line(color = "grey"),
-        legend.key.size = unit(2, "lines"),
-        legend.text = element_text(size = 10)
-        ) +
-  guides(
-    color = guide_legend(override.aes = list(size = 3)), # Increase size of color legend keys
-    shape = guide_legend(override.aes = list(size = 3))
+                width = 0.2, position = position_dodge(width = 0.2), 
+                linetype = "solid", color = "black") +
+  geom_point(position = position_dodge(width = 0.5), size = 1.8) + 
+  scale_shape_manual(values = c(15, 16, 17, 18, 4, 8)) +
+  facet_wrap(~ Element, scales = "free_y", ncol = 4) + 
+  theme(
+    axis.text.x = element_text(size = 7, angle = 45, hjust = 1),  # Rotate x-axis labels by 45 degrees
+    axis.text.y = element_text(size = 7),                        # Tick labels y-axis
+    axis.title.x = element_text(size = 7),                       # x-axis label
+    axis.title.y = element_text(size = 7),                       # y-axis label
+    plot.title = element_text(size = 7, hjust = 0.5),            # Plot title centered
+    strip.text = element_text(size = 7),                         # Facet title (strip text)
+    panel.grid.minor = element_blank(),                          # Remove minor grid lines
+    panel.background = element_blank(),                          # Remove panel background
+    plot.background = element_blank(),
+    legend.text = element_text(size = 7),                        # Legend text font size
+    legend.title = element_text(size = 7)                        # Legend title font size
   )+
-  labs(title = "MPRA Variant interpretation: DeepCompare v.s. Enformer", x = "Model", y = "Pearson Correlation")
+  guides(
+    color = guide_legend(override.aes = list(size = 2)),  # Smaller dots in color legend
+    shape = guide_legend(override.aes = list(size = 2))   # Smaller dots in shape legend
+  ) +
+  labs(title = "MPRA Variant effect size prediction", 
+       x = "Model", 
+       y = "Pearson Correlation")
 
-ggsave(paste0("Generated_plots/Publication/MPRA_variant_interpretation_DeepCompare_vs_Enformer.pdf"), plot = p, width = 10, height = 10)
-
-
+ggsave(paste0("Plots/MPRA_DeepCompare_vs_Enformer.pdf"), 
+       plot = p, 
+       width = 190/25.4, 
+       height = 80/25.4, 
+       dpi = 300)

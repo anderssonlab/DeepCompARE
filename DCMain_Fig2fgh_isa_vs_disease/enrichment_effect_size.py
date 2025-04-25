@@ -19,8 +19,7 @@ file_dict={"hepg2":{"clinvar":f"{prefix}/ClinVar_non_benign_non_coding.bed","eqt
            "k562":{"clinvar":f"{prefix}/ClinVar_non_benign_non_coding.bed","eqtl":f"{prefix}/whole_blood_eQTLs_PIP_01_non_coding.bed","gwas":f"{prefix}/red_blood_cell_trait_GWAS_PIP_01_non_coding.bed"}
            }
            
-
-track_dict={"hepg2":13,"k562":14}
+track_dict={"hepg2":0,"k562":1}
 
 #--------------------
 # Helper functions
@@ -45,9 +44,7 @@ def main(trait, cell_line):
     tfbs_enhancers = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_enhancers_{cell_line}.csv")
     tfbs_promoters = pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd5_motif_info/motif_info_thresh_500_promoters_{cell_line}.csv")
     df_tfbs= pd.concat([tfbs_enhancers, tfbs_promoters], axis=0, ignore_index=True)
-
-    # Select specific columns, 14 for k562, 13 for hepg2
-    df_tfbs = df_tfbs.iloc[:, [1, 2, 3, 4, track_dict[cell_line]]]
+    df_tfbs = df_tfbs.loc[:, ['chromosome', 'start', 'end', 'protein', f'isa_track{track_dict[cell_line]}']]
     # rename column isa_track1 to ISA
     df_tfbs = df_tfbs.rename(columns={"isa_track0": "ISA"})
     df_tfbs = df_tfbs.rename(columns={"isa_track1": "ISA"})
@@ -74,7 +71,7 @@ def main(trait, cell_line):
 
     df_res = pd.DataFrame(df_res)
 
-    plt.figure(figsize=(2.1,2))
+    plt.figure(figsize=(2.1,2.2))
     # thin frame
     plt.gca().spines['top'].set_linewidth(0.5)
     plt.gca().spines['right'].set_linewidth(0.5)
@@ -104,6 +101,7 @@ def main(trait, cell_line):
     plt.yticks(fontsize=5)
 
     # Ensure tight layout and save the figure
+    plt.title(f"{trait} {cell_line}", fontsize=7)
     plt.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01)
     plt.tight_layout()
     plt.savefig(f"{trait}_{cell_line}.pdf")

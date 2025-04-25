@@ -27,7 +27,7 @@ def plot_or_af(df,color_mapping,n_mapping,operation,title,out_path):
     """
     df: output of odds_ratio_one_df, contains 'or', 'pval', 'ci_low', 'ci_high', 'threshold'
     """
-    plt.figure(figsize=(2.65,2.15))
+    plt.figure(figsize=(2.65,2.2))
     # thinner frame
     plt.gca().spines['top'].set_linewidth(0.5)
     plt.gca().spines['right'].set_linewidth(0.5)
@@ -73,6 +73,7 @@ def plot_or_af(df,color_mapping,n_mapping,operation,title,out_path):
     plt.ylabel("Odds ratio",fontsize=7)
     plt.axhline(y=1, color='black', linestyle=':',linewidth=0.5)
     plt.legend(fontsize=5)
+    plt.title(title,fontsize=7)
     # change the ticks back to the original labels: bin edges
     plt.xticks(df["x"], df["bin"],rotation=30,fontsize=5)
     plt.yticks(fontsize=5)
@@ -95,7 +96,7 @@ def plot_or_phylop(df,color_mapping,n_mapping,operation,title,out_path):
     """
     df: output of odds_ratio_one_df, contains 'or', 'pval', 'ci_low', 'ci_high', 'threshold'
     """
-    plt.figure(figsize=(2.65, 2.15))
+    plt.figure(figsize=(2.65, 2.2))
     # thinner frame
     plt.gca().spines['top'].set_linewidth(0.5)
     plt.gca().spines['right'].set_linewidth(0.5)
@@ -142,6 +143,7 @@ def plot_or_phylop(df,color_mapping,n_mapping,operation,title,out_path):
     plt.axhline(y=1, color='black', linestyle=':',linewidth=0.5)
     # legend at top left
     plt.legend(fontsize=5,loc='upper left')
+    plt.title(title,fontsize=7)
     # change the ticks back to the original labels: bin edges
     plt.xticks(df["x"], df["bin"],rotation=30,fontsize=5)
     plt.yticks(fontsize=5)
@@ -170,10 +172,19 @@ df_orig=pd.concat([df_promoter_hepg2,df_enhancer_hepg2,df_promoter_k562,df_enhan
 df_orig["cell_type"]=df_orig["dataset"].apply(lambda x: x.split("_")[1])
 
 
+track_num_2_name = {
+    0:"CAGE",
+    1:"CAGE",
+    2:"DNase",
+    3:"DNAse",
+    4:"STARR",
+    5:"STARR",
+    6:"SuRE",
+    7:"SuRE",
+}
 
 
-# colors_list = ['#808080', '#B5BD00', '#27ae60', '#1E90FF']
-
+colors_list = ["#808080", "#FFC0CB", "#C7B6EA", "#9400D3"] # pink to purple
 # plot max_af
 threshold_list = [0.0001,0.001,0.01,0.05]
 for dataset in ["promoters_hepg2","enhancers_hepg2","promoters_k562","enhancers_k562"]:
@@ -186,11 +197,11 @@ for dataset in ["promoters_hepg2","enhancers_hepg2","promoters_k562","enhancers_
         df_or,n_list=calc_or_by_various_thresholds(df,"max_af",threshold_list,"larger",f"isa_track{track_num}_bin")
         color_mapping = dict(zip(threshold_list, colors_list))
         n_mapping = dict(zip(threshold_list, n_list))
-        plot_or_af(df_or,color_mapping,n_mapping,"larger",f"Odds ratio ({dataset}, track {track_num})",f"Plots_af/af_or_{dataset}_track{track_num}.pdf")
+        plot_or_af(df_or,color_mapping,n_mapping,"larger",f"{dataset}, track {track_num_2_name[track_num]})",f"Plots_af/af_or_{dataset}_track{track_num}.pdf")
 
 
 
-# colors_list = ["#A9A9A9", "#FFC0CB", "#C7B6EA", "#9400D3"] pink to purple
+
 colors_list = ["#808080", '#FFD700', '#FFA500', '#D98880']
 # plot phylop
 threshold_list = [0,1,2,3]
@@ -203,7 +214,8 @@ for dataset in ["promoters_hepg2","enhancers_hepg2","promoters_k562","enhancers_
         df_or,n_list=calc_or_by_various_thresholds(df,"max_241way", threshold_list,"larger",f"isa_track{track_num}_bin")
         color_mapping = dict(zip(threshold_list, colors_list))
         n_mapping = dict(zip(threshold_list, n_list))
-        plot_or_phylop(df_or,color_mapping,n_mapping,"larger",f"Odds ratio ({dataset}, track {track_num})",f"Plots_phylop/phylop_or_{dataset}_track{track_num}.pdf")
+        plot_or_phylop(df_or,color_mapping,n_mapping,"larger",f"{dataset}, track {track_num_2_name[track_num]})",f"Plots_phylop/phylop_or_{dataset}_track{track_num}.pdf")
 
 
 
+# nohup python3 plot_or.py > plot_or.out &

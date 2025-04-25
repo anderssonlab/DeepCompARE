@@ -16,8 +16,8 @@ def plot_or(df,color_mapping,n_mapping,operation,title,out_path):
     """
     df: output of odds_ratio_one_df, contains 'or', 'pval', 'ci_low', 'ci_high', 'threshold'
     """
-    plt.figure(figsize=(2.65,2.15))
-    # thinner frame
+    plt.figure(figsize=(2.65,2.2))
+    # thinner fram
     plt.gca().spines['top'].set_linewidth(0.5)
     plt.gca().spines['right'].set_linewidth(0.5)
     plt.gca().spines['bottom'].set_linewidth(0.5)
@@ -59,9 +59,9 @@ def plot_or(df,color_mapping,n_mapping,operation,title,out_path):
         jitter+=0.15
     plt.xlabel("Predicted loss-of-function effect size", fontsize=7)
     plt.ylabel("Odds ratio", fontsize=7)
-    # plt.title(title, fontsize=7)
+    plt.title(title, fontsize=7)
     plt.axhline(y=1, color='black', linestyle=':', linewidth=0.5)
-    plt.legend(fontsize=5,loc='lower left')
+    plt.legend(fontsize=5)
     # change the ticks back to the original labels: bin edges
     plt.xticks(df["x"], df["bin"],rotation=30,fontsize=5)
     plt.yticks(fontsize=5)
@@ -109,7 +109,17 @@ for dataset in ["promoters_hepg2","promoters_k562","enhancers_hepg2","enhancers_
         colors_list = ['#808080', '#B5BD00', '#27ae60', '#1E90FF']
         color_mapping = dict(zip(threshold_list, colors_list))
         n_mapping = dict(zip(threshold_list, n_list))
-        plot_or(df_or,color_mapping,n_mapping,"larger",f"Odds ratio ({dataset}, track {track_num})",f"or_{dataset}_track{track_num}.pdf")
+        track_num_2_name = {
+            0:"CAGE",
+            1:"CAGE",
+            2:"DNase",
+            3:"DNAse",
+            4:"STARR",
+            5:"STARR",
+            6:"SuRE",
+            7:"SuRE",
+        }
+        plot_or(df_or,color_mapping,n_mapping,"larger",f"{dataset}, track {track_num_2_name[track_num]})",f"or_{dataset}_track{track_num}.pdf")
 
 
 # nohup python3 plot_or.py > plot_or.out &

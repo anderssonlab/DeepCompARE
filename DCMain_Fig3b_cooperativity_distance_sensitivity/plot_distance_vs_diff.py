@@ -98,7 +98,7 @@ sns.lineplot(x="distance", y="diff", data=df_alt, hue="data", linewidth=0.5)
 sns.lineplot(x="distance", y="diff", data=df_null, hue="data", legend=False, linewidth=0.5, linestyle="--")
 
 plt.xlabel("Distance", fontsize=7)
-plt.ylabel("Difference", fontsize=7)
+plt.ylabel("Interaction", fontsize=7)
 
 # Set log scale and specify ticks
 plt.xscale("log")
@@ -112,6 +112,9 @@ plt.legend(title="Modality", fontsize=5, title_fontsize=5)
 plt.tight_layout()
 plt.savefig(f"Plots/distance_vs_diff{option}.pdf")
 plt.close()
+
+
+
 
 # nohup python3 plot_distance_vs_diff.py > plot_distance_vs_diff.log &
 
