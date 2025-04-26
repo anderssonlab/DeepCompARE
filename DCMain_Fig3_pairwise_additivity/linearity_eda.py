@@ -5,10 +5,6 @@ import seaborn as sns
 
 from loguru import logger
 
-import sys
-sys.path.append('/isdata/alab/people/pcr980/Scripts_python')
-from tf_cooperativity import assign_cooperativity
-
 import matplotlib
 matplotlib.rcParams['pdf.fonttype']=42
 

@@ -76,10 +76,10 @@ df_null_enhancers_k562=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null{opti
 df_null_promoters_hepg2=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null{option}_promoters_hepg2.csv")
 df_null_promoters_k562=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null{option}_promoters_k562.csv")
 
-df_enhancers_hepg2=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs{option}_enhancers_hepg2.csv")
-df_enhancers_k562=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs{option}_enhancers_k562.csv")
-df_promoters_hepg2=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs{option}_promoters_hepg2.csv")
-df_promoters_k562=read_file(f"/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs{option}_promoters_k562.csv")
+df_enhancers_hepg2=read_file(f"Pd2_mutate_pairs{option}/mutate_pairs{option}_enhancers_hepg2.csv")
+df_enhancers_k562=read_file(f"Pd2_mutate_pairs{option}/mutate_pairs{option}_enhancers_k562.csv")
+df_promoters_hepg2=read_file(f"Pd2_mutate_pairs{option}/mutate_pairs{option}_promoters_hepg2.csv")
+df_promoters_k562=read_file(f"Pd2_mutate_pairs{option}/mutate_pairs{option}_promoters_k562.csv")
 
 
 df_null=pd.concat([df_null_enhancers_hepg2,df_null_enhancers_k562,df_null_promoters_hepg2,df_null_promoters_k562])
