@@ -68,8 +68,8 @@ def read_file(file_name):
 
 
 
-#option=""
-option="_cnn6"
+# option="" (2.3,2)
+option="_cnn6" 
 
 df_null_enhancers_hepg2=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null{option}_enhancers_hepg2.csv")
 df_null_enhancers_k562=read_file(f"Pd1_mutate_pair_null/df_mutate_pair_null{option}_enhancers_k562.csv")
@@ -88,7 +88,7 @@ df_null=df_null.groupby(["distance","data"]).agg({"diff":"mean"}).reset_index()
 df_alt=pd.concat([df_enhancers_hepg2,df_enhancers_k562,df_promoters_hepg2,df_promoters_k562])
 df_alt=df_alt.groupby(["distance","data"]).agg({"diff":"mean"}).reset_index()
 
-plt.figure(figsize=(2.3,2))
+plt.figure(figsize=(2.3, 2))
 plt.gca().spines['top'].set_linewidth(0.5)
 plt.gca().spines['right'].set_linewidth(0.5)
 plt.gca().spines['bottom'].set_linewidth(0.5)

@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib as mpl
 from adjustText import adjust_text
+import matplotlib.lines as mlines
+
 
 
 from utils_ppi import get_htfs_list
@@ -17,8 +19,8 @@ from tf_cooperativity import assign_cooperativity
 
 
 
-import matplotlib
-matplotlib.rcParams['pdf.fonttype']=42
+mpl.rcParams['pdf.fonttype']=42
+
 
 
 # Use a fixed colormap
@@ -31,8 +33,8 @@ cmap = mpl.cm.coolwarm
 
 bait_list = ["BACH1", "IKZF1", "MAFG", "RFX5", "RREB1"]
 
+
 for bait in bait_list:
-    print(bait)
     df_bait = pd.read_csv(f"Pd1_PPI_experiment/250107.{bait}.K562.Taplin.GenoppiStats.txt", sep='\t')
     htfs=get_htfs_list()
     # select K562 expressed TFs
@@ -44,8 +46,8 @@ for bait in bait_list:
     # select baits
     df_coop = df_coop[df_coop["protein2"] == bait].reset_index(drop=True)
     # determine if TF is linear or nonlinear
-    df_nonlinear = df_coop[df_coop["cooperativity"]!="Linear"].reset_index(drop=True)
-    df_linear = df_coop[df_coop["cooperativity"]=="Linear"].reset_index(drop=True)
+    df_nonlinear = df_coop[df_coop["cooperativity"]!="Independent"].reset_index(drop=True)
+    df_linear = df_coop[df_coop["cooperativity"]=="Independent"].reset_index(drop=True)
     df_bait["is_tf"] = df_bait["gene"].isin(htfs)
     df_bait["is_nonlinear"] = df_bait["gene"].isin(df_nonlinear["protein1"])
     df_bait["is_linear"] = df_bait["gene"].isin(df_linear["protein1"])
@@ -53,7 +55,7 @@ for bait in bait_list:
     df_bait["-log10_pvalue"] = df_bait["pvalue"].apply(lambda x: -1 if x == 0 else -1 * np.log10(x))
 
     
-    plt.figure(figsize=(2.5,2.5))
+    plt.figure(figsize=(2,2)) # (2.8,2.6) for main. (2,2) for sup
     # Adjust thin frame
     for spine in plt.gca().spines.values():
         spine.set_linewidth(0.5)
@@ -83,7 +85,7 @@ for bait in bait_list:
     
     # plot linear TFs as black x
     df_linear=pd.merge(df_linear,df_bait,how="inner",left_on="protein1",right_on="gene")
-    sns.scatterplot(data=df_linear,x="logFC",y="-log10_pvalue",s=5,color="black",label="Linear TF partner",marker="x")
+    sns.scatterplot(data=df_linear,x="logFC",y="-log10_pvalue",s=5,color="black",label="Independent TF partner",marker="x")
     
     # Plot nonlinear TFs with hue based on cooperativity_index
     df_nonlinear=pd.merge(df_nonlinear,df_bait,how="inner",left_on="protein1",right_on="gene")
@@ -101,29 +103,43 @@ for bait in bait_list:
     )
 
         
-    # Add gene names for investigated TFs
-    texts = []
-    for i in range(len(df_nonlinear)):
-        texts.append(plt.text(df_nonlinear.loc[i, "logFC"],
-                 df_nonlinear.loc[i, "-log10_pvalue"],
-                 df_nonlinear.loc[i, "gene"],
-                 fontsize=5))
-    adjust_text(texts)
+    # Add gene names for investigated TFs (only for main)
+    # texts = []
+    # for i in range(len(df_nonlinear)):
+    #     texts.append(plt.text(df_nonlinear.loc[i, "logFC"],
+    #              df_nonlinear.loc[i, "-log10_pvalue"],
+    #              df_nonlinear.loc[i, "gene"],
+    #              fontsize=5))
+    # adjust_text(texts)
     
     # Add horizontal significance line
     plt.axhline(-1 * np.log10(0.05), color="black", linestyle="--", linewidth=0.5)
-    plt.xlabel("log fold change", fontsize=7)
-    plt.ylabel("-log10 pvalue", fontsize=7)
+    plt.xlabel("Log fold change", fontsize=7)
+    plt.ylabel("-Log10 pvalue", fontsize=7)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
     # legend font size: 5
-    plt.legend(fontsize=5)
-    plt.title(f"{bait}", fontsize=7)
-    # Add the same coolwarm color bar to each plot
-    sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
-    cbar = plt.colorbar(sm)
-    cbar.set_label("Cooperativity Index", fontsize=5)  # Adjust colorbar title size
-    cbar.ax.tick_params(labelsize=5)  # Adjust colorbar tick size 
+    # Custom legend
+    legend_elements = [
+        # Non-TFs: light gray solid dot
+        mlines.Line2D([], [], color="LightGray", marker='o', linestyle='None', markersize=5, label='Non-TF interactors', alpha=0.3),
+        # Uninvestigated TFs: black solid dot
+        mlines.Line2D([], [], color='black', marker='o', linestyle='None', markersize=5, label='Uninvestigated TF', alpha=0.3),
+        # Independent TF partners: black x
+        mlines.Line2D([], [], color='black', marker='x', linestyle='None', markersize=5, label='Independent TF', alpha=1),
+        # Cooperative TF partner: hollow circle (uses colormap in plot)
+        mlines.Line2D([], [], color='gray', marker='o', linestyle='None', markersize=5, alpha=1, markerfacecolor='none', label='Cooperative TF'),
+    ]
+
+
+    plt.legend(handles=legend_elements, fontsize=5, loc='upper left')
+
+    plt.title(f"{bait} interactors", fontsize=7)
+    # # Add the same coolwarm color bar to each plot (Only in main)
+    # sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
+    # cbar = plt.colorbar(sm)
+    # cbar.set_label("Synergy score", fontsize=5)  # Adjust colorbar title size
+    # cbar.ax.tick_params(labelsize=5)  # Adjust colorbar tick size 
     plt.tight_layout()
     plt.savefig(f"volcano_{bait}.pdf")
     plt.close()

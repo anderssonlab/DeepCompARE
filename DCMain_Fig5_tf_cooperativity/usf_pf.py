@@ -15,7 +15,7 @@ from tf_cooperativity import assign_cooperativity
 import matplotlib
 matplotlib.rcParams['pdf.fonttype']=42
 
-# are linear TFs depleted in USF and PF?
+
 
 
 
@@ -63,7 +63,7 @@ for cell_line in ["hepg2","k562"]:
             stat,p=mannwhitneyu(df_pf[col],df_non_pf[col])
             logger.info(f"PF vs non-PF: {p}")
 
-            plt.figure(figsize=(3.2,3.2))
+            plt.figure(figsize=(3.1,3.1))
             # thin frame
             plt.gca().spines['top'].set_linewidth(0.5)
             plt.gca().spines['right'].set_linewidth(0.5)
@@ -91,7 +91,10 @@ for cell_line in ["hepg2","k562"]:
             plt.legend(fontsize=5,loc='lower right')
             # label 7
             plt.xlabel("Rank",fontsize=7)
-            plt.ylabel(col,fontsize=7)
+            # determine y label:
+            dict_label={"cooperativity_index":"TF synergy score",
+                       "linearity_index":"TF independence score"}
+            plt.ylabel(dict_label[col],fontsize=7)
             plt.tight_layout()
             plt.savefig(f"usf_pf_{col}_{cell_line}_{suffix}.pdf",dpi=300)
             plt.close()

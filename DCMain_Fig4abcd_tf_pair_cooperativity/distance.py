@@ -23,15 +23,17 @@ for cell_line in ["hepg2","k562"]:
     # set distance to plot
     df["distance_to_plot"]=df["nonlinear_distance"]
     # for linear pairs, use linear distance
-    df.loc[df["cooperativity"]=="Linear","distance_to_plot"]=df.loc[df["cooperativity"]=="Linear","linear_distance"]
+    df.loc[df["cooperativity"]=="Independent","distance_to_plot"]=df.loc[df["cooperativity"]=="Independent","linear_distance"]
     # Analysis 1: distance vs cooperativity index
     plot_violin_with_statistics(
+        (2.3,2.3),
         df=df,
         x_col="cooperativity",
         y_col="distance_to_plot",
-        x_label="Cooperativity",
+        x_label="TF pair type",
         y_label="Median distance\nbetween TFBS pair (bp)",
         title=None,
+        rotation=30,
         output_file=f"distance_vs_ci_{cell_line}.pdf"
     )
 

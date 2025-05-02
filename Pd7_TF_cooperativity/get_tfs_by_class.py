@@ -10,10 +10,10 @@ from tf_cooperativity import assign_cooperativity
 def write_tfs_by_class(path,suffix,thresh_redun,thresh_codep):
     df_tf=pd.read_csv(path)
     df_tf=assign_cooperativity(df_tf,5,0.95,thresh_redun,thresh_codep)
-    tfs_linear=df_tf[df_tf["cooperativity"]=="Linear"]["protein2"].tolist()
+    tfs_linear=df_tf[df_tf["cooperativity"]=="Independent"]["protein2"].tolist()
     tfs_redundant=df_tf[df_tf["cooperativity"]=="Redundant"]["protein2"].tolist()
     tfs_intermediate=df_tf[df_tf["cooperativity"]=="Intermediate"]["protein2"].tolist()
-    tfs_codependent=df_tf[df_tf["cooperativity"]=="Codependent"]["protein2"].tolist()
+    tfs_codependent=df_tf[df_tf["cooperativity"]=="Synergistic"]["protein2"].tolist()
     with open(f"tfs_linear_{suffix}.txt","w") as f:
         f.write("\n".join(tfs_linear))
     with open(f"tfs_redundant_{suffix}.txt","w") as f:

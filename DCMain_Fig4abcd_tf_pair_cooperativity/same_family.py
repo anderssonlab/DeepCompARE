@@ -19,7 +19,7 @@ matplotlib.rcParams['pdf.fonttype']=42
 for cell_line in ["hepg2","k562"]:
     df=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell_line}_pe.csv")
     df=assign_cooperativity(df,1,0.9,0.3,0.7)
-    df=df[df["cooperativity"]!="Linear"].reset_index(drop=True)
+    df=df[df["cooperativity"]!="Independent"].reset_index(drop=True)
     df_family=pd.read_csv("/isdata/alab/people/pcr980/Resource/JASPAR2022_tracks/JASPAR2024_CORE_tf_family.csv")
     df_family["ID"]=df_family["ID"].str.upper()
 
@@ -31,10 +31,12 @@ for cell_line in ["hepg2","k562"]:
     df.drop(columns=['AC', 'ID'],inplace=True)
     df.rename(columns={"tf_family":"family_2"},inplace=True)
     df["same_family"]= (df["family_1"]==df["family_2"])
+    # turn df["same_family"] to Category
+    df["same_family"]=pd.Categorical(df["same_family"],categories=[True,False],ordered=True)
     
     
     # sns kde plot the distribution of cooperativity_index split by family with family size
-    plt.figure(figsize=(2.3, 2.3))
+    plt.figure(figsize=(2.3, 2.2))
     # thin frame
     plt.gca().spines['top'].set_linewidth(0.5)
     plt.gca().spines['right'].set_linewidth(0.5)
@@ -52,17 +54,17 @@ for cell_line in ["hepg2","k562"]:
     )
     # write the p value to the plot
     stat, p= mannwhitneyu(df[df["same_family"]==True]["cooperativity_index"],df[df["same_family"]==False]["cooperativity_index"])
-    plt.text(0.1, 0.2, f"p={p:.2e}", fontsize=7, transform=plt.gca().transAxes)
+    plt.text(0.1, 0.2, f"p={p:.1e}", fontsize=5, transform=plt.gca().transAxes)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
-    plt.xlabel("Cooperativity index", fontsize=7)
+    plt.xlabel("Synergy score", fontsize=7)
     plt.ylabel("Density", fontsize=7)
     plt.legend(
     title="Same TF family?",
     fontsize=5,
     title_fontsize=5,
     loc='upper right',
-    labels=["True", "False"]  # Explicitly set legend labels
+    labels=["False", "True"]  # Explicitly set legend labels
 )
     plt.tight_layout()
     plt.savefig(f"same_family_{cell_line}.pdf")

@@ -14,15 +14,15 @@ from stat_tests import fisher_exact_with_ci
 import matplotlib
 matplotlib.rcParams['pdf.fonttype']=42
 
-ci_suffix="dhs"
-redundancy_threshold=0.44
-codependent_threshold=0.81
+# ci_suffix="dhs"
+# redundancy_threshold=0.44
+# codependent_threshold=0.81
 
 
 
-# ci_suffix="pe"
-# redundancy_threshold=0.3 
-# codependent_threshold=0.7
+ci_suffix="pe"
+redundancy_threshold=0.3 
+codependent_threshold=0.7
 
 
 
@@ -108,7 +108,7 @@ def fisher_exact_test(df, class_label):
 df_coop=df_coop[df_coop["prediction_state"]!="not_predicted"].reset_index(drop=True)
 
 df_res=pd.DataFrame()
-for class_label in ["Linear","Redundant","Intermediate","Codependent"]:
+for class_label in ["Independent","Redundant","Intermediate","Synergistic"]:
     df_coop_copy=df_coop.copy()
     # stringent version: "experiment_state"=="found" only if "experiment_state"=="significant"
     df_coop_copy.loc[df_coop_copy["experiment_state"]=="significant","experiment_state"]="found"
@@ -131,7 +131,7 @@ for class_label in ["Linear","Redundant","Intermediate","Codependent"]:
 
 
 
-plt.figure(figsize=(2.5,2.5))
+plt.figure(figsize=(2.3,2.6))
 # thin frame
 plt.gca().spines['top'].set_linewidth(0.5)
 plt.gca().spines['right'].set_linewidth(0.5)
@@ -147,14 +147,15 @@ x_stringent = x - jitter   # jitter for negative control
 
 df_stringent=df_res[df_res["method"]=="stringent"].reset_index(drop=True)
 df_lenient=df_res[df_res["method"]=="lenient"].reset_index(drop=True)
-plt.errorbar(x_stringent, df_stringent['odds_ratio'],yerr=[df_stringent['odds_ratio']-df_stringent['ci_lower'], df_stringent['ci_upper']-df_stringent['odds_ratio']],fmt='o', capsize=0, markersize=2, label='Significant TFs', color='gray', linewidth=0.5)
+plt.errorbar(x_stringent, df_stringent['odds_ratio'],yerr=[df_stringent['odds_ratio']-df_stringent['ci_lower'], df_stringent['ci_upper']-df_stringent['odds_ratio']],fmt='o', capsize=0, markersize=2, label='Significant TFs', color='lightgray', linewidth=0.5)
 plt.errorbar(x_lenient, df_lenient['odds_ratio'],yerr=[df_lenient['odds_ratio']-df_lenient['ci_lower'], df_lenient['ci_upper']-df_lenient['odds_ratio']],fmt='o', capsize=0, markersize=2, label='Significant + Subthreshold TFs', color='black', linewidth=0.5)
-plt.xticks(x, df_stringent['class'], fontsize=5, rotation=30)
+plt.xticks(x, df_stringent['class'], fontsize=5)
 plt.yticks(fontsize=5)
 plt.axhline(y=1, linestyle='--', color='gray', linewidth=0.5)
-plt.xlabel('Class of TF partner', fontsize=7)
+plt.xlabel('Type of TF partner', fontsize=7)
 plt.ylabel('Odds ratio', fontsize=7)
 plt.legend(fontsize=5)
+plt.title("Pooled interactors of all 5 TFs", fontsize=7)
 plt.tight_layout()
 plt.savefig(f"pooled_enrichment_{ci_suffix}.pdf")
 plt.close()

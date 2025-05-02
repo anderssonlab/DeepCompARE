@@ -3,6 +3,9 @@ import numpy as np
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 import seaborn as sns
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
+
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
@@ -10,11 +13,22 @@ from tf_cooperativity import assign_cooperativity
 
 
 
-def scatter_ci_vs_tf_effect(df,modality,cell_line,suffix):
-    df_nonlinear=df[df["cooperativity"]!="Linear"].reset_index(drop=True)
-    df_nonlinear["cooperativity"]=pd.Categorical(df_nonlinear["cooperativity"],categories=["Redundant","Intermediate","Codependent"],ordered=True)
 
-    fig, axes = plt.subplots(1, 2, gridspec_kw={'width_ratios': [5, 1]},sharey=True,figsize=(2.8,2.3),constrained_layout=True)
+
+
+
+import matplotlib
+matplotlib.rcParams['pdf.fonttype']=42
+
+
+
+
+
+def scatter_ci_vs_tf_effect(df,modality,cell_line,suffix):
+    df_nonlinear=df[df["cooperativity"]!="Independent"].reset_index(drop=True)
+    df_nonlinear["cooperativity"]=pd.Categorical(df_nonlinear["cooperativity"],categories=["Redundant","Intermediate","Synergistic"],ordered=True)
+
+    fig, axes = plt.subplots(1, 2, gridspec_kw={'width_ratios': [5, 1]},sharey=True,figsize=(2.3,2.1),constrained_layout=True)
     for ax in axes:  # Loop through both subplots
         ax.spines['top'].set_linewidth(0.5)
         ax.spines['right'].set_linewidth(0.5)
@@ -26,32 +40,37 @@ def scatter_ci_vs_tf_effect(df,modality,cell_line,suffix):
                     data=df_nonlinear,
                     hue="cooperativity",
                     ax=axes[0],
-                    palette={"Intermediate":"gray","Codependent":"orangered","Redundant":"dodgerblue"},s=5)
+                    palette={"Intermediate":"gray","Synergistic":"#d62728","Redundant":"#1f77b4"},s=5)
     # add pearson correlation and p
     r,p=pearsonr(df_nonlinear["cooperativity_index"],df_nonlinear[f"avg_isa_{modality}_activity"])
     # text at center
     axes[0].text(0.6,0.6,f"r={r:.2f}\np={p:.2e}",horizontalalignment='center',verticalalignment='center',transform=axes[0].transAxes,fontsize=5)
+    
     # legend
-    axes[0].legend(title="TF type",fontsize=5, title_fontsize=5)
+    handles, labels = axes[0].get_legend_handles_labels()
+    # Create a solid black dot (marker) for Independent TFs
+    independent_dot = Line2D([0], [0], marker='o', color='black', linestyle='None', markersize=5, label='Independent')
+    # Add it to the legend
+    axes[0].legend(handles + [independent_dot], labels + ['Independent'],
+               title="TF type", fontsize=5, title_fontsize=5)
+    
     axes[0].set_xticks([0, threshold_dict[cell_line][suffix][0], threshold_dict[cell_line][suffix][1], 1])
     axes[0].set_xticklabels([0, threshold_dict[cell_line][suffix][0], threshold_dict[cell_line][suffix][1], 1], fontsize=5)
     axes[0].set_yticks(np.arange(0, 1.2, 0.1))
     axes[0].set_yticklabels([f"{x:.1f}" for x in np.arange(0, 1.2, 0.1)], fontsize=5)
-    axes[0].set_xlabel("Cooperativity index", fontsize=7)
+    axes[0].set_xlabel("Synergy score", fontsize=7)
     axes[0].set_ylabel(f"Motif ISA ({modality.upper()})", fontsize=7)
     # strip plot for linear TFs
     sns.stripplot(
         x="cooperativity",
         y=f"avg_isa_{modality}_activity",
-        data=df[df["cooperativity"] == "Linear"].reset_index(drop=True),
+        data=df[df["cooperativity"] == "Independent"].reset_index(drop=True),
         ax=axes[1],
         color="black",
-        alpha=0.8,
         size=2)
 
-    axes[1].set_xticks([])  # Remove x-ticks
-    axes[1].set_xlabel("Linear\n TFs", fontsize=7)
-
+    axes[1].set_xticks("")  # Remove x-ticks
+    axes[1].set_xlabel("")  # Remove x-label
     plt.savefig(f"ci_vs_{modality}_scatter_{cell_line}_{suffix}.pdf",dpi=300)
     plt.close()
 
