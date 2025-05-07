@@ -20,13 +20,16 @@ matplotlib.rcParams['pdf.fonttype']=42
 # Helper functions
 # ----------------------------------------------------
 
+prefix="Pd2_E1E2P1P2_motif_info/motif_info_thresh_500"
+
+
 def read_df_add_tf_coop(prefix,file_name):
     df=pd.read_csv(f"{prefix}_{file_name}_k562.csv",index_col=0)
     # add tf ci
     df_coop=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_k562_dhs.csv")
-    df_coop=assign_cooperativity(df_coop,5,0.95,0.44,0.81)
+    df_coop=assign_cooperativity(df_coop,5,0.95,0.43,0.80)
     df_coop.rename(columns={"protein2":"protein"},inplace=True)
-    df=pd.merge(df,df_coop,on="protein",how="left")
+    df=pd.merge(df,df_coop,on="protein",how="inner")
     df["region_type"]=file_name
     return df
 
@@ -35,10 +38,10 @@ def read_df_add_tf_coop(prefix,file_name):
 def count_tf(df,file_name):
     # count number of redundant and codependent TFs in each region
     df=df.groupby(["region","cooperativity"]).size().unstack(fill_value=0).reset_index()
-    df.rename(columns={"Codependent":"codependent_tf_count",
+    df.rename(columns={"Synergistic":"synergistic_tf_count",
                        "Redundant":"redundant_tf_count",
                        "Intermediate":"intermediate_tf_count",
-                       "Linear":"linear_tf_count"
+                       "Independent":"independent_tf_count"
                        },inplace=True)
     df["region_type"]=file_name
     return df
@@ -55,7 +58,6 @@ def preprocess(prefix,file_name):
     return df
 
 
-prefix="Pd2_E1E2P1P2_motif_info/motif_info_thresh_500"
 
 
 df_p1=preprocess(prefix,"P1")
@@ -81,48 +83,50 @@ neighbor_pairs = [
 ]
 
 color_map = {
-    "redundant_tf_count": "dodgerblue",
-    "codependent_tf_count": "orangered",
+    "redundant_tf_count": "#1f77b4",
+    "synergistic_tf_count": "#d62728",
     "intermediate_tf_count": "grey",
-    "linear_tf_count": "black"
+    "independent_tf_count": "black"
 }
 
 
 
-for col in ["redundant_tf_count", "codependent_tf_count", "intermediate_tf_count", "linear_tf_count"]:
+for col in ["redundant_tf_count", "synergistic_tf_count", "intermediate_tf_count", "independent_tf_count"]:
     col_color = color_map[col]
-    plt.figure(figsize=(2.3, 2.3))
+    plt.figure(figsize=(1.6, 2.3))
     ax = plt.gca()
-    # thin frame  
+    # thin frame, no top and right
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
     for spine in ax.spines.values():
         spine.set_linewidth(0.5)
-    
-    if col != "linear_tf_count":
-        sns.boxplot(
-            x="region_type", 
-            y=col, 
-            data=df, 
-            color=col_color,  # this sets the default color
-            boxprops={'facecolor': col_color, 'alpha': 0.3},  # add some transparency if desired
-            whiskerprops={'color': "black"},
-            capprops={'color': "black"},
-            medianprops={'color': col_color},
-            showfliers=False,
-            linewidth=0.5,
-        )
-    if col == "linear_tf_count":
-        sns.boxplot(
-            x="region_type", 
-            y="linear_tf_count",
-            data=df, 
-            boxprops={'facecolor': 'none'},  
-            whiskerprops={'color': "black"},
-            capprops={'color': "black"},
-            medianprops={'color': col_color},
-            showfliers=True,  # Ensure outliers are shown
-            linewidth=0.5,
-            flierprops={'marker': 'o', 'markersize': 3, 'markerfacecolor': 'black', 'markeredgewidth': 0}  # Small black dots
-        )
+    #
+    # if col != "independent_tf_count":
+    sns.boxplot(
+        x="region_type", 
+        y=col, 
+        data=df, 
+        color=col_color,  # this sets the default color
+        boxprops={'facecolor': col_color, 'alpha': 0.3},  # add some transparency if desired
+        whiskerprops={'color': "black"},
+        capprops={'color': "black"},
+        medianprops={'color': col_color},
+        showfliers=False,
+        linewidth=0.5,
+    )
+    # if col == "independent_tf_count":
+    #     sns.boxplot(
+    #         x="region_type", 
+    #         y="independent_tf_count",
+    #         data=df, 
+    #         boxprops={'facecolor': 'none'},  
+    #         whiskerprops={'color': "black"},
+    #         capprops={'color': "black"},
+    #         medianprops={'color': col_color},
+    #         showfliers=True,  # Ensure outliers are shown
+    #         linewidth=0.5,
+    #         flierprops={'marker': 'o', 'markersize': 3, 'markerfacecolor': 'black', 'markeredgewidth': 0}  # Small black dots
+    #     )
 
     # Calculate and annotate Mann-Whitney U test p-values
     for pair in neighbor_pairs:
@@ -177,7 +181,8 @@ df=pd.concat([df_p1,df_p2,df_e1,df_e2],axis=0)
 
 # select cooperativity=="intermediate"
 df=df[df["cooperativity"]=="Intermediate"].reset_index(drop=True)
-df=df[["region_type","cooperativity_index"]]
+# df=df[df["cooperativity"]!="Independent"].reset_index(drop=True)
+
 df["region_type"]=pd.Categorical(df["region_type"],categories=["E1","E2","P2","P1"],ordered=True)
 
 
@@ -189,9 +194,11 @@ neighbor_pairs = [
 ]
 
 
-plt.figure(figsize=(2.3, 2.3))
+plt.figure(figsize=(1.6, 2.3))
 ax = plt.gca()
-# thin frame  
+# thin frame, no top and right
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
 for spine in ax.spines.values():
     spine.set_linewidth(0.5)
 
@@ -205,7 +212,6 @@ sns.boxplot(
     capprops={'color': 'black'},
     flierprops={'marker': 'o', 'markersize': 1}
 )
-plt.xticks(rotation=30)
 #
 # Calculate and annotate Mann-Whitney U test p-values
 for pair in neighbor_pairs:
@@ -225,7 +231,7 @@ for pair in neighbor_pairs:
                 ha='center', va='bottom', fontsize=5)
 
 plt.xlabel("Region type", fontsize=7)
-plt.ylabel("Cooperativity index", fontsize=7)
+plt.ylabel("Synergy score", fontsize=7)
 plt.xticks(fontsize=5)
 plt.yticks(fontsize=5)
 plt.tight_layout()

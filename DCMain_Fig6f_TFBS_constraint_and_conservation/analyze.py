@@ -4,6 +4,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
+
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+
+
+
+
 from scipy.stats import mannwhitneyu,pearsonr
 from loguru import logger
 
@@ -35,10 +42,10 @@ matplotlib.rcParams['pdf.fonttype']=42
 def add_tf_cooperativity(df,cell_line):
     if cell_line=="hepg2":
         thresh_redun=0.48
-        thresh_codep=0.76
+        thresh_codep=0.78
     elif cell_line=="k562":
-        thresh_redun=0.44
-        thresh_codep=0.81
+        thresh_redun=0.43
+        thresh_codep=0.80
     else:
         raise ValueError("cell line not found")
     # add tf ci
@@ -184,10 +191,13 @@ df_gnocchi_k562=aggregate_per_cell("k562")
 
 for file in df_gnocchi["dataset"].unique():
     df_sub=df_gnocchi[df_gnocchi["dataset"]==file].reset_index(drop=True)
+    # print the protein name with largest 241way_max
+    max_241way_max_protein=df_sub.loc[df_sub["241way_max"].idxmax(), "protein"]
+    logger.info(f"Max 241way_max protein for {file}: {max_241way_max_protein}")
     # Calculate Pearson correlation and p-value
     r, p_value = pearsonr(df_sub["z"], df_sub["241way_max"])
     #
-    plt.figure(figsize=(2.3, 2))
+    plt.figure(figsize=(2.2, 1.9))
     # Thin frame
     plt.gca().spines['top'].set_linewidth(0.5)
     plt.gca().spines['right'].set_linewidth(0.5)
@@ -207,18 +217,18 @@ for file in df_gnocchi["dataset"].unique():
         x="z",
         y="241way_max",
         data=df_sub[df_sub["cooperativity_index"].isnull()],
-        marker="$\circ$",
-        s=9,
-        color="black",
-        label="Linear TFs"
+        marker='o',
+        s=5,
+        facecolors='none',  # Hollow circle
+        edgecolor='black',
+        legend=False
     )
-    
     # Create a colorbar
     norm = plt.Normalize(df_sub["cooperativity_index"].min(), df_sub["cooperativity_index"].max())
     sm = plt.cm.ScalarMappable(cmap="coolwarm", norm=norm)
     sm.set_array([])
     cbar = plt.colorbar(sm)
-    cbar.set_label("Cooperativity Index", fontsize=5)
+    cbar.set_label("Synergy score", fontsize=5)
     cbar.ax.tick_params(labelsize=5)
     #
     # Add Pearson r and p-value to the plot (top-left)
@@ -226,10 +236,14 @@ for file in df_gnocchi["dataset"].unique():
              transform=plt.gca().transAxes, verticalalignment='top', horizontalalignment='left')
     #
     # add a invisible solid gray dot for legend: Nonlinear TFs
-    plt.scatter([], [], c="black", label="Nonlinear TFs", s=20)
-    plt.legend(fontsize=5, title="TF type", title_fontsize=5, markerscale=0.8)
+    # Hollow circle for linear TFs
+    plt.scatter([], [], facecolors='none', edgecolors='black', label='Independent TFs', s=12, marker='o')
+    # Filled circle for cooperative TFs
+    plt.scatter([], [], facecolors='none', edgecolors='black', label='Cooperative TFs', s=12, marker='o')
+    plt.legend(fontsize=5, title="TF type", title_fontsize=5)
     plt.xlabel("Constraint z", fontsize=7)
     plt.ylabel("241way_max", fontsize=7)
+    plt.title(f"{file}", fontsize=7)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
     plt.tight_layout()
@@ -245,14 +259,14 @@ for file in df_gnocchi["dataset"].unique():
 
 # Define color mapping
 color_mapping = {
-    "Linear": "white",
+    "Independent": "white",
     "Redundant": "#1f77b4",  # cool color
     "Intermediate": "#7f7f7f",  # gray
-    "Codependent": "#d62728"  # warm color
+    "Synergistic": "#d62728"  # warm color
 }
 
-for col in ["241way_max", "241way_mean", "241way_min"]:
-    plt.figure(figsize=(3, 3))
+for col in ["241way_max", "241way_min"]:
+    plt.figure(figsize=(3, 2.5))
     # Thin frame
     plt.gca().spines['top'].set_linewidth(0.5)
     plt.gca().spines['right'].set_linewidth(0.5)
@@ -263,7 +277,8 @@ for col in ["241way_max", "241way_mean", "241way_min"]:
         'marker': 'o',
         'markersize': 1,
         'markerfacecolor': 'gray',
-        'markeredgecolor': 'gray'
+        'markeredgecolor': 'gray',
+        'alpha': 0.3,
     }
     # Custom palette mapping
     palette = {key: color_mapping[key] for key in df_gnocchi["cooperativity"].unique()}
@@ -286,30 +301,30 @@ for col in ["241way_max", "241way_mean", "241way_min"]:
 
 # calculate P values
 df_hepg2=df_gnocchi[df_gnocchi["cell_line"]=="hepg2"].reset_index(drop=True)
-df_hepg2_redundant=df_hepg2[df_hepg2["cooperativity"]=="redundant"].reset_index(drop=True)
+df_hepg2_redundant=df_hepg2[df_hepg2["cooperativity"]=="Redundant"].reset_index(drop=True)
 mannwhitneyu(df_hepg2_redundant[df_hepg2_redundant["re"]=="proximal"]["241way_max"], df_hepg2_redundant[df_hepg2_redundant["re"]=="distal"]["241way_max"])
 
-df_hepg2_codependent=df_hepg2[df_hepg2["cooperativity"]=="codependent"].reset_index(drop=True)
+df_hepg2_codependent=df_hepg2[df_hepg2["cooperativity"]=="Synergistic"].reset_index(drop=True)
 mannwhitneyu(df_hepg2_codependent[df_hepg2_codependent["re"]=="proximal"]["241way_max"], df_hepg2_codependent[df_hepg2_codependent["re"]=="distal"]["241way_max"])
 
 df_k562=df_gnocchi[df_gnocchi["cell_line"]=="k562"].reset_index(drop=True)
-df_k562_redundant=df_k562[df_k562["cooperativity"]=="redundant"].reset_index(drop=True)
+df_k562_redundant=df_k562[df_k562["cooperativity"]=="Redundant"].reset_index(drop=True)
 mannwhitneyu(df_k562_redundant[df_k562_redundant["re"]=="proximal"]["241way_max"], df_k562_redundant[df_k562_redundant["re"]=="distal"]["241way_max"])
 
-df_k562_codependent=df_k562[df_k562["cooperativity"]=="codependent"].reset_index(drop=True)
+df_k562_codependent=df_k562[df_k562["cooperativity"]=="Sygernistic"].reset_index(drop=True)
 mannwhitneyu(df_k562_codependent[df_k562_codependent["re"]=="proximal"]["241way_max"], df_k562_codependent[df_k562_codependent["re"]=="distal"]["241way_max"])
 
 df_hepg2_proximal=df_hepg2[df_hepg2["re"]=="proximal"].reset_index(drop=True)
-mannwhitneyu(df_hepg2_proximal[df_hepg2_proximal["cooperativity"]=="redundant"]["241way_max"], df_hepg2_proximal[df_hepg2_proximal["cooperativity"]=="codependent"]["241way_max"])
+mannwhitneyu(df_hepg2_proximal[df_hepg2_proximal["cooperativity"]=="Redundant"]["241way_max"], df_hepg2_proximal[df_hepg2_proximal["cooperativity"]=="Synergistic"]["241way_max"])
 
 df_hepg2_distal=df_hepg2[df_hepg2["re"]=="distal"].reset_index(drop=True)
-mannwhitneyu(df_hepg2_distal[df_hepg2_distal["cooperativity"]=="redundant"]["241way_max"], df_hepg2_distal[df_hepg2_distal["cooperativity"]=="codependent"]["241way_max"])
+mannwhitneyu(df_hepg2_distal[df_hepg2_distal["cooperativity"]=="Redundant"]["241way_max"], df_hepg2_distal[df_hepg2_distal["cooperativity"]=="Synergistic"]["241way_max"])
 
 df_k562_proximal=df_k562[df_k562["re"]=="proximal"].reset_index(drop=True)
-mannwhitneyu(df_k562_proximal[df_k562_proximal["cooperativity"]=="redundant"]["241way_max"], df_k562_proximal[df_k562_proximal["cooperativity"]=="codependent"]["241way_max"])
+mannwhitneyu(df_k562_proximal[df_k562_proximal["cooperativity"]=="Redundant"]["241way_max"], df_k562_proximal[df_k562_proximal["cooperativity"]=="Synergistic"]["241way_max"])
 
 df_k562_distal=df_k562[df_k562["re"]=="distal"].reset_index(drop=True)
-mannwhitneyu(df_k562_distal[df_k562_distal["cooperativity"]=="redundant"]["241way_max"], df_k562_distal[df_k562_distal["cooperativity"]=="codependent"]["241way_max"])
+mannwhitneyu(df_k562_distal[df_k562_distal["cooperativity"]=="Redundant"]["241way_max"], df_k562_distal[df_k562_distal["cooperativity"]=="Synergistic"]["241way_max"])
 
 
 
@@ -331,7 +346,7 @@ for file in df_gnocchi["dataset"].unique():
         r, p_value = pearsonr(df_sub[x_var], df_sub["cooperativity_index"])
         #
         # Create scatter plot
-        plt.figure(figsize=(2.3, 2))
+        plt.figure(figsize=(1.9, 1.9))
         # thin frame
         plt.gca().spines['top'].set_linewidth(0.5)
         plt.gca().spines['right'].set_linewidth(0.5)
@@ -344,8 +359,9 @@ for file in df_gnocchi["dataset"].unique():
                  transform=plt.gca().transAxes, verticalalignment='top', horizontalalignment='left')
         #
         # Add labels and title
+        plt.title(f"{file}", fontsize=7)
         plt.xlabel(x_var, fontsize=7)
-        plt.ylabel("Cooperativity index", fontsize=7)
+        plt.ylabel("Synergy score", fontsize=7)
         plt.xticks(fontsize=5)
         plt.yticks(fontsize=5)
         plt.tight_layout()
@@ -367,70 +383,118 @@ for file in df_gnocchi["dataset"].unique():
 # Define a custom color palette for cooperativity categories
 
 
+
+
 custom_palette = {
-    "Codependent": "#d62728",  # warm color
-    "Redundant": "#1f77b4",   # cool color
+    "Synergistic": "#d62728",  # warm color
+    "Redundant": "#1f77b4",    # cool color
 }
+
 for cell in ["hepg2", "k562"]:
-    for col in ["z", "have_common_variants","241way_max", "241way_mean", "241way_min"]:
+    if cell=="hepg2":
+        thresh_redun=0.48
+        thresh_codep=0.78
+    elif cell=="k562":
+        thresh_redun=0.43
+        thresh_codep=0.80
+    else:
+        raise ValueError("cell line not found")
+    for col in ["z", "have_common_variants", "241way_max", "241way_min"]:
         # Subset the data to only constrained TFs for one cell line
         df_sub = df_gnocchi[df_gnocchi["cell_line"] == cell].reset_index(drop=True)
         df_pivot = df_sub.pivot(index="protein", columns="re", values=col).dropna().reset_index()
-        # merge 
-        if cell=="hepg2":
-            df_pivot=df_pivot.merge(df_gnocchi_hepg2[["protein","z","p_val_241way_max","p_val_241way_mean","p_val_241way_min"]], on="protein", how="inner")
-        elif cell=="k562":
-            df_pivot=df_pivot.merge(df_gnocchi_k562[["protein","z","p_val_241way_max","p_val_241way_mean","p_val_241way_min"]], on="protein", how="inner")
-        else:
-            raise ValueError("cell line not found")
         #
-        df_pivot=df_pivot[df_pivot["z"]>0].reset_index(drop=True)
-        # Add cooperativity information
+        # Merge with stats
+        if cell == "hepg2":
+            df_pivot = df_pivot.merge(
+                df_gnocchi_hepg2[["protein", "z", "p_val_241way_max", "p_val_241way_mean", "p_val_241way_min"]],
+                on="protein", how="inner"
+            )
+        elif cell == "k562":
+            df_pivot = df_pivot.merge(
+                df_gnocchi_k562[["protein", "z", "p_val_241way_max", "p_val_241way_mean", "p_val_241way_min"]],
+                on="protein", how="inner"
+            )
+        else:
+            raise ValueError("Cell line not found")
+        #
+        # Keep only positive z-scores
+        df_pivot = df_pivot[df_pivot["z"] > 0].reset_index(drop=True)
+        #
+        # Add cooperativity info
         df_pivot = add_tf_cooperativity(df_pivot, cell)
-        df_pivot["cooperativity"] = df_pivot["cooperativity"].astype("str")
-        # report the number of proteins where enhancers>promoters
+        df_pivot["cooperativity"] = df_pivot["cooperativity"].astype(str)
+        #
+        # Report stats
         df_redundant = df_pivot[df_pivot["cooperativity"] == "Redundant"].reset_index(drop=True)
-        df_codependent = df_pivot[df_pivot["cooperativity"] == "Codependent"].reset_index(drop=True)
-        logger.info(f"Number of proteins where enhancers>promoters (redundant tfs): {np.mean(df_redundant['distal'] > df_redundant['proximal'])}")
-        logger.info(f"Number of proteins where enhancers>promoters (codependent tfs): {np.mean(df_codependent['distal'] > df_codependent['proximal'])}")
-        if col=="241way_max":         # get proximal>4 and distal>4
-            df_outlier=df_pivot[(df_pivot["proximal"]>4) & (df_pivot["distal"]>4)].reset_index(drop=True)   
-            logger.info(f"Number of proteins where enhancers>4 and promoters>4: {df_outlier.protein.tolist()}")
-        # Create the plot
-        plt.figure(figsize=(2.3, 2.2))
+        df_codependent = df_pivot[df_pivot["cooperativity"] == "Synergistic"].reset_index(drop=True)
+        logger.info(f"{cell.upper()} | {col} | Redundant TFs enhancers > promoters: {np.mean(df_redundant['distal'] > df_redundant['proximal']):.2f}")
+        logger.info(f"{cell.upper()} | {col} | Synergistic TFs enhancers > promoters: {np.mean(df_codependent['distal'] > df_codependent['proximal']):.2f}")
+        #
+        # Special condition for outliers
+        if col == "241way_max":
+            df_outlier = df_pivot[(df_pivot["proximal"] > 4) & (df_pivot["distal"] > 4)].reset_index(drop=True)
+            logger.info(f"Outlier proteins (enhancer>4 and promoter>4): {df_outlier.protein.tolist()}")
+        #
+        # === PLOT ===
+        plt.figure(figsize=(2.6, 2.3))
         ax = plt.gca()
+        #
         for spine in ax.spines.values():
             spine.set_linewidth(0.5)
         #
-        # Use the custom palette in the scatterplot
-        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"].isin(["Redundant", "Codependent"])], hue="cooperativity", s=5, palette=custom_palette,legend=False)
-        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"]=="Intermediate"], hue="cooperativity_index", s=5, palette="coolwarm",legend=False,marker="x")
-        sns.scatterplot(x="proximal", y="distal", data=df_pivot[df_pivot["cooperativity"]=="Linear"], color="black", s=9, label="Linear",marker="$\circ$")
+        # Redundant and Synergistic
+        sns.scatterplot(
+            x="proximal", y="distal",
+            data=df_pivot[df_pivot["cooperativity"].isin(["Redundant", "Synergistic"])],
+            hue="cooperativity",
+            palette=custom_palette,
+            s=5, legend=False
+        )
         #
+        # Intermediate TFs with color gradient
+        intermediate_df = df_pivot[df_pivot["cooperativity"] == "Intermediate"]
+        norm = mcolors.Normalize(vmin=thresh_redun, vmax=thresh_codep)
+        cmap = cm.get_cmap("coolwarm")
+        sc = ax.scatter(
+            intermediate_df["proximal"], intermediate_df["distal"],
+            c=intermediate_df["cooperativity_index"],
+            cmap=cmap, norm=norm,
+            marker="x", s=5, linewidths=0.5
+        )
+        #
+        # Independent TFs
+        sns.scatterplot(
+            x="proximal", y="distal",
+            data=df_pivot[df_pivot["cooperativity"] == "Independent"],s=9, label="Independent", marker="o", facecolors='none',edgecolor="black"
+        )
+        #
+        # Diagonal reference line
         min_val = min(df_pivot["proximal"].min(), df_pivot["distal"].min())
         max_val = max(df_pivot["proximal"].max(), df_pivot["distal"].max())
         plt.plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.3)
         #
-        dummy_handle = Line2D([], [],
-                      marker='x',
-                      color='black',
-                      markersize=5,
-                      linestyle='None',
-                      markeredgewidth=0.5,
-                      label='Intermediate')
-        #   
-        # Get current handles and labels, and append the dummy handle:
-        handles, labels = ax.get_legend_handles_labels()
-        handles.append(dummy_handle)
-        labels.append("Intermediate")
-        ax.legend(handles=handles, labels=labels, title="TF Type", fontsize=5, title_fontsize=5,markerscale=0.5)
+        # Custom legend handles
+        legend_elements = [
+            Line2D([0], [0], marker='o', color='w', linestyle='None', label='Redundant',markerfacecolor=custom_palette["Redundant"], markersize=20),
+            Line2D([0], [0], marker='o', color='w', linestyle='None', label='Synergistic',markerfacecolor=custom_palette["Synergistic"], markersize=20),
+            Line2D([0], [0], marker='x', color='black', linestyle='None', label='Intermediate',markersize=20),
+            Line2D([0], [0], marker='o', markerfacecolor='none', color='black', linestyle='None', label='Independent',markersize=20)
+        ]
+        ax.legend(handles=legend_elements, title="TF Type", fontsize=5, title_fontsize=5, markerscale=0.2)
         #
-        plt.xlabel(f"{col} at proximal", fontsize=7)
-        plt.ylabel(f"{col} at distal", fontsize=7)
+        # Add colorbar for cooperativity index
+        cbar = plt.colorbar(sc, ax=ax)
+        cbar.ax.tick_params(labelsize=5)
+        cbar.set_label("Synergy score\n(Intermediate TFs)", fontsize=6)
+        #
+        # Labels and title
+        plt.title(f"{col}", fontsize=7)
+        plt.xlabel("Promoter proximal", fontsize=7)
+        plt.ylabel("Promoter distal", fontsize=7)
         plt.xticks(fontsize=5)
         plt.yticks(fontsize=5)
         plt.tight_layout()
         plt.savefig(f"scatter_proximal_vs_distal_{col}_{cell}.pdf")
         plt.close()
-
 

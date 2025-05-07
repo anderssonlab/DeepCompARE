@@ -16,7 +16,7 @@ import matplotlib
 matplotlib.rcParams['pdf.fonttype']=42
 
 
-# TODO: change "codependent" to "synergistic"
+
 
 # ----------------------------------------------------
 # Helper functions
@@ -27,11 +27,11 @@ def read_df_add_tf_coop(prefix,file_name):
     if "hepg2" in file_name:
         cell_line="hepg2"
         thresh_redun=0.48
-        thresh_codep=0.76
+        thresh_codep=0.78
     elif "k562" in file_name:
         cell_line="k562"
-        thresh_redun=0.44
-        thresh_codep=0.81
+        thresh_redun=0.43
+        thresh_codep=0.80
     else:
         raise ValueError("cell line not found")
     # add tf ci
@@ -46,10 +46,10 @@ def read_df_add_tf_coop(prefix,file_name):
 def count_tf(df,file_name):
     # count number of redundant and codependent TFs in each region
     df=df.groupby(["region","cooperativity"]).size().unstack(fill_value=0).reset_index()
-    df.rename(columns={"Codependent":"codependent_tf_count",
+    df.rename(columns={"Synergistic":"synergistic_tf_count",
                        "Redundant":"redundant_tf_count",
                        "Intermediate":"intermediate_tf_count",
-                       "Linear":"linear_tf_count"},inplace=True)
+                       "Independent":"independent_tf_count"},inplace=True)
     df["region_type"]=file_name
     return df
 
@@ -94,6 +94,7 @@ def preprocess(prefix,file_name):
     df=count_tf(df,file_name)
     # add sequence info
     df=add_seq_info(df,file_name)
+    df["dataset"]=file_name
     return df
 
 
@@ -104,10 +105,7 @@ df_distal_hepg2=preprocess(prefix,"distal_hepg2")
 df_proximal_k562=preprocess(prefix,"proximal_k562")
 df_distal_k562=preprocess(prefix,"distal_k562")
 
-df=pd.concat([df_proximal_hepg2.assign(dataset="proximal_hepg2"),
-              df_distal_hepg2.assign(dataset="distal_hepg2"),
-              df_proximal_k562.assign(dataset="proximal_k562"),
-              df_distal_k562.assign(dataset="distal_k562")],axis=0)
+df=pd.concat([df_proximal_hepg2,df_distal_hepg2,df_proximal_k562,df_distal_k562],axis=0)
 
 df=assign_region_type(df)
 
@@ -121,22 +119,26 @@ neighbor_pairs = [
 ]
 
 color_map = {
-    "redundant_tf_count": "dodgerblue",
-    "codependent_tf_count": "orangered",
+    "redundant_tf_count": "#1f77b4",
+    "synergistic_tf_count": "#d62728",
     "intermediate_tf_count": "grey",
-    "linear_tf_count": "black"
+    "independent_tf_count": "black"
 }
+
+
 
 for cell_line in ["k562", "hepg2"]:
     df_sub = df[df["cell_line"] == cell_line].reset_index(drop=True)
-    for col in ["redundant_tf_count", "codependent_tf_count", "intermediate_tf_count", "linear_tf_count"]:
+    for col in ["redundant_tf_count", "synergistic_tf_count", "intermediate_tf_count", "independent_tf_count"]:
         col_color = color_map[col]
         logger.info(f"Plotting {col} for {cell_line}")
-        plt.figure(figsize=(2.3, 2.3))
+        plt.figure(figsize=(1.4, 2))
         ax = plt.gca()
-        # thin frame  
-        for spine in ax.spines.values():
-            spine.set_linewidth(0.5)
+        # thin frame, no spine on top and right  
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        for spine in ['left', 'bottom']:
+            ax.spines[spine].set_linewidth(0.5)
         #
         # box plot with colored boxes and thin lines  
         if col!="linear_tf_count":
@@ -180,11 +182,11 @@ for cell_line in ["k562", "hepg2"]:
             x2 = df_sub["region_type"].cat.categories.get_loc(pair[1])
             #
             plt.plot([x1, x2], [y_position, y_position], lw=0.2, color='black')
-            plt.text((x1 + x2) / 2, y_position * 1.05, f"p={p_value:.2e}",
+            plt.text((x1 + x2) / 2, y_position * 1.05, f"p={p_value:.1e}",
                      ha='center', va='bottom', fontsize=5)
         #
         plt.xlabel("Region type", fontsize=7)
-        plt.ylabel(f"{col} count", fontsize=7)
+        plt.ylabel(f"{col}", fontsize=7)
         plt.xticks(fontsize=5,rotation=30)
         plt.yticks(fontsize=5)
         plt.tight_layout()
@@ -217,77 +219,79 @@ for cell_line in ["k562", "hepg2"]:
 #---------------------------------------
 # DHS: box plot for cooperativity index distribution of intermediate TFs (or all TFs)
 #---------------------------------------
-df_proximal_hepg2=read_df_add_tf_coop(prefix,"proximal_hepg2")
-df_distal_hepg2=read_df_add_tf_coop(prefix,"distal_hepg2")
-df_proximal_k562=read_df_add_tf_coop(prefix,"proximal_k562")
-df_distal_k562=read_df_add_tf_coop(prefix,"distal_k562")
+
+def preprocess2(prefix,file_name):
+    df=read_df_add_tf_coop(prefix,file_name)
+    df["dataset"]=file_name
+    # add sequence info
+    df=add_seq_info(df,file_name)
+    # remove na
+    df=df[~df["cooperativity_index"].isna()].reset_index(drop=True)
+    df=assign_region_type(df)
+    return df
 
 
-df_proximal_hepg2=add_seq_info(df_proximal_hepg2,"proximal_hepg2")
-df_distal_hepg2=add_seq_info(df_distal_hepg2,"distal_hepg2")
-df_proximal_k562=add_seq_info(df_proximal_k562,"proximal_k562")
-df_distal_k562=add_seq_info(df_distal_k562,"distal_k562")
 
-df=pd.concat([df_proximal_hepg2.assign(dataset="proximal_hepg2"),
-              df_distal_hepg2.assign(dataset="distal_hepg2"),
-              df_proximal_k562.assign(dataset="proximal_k562"),
-              df_distal_k562.assign(dataset="distal_k562")],axis=0)
+df_proximal_hepg2=preprocess2(prefix,"proximal_hepg2")
+df_distal_hepg2=preprocess2(prefix,"distal_hepg2")
+df_proximal_k562=preprocess2(prefix,"proximal_k562")
+df_distal_k562=preprocess2(prefix,"distal_k562")
 
 
-# select tf_type=="intermediate"
-df=df[df["cooperativity"]=="Intermediate"].reset_index(drop=True)
-df=assign_region_type(df)
-df=df[["region_type","cooperativity_index","cell_line"]]
+
+
+df=pd.concat([df_proximal_hepg2,df_distal_hepg2,df_proximal_k562,df_distal_k562],axis=0)
 
 # box plot cooperativity index by region type
-neighbor_pairs = [
-    ("distal_ts", "distal_ti"),
-    ("distal_ti", "proximal_ts"),
-    ("proximal_ts", "proximal_ti")
-]
 
-for cell in ["hepg2", "k562"]:
+
+def plot_synergy_by_region(df, cell, filename_prefix, neighbor_pairs):
     df_sub = df[df["cell_line"] == cell].reset_index(drop=True)
-    plt.figure(figsize=(2.3, 2.3))
+    plt.figure(figsize=(1.4, 2))
     ax = plt.gca()
-    # thin frame  
-    for spine in ax.spines.values():
-        spine.set_linewidth(0.5)
+    
+    # Customize plot spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    for spine in ['left', 'bottom']:
+        ax.spines[spine].set_linewidth(0.5)
+
+    # Ensure region_type is categorical with correct order
+    region_order = ["distal_ts", "distal_ti", "proximal_ts", "proximal_ti"]
+    df_sub["region_type"] = pd.Categorical(df_sub["region_type"], categories=region_order, ordered=True)
+
+    # Create boxplot
     sns.boxplot(
         x="region_type",
         y="cooperativity_index",
         data=df_sub,
-        order=["distal_ts", "distal_ti", "proximal_ts", "proximal_ti"],
+        order=region_order,
         linewidth=0.5,
         boxprops={'facecolor': 'none'},
         whiskerprops={'color': 'black'},
         capprops={'color': 'black'}
     )
     plt.xticks(rotation=30)
-    #
-    # Calculate and annotate Mann-Whitney U test p-values
+
+    # Annotate Mann-Whitney U test p-values
     for pair in neighbor_pairs:
         group1 = df_sub[df_sub["region_type"] == pair[0]]["cooperativity_index"]
         group2 = df_sub[df_sub["region_type"] == pair[1]]["cooperativity_index"]
         stat, p_value = mannwhitneyu(group1, group2, alternative='two-sided')
-        # Determine y position for annotation (using 95th percentile as reference)
         y_max = max(group1.quantile(0.95), group2.quantile(0.95))
-        y_position = y_max * 1.05  # Adjust as needed
-        # Get x-axis positions based on the categorical order
-        x1 = df_sub["region_type"].cat.categories.get_loc(pair[0])
-        x2 = df_sub["region_type"].cat.categories.get_loc(pair[1])
-        # Draw a line connecting the two groups
+        y_position = y_max * 1.05
+        x1 = region_order.index(pair[0])
+        x2 = region_order.index(pair[1])
         plt.plot([x1, x2], [y_position, y_position], lw=0.2, color='black')
-        # Add p-value text; adjust multiplier to position text closer to the line if needed
-        plt.text((x1 + x2) / 2, y_position * 1.05, f"p={p_value:.2e}",
+        plt.text((x1 + x2) / 2, y_position * 1.05, f"p={p_value:.1e}",
                  ha='center', va='bottom', fontsize=5)
-    #
+
     plt.xlabel("Region type", fontsize=7)
-    plt.ylabel("Cooperativity index", fontsize=7)
+    plt.ylabel("Synergy score", fontsize=7)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
     plt.tight_layout()
-    plt.savefig(f"intermediate_tf_ci_by_region_type_{cell}.pdf")
+    plt.savefig(f"{filename_prefix}_{cell}.pdf")
     plt.close()
 
 
@@ -296,7 +300,29 @@ for cell in ["hepg2", "k562"]:
 
 
 
-# nohup python3 re_ci.py > re_ci.out &
+
+
+neighbor_pairs = [
+    ("distal_ts", "distal_ti"),
+    ("distal_ti", "proximal_ts"),
+    ("proximal_ts", "proximal_ti")
+]
+
+
+# Plot for all TFs
+for cell in ["hepg2", "k562"]:
+    plot_synergy_by_region(df, cell, "tf_ci_by_region_type", neighbor_pairs)
+
+# Filter and plot for Intermediate TFs
+df_intermediate = df[df["cooperativity"] == "Intermediate"].reset_index(drop=True)
+for cell in ["hepg2", "k562"]:
+    plot_synergy_by_region(df_intermediate, cell, "intermediate_tf_ci_by_region_type", neighbor_pairs)
+
+
+
+
+
+# nohup python3 analyze_dhs.py > analyze_dhs.log 2>&1 &
 
 
 
