@@ -43,16 +43,16 @@ for cell_line in ["hepg2","k562"]:
     #
     
     # scatter plot for gini and cooperativity index
-    plt.figure(figsize=(2.5,2.5))
+    plt.figure(figsize=(2.3,2.3))
     # thin frame
     plt.gca().spines['top'].set_linewidth(0.5)
     plt.gca().spines['right'].set_linewidth(0.5)
     plt.gca().spines['bottom'].set_linewidth(0.5)
     plt.gca().spines['left'].set_linewidth(0.5)
-    sns.scatterplot(y="gini",x="cooperativity_index",data=df_tf,hue="cooperativity",palette={"Intermediate":"gray","Synergistic":"#d62728" ,"Redundant":"#1f77b4"},s=5)
+    sns.scatterplot(y="gini",x="cooperativity_index",data=df_tf,hue="cooperativity",palette={"Intermediate":"gray","Synergistic":"#d62728" ,"Redundant":"#1f77b4"},s=5,alpha=0.5)
     # add pearson correlation and p
     r,p=pearsonr(df_tf["gini"],df_tf["cooperativity_index"])
-    plt.text(0.2,1.2,f"r={r:.2f}\np={p:.2e}",fontsize=5)
+    plt.text(0.1,1.2,f"Pearson R={r:.2f}\nP={p:.2e}",fontsize=5)
     # Add horizontal median lines for each cooperativity group
     group_colors = {"Intermediate":"gray", "Synergistic":"#d62728", "Redundant":"#1f77b4"}
     median_x_positions = {
@@ -72,6 +72,7 @@ for cell_line in ["hepg2","k562"]:
     # xticks should include 
     plt.xticks([0,0.3,0.7,1],fontsize=5)
     plt.yticks([0.2,0.4,0.6,0.8,1,1.2,1.4],fontsize=5)
+    plt.title(cell_line, fontsize=7)
     plt.tight_layout()
     plt.savefig(f"gini_vs_ci_{cell_line}_{suffix}.pdf")
     plt.close()

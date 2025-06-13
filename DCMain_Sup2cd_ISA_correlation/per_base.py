@@ -50,7 +50,7 @@ corr_list_ism_isa=[]
 corr_list_ism_gradxinp=[]
 corr_list_isa_gradxinp=[]
 
-for file_name in ["promoters_hepg2","enhancers_hepg2","promoters_k562","enhancers_k562"]:
+for file_name in ["promoters_hepg2","enhancers_hepg2","promoters_k562","enhancers_k562"]: # 16775+15238+12614+10450 
     logger.info(f"Processing {file_name}")
     df_ism=pd.read_csv(f"{file_path}/ism_{file_name}.csv",index_col=0).reset_index(drop=True).round(3)
     df_isa=pd.read_csv(f"{file_path}/isa_{file_name}.csv",index_col=0).reset_index(drop=True).round(3)

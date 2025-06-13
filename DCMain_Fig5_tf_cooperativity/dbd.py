@@ -33,17 +33,17 @@ df=df[df.DBD.isin(dbds_retain)].reset_index(drop=True)
 order=df.groupby("DBD")["cooperativity_index"].mean().sort_values(ascending=False).index
 df["DBD"] = pd.Categorical(df["DBD"], categories=order, ordered=True)
 
-plt.figure(figsize=(5,2.5))
+plt.figure(figsize=(3,4.5))
 # thin frame, linewidth 0.5
 plt.gca().spines['top'].set_linewidth(0.5)
 plt.gca().spines['right'].set_linewidth(0.5)
 plt.gca().spines['left'].set_linewidth(0.5)
 plt.gca().spines['bottom'].set_linewidth(0.5)
 # small fliers
-sns.boxplot(data=df,x="DBD",y="cooperativity_index",hue="cell",palette="Set2",linewidth=0.5,fliersize=1)
+sns.boxplot(data=df,y="DBD",x="cooperativity_index",hue="cell",palette="Set2",linewidth=0.5,fliersize=1)
 # rotate x-axis labels
-plt.xlabel("DNA-binding domain (DBD)", fontsize=7)
-plt.ylabel("TF synergy score", fontsize=7)
+plt.ylabel("DNA-binding domain (DBD)", fontsize=7)
+plt.xlabel("TF synergy score", fontsize=7)
 plt.xticks(rotation=90, fontsize=5)
 plt.yticks(fontsize=5)
 plt.legend(fontsize=5, title_fontsize=5)

@@ -48,10 +48,10 @@ def get_corr(df):
 #----------------
 # Data generation
 #----------------
-df_promoters_hepg2=read_file("promoters_hepg2")
-df_enhancers_hepg2=read_file("enhancers_hepg2")
-df_promoters_k562=read_file("promoters_k562")
-df_enhancers_k562=read_file("enhancers_k562")
+df_promoters_hepg2=read_file("promoters_hepg2") # 202713
+df_enhancers_hepg2=read_file("enhancers_hepg2") # 230086
+df_promoters_k562=read_file("promoters_k562") # 271749
+df_enhancers_k562=read_file("enhancers_k562") # 211824
 
 df=pd.concat([df_promoters_hepg2,df_enhancers_hepg2,df_promoters_k562,df_enhancers_k562],axis=0)
 # shuffle row

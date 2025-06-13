@@ -2,8 +2,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import pearsonr,mannwhitneyu
-from adjustText import adjust_text
+
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")

@@ -32,7 +32,7 @@ threshold_dict={"hepg2":{"pe":[0.3,0.7],"dhs":[0.48,0.78]},
 
 
 for cell_line in ["hepg2","k562"]:
-    for suffix in ["pe","dhs"]:
+    for suffix in ["pe"]:
         for col in ["cooperativity_index","linearity_index"]:
             logger.info(f"Processing {cell_line}, {suffix}, {col}")
             df_tf=pd.read_csv(f"/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_{cell_line}_{suffix}.csv")
@@ -63,10 +63,10 @@ for cell_line in ["hepg2","k562"]:
             stat,p=mannwhitneyu(df_pf[col],df_non_pf[col])
             logger.info(f"PF vs non-PF: {p}")
 
-            plt.figure(figsize=(3.1,3.1))
+            plt.figure(figsize=(2.5,1.8))
             # thin frame
-            plt.gca().spines['top'].set_linewidth(0.5)
-            plt.gca().spines['right'].set_linewidth(0.5)
+            plt.gca().spines['top'].set_visible(False)
+            plt.gca().spines['right'].set_visible(False)
             plt.gca().spines['bottom'].set_linewidth(0.5)
             plt.gca().spines['left'].set_linewidth(0.5)
             sns.scatterplot(x="rank",y=col,data=df_tf,s=1,color='black')
@@ -88,6 +88,7 @@ for cell_line in ["hepg2","k562"]:
             # add legend for text color
             plt.scatter([],[],color='#4169E1',label='Universal stripe factors')
             plt.scatter([],[],color='darkorange',label='Pioneer factors')
+            # smaller markers
             plt.legend(fontsize=5,loc='lower right')
             # label 7
             plt.xlabel("Rank",fontsize=7)

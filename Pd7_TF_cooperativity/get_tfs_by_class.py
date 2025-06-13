@@ -27,8 +27,8 @@ def write_tfs_by_class(path,suffix,thresh_redun,thresh_codep):
 write_tfs_by_class("tf_cooperativity_index_hepg2_pe.csv","hepg2_pe",0.3,0.7)
 write_tfs_by_class("tf_cooperativity_index_k562_pe.csv","k562_pe",0.3,0.7)
 
-write_tfs_by_class("tf_cooperativity_index_hepg2_dhs.csv","hepg2_dhs",0.48,0.76)
-write_tfs_by_class("tf_cooperativity_index_k562_dhs.csv","k562_dhs",0.44,0.81)
+write_tfs_by_class("tf_cooperativity_index_hepg2_dhs.csv","hepg2_dhs",0.48,0.78)
+write_tfs_by_class("tf_cooperativity_index_k562_dhs.csv","k562_dhs",0.43,0.80)
 
 
 

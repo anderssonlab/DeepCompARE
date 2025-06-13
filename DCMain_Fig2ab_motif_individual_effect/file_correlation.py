@@ -43,10 +43,10 @@ data_dstat = {
 
 # Define the four comparisons as tuples: (x_category, y_category, plot_title)
 comparisons = [
-    ("Promoter HepG2","Enhancer HepG2", "HepG2: promoter vs. enhancer"),
-    ("Promoter K562", "Enhancer K562", "K562: promoter v.s. enhancer"),
-    ("Promoter HepG2", "Promoter K562", "Promoter: HepG2 v.s. K562"),
-    ("Enhancer HepG2", "Enhancer K562", "Enhancer: HepG2 v.s. K562"),
+    ("Promoter HepG2","Enhancer HepG2", "HepG2: promoter vs enhancer"),
+    ("Promoter K562", "Enhancer K562", "K562: promoter vs enhancer"),
+    ("Promoter HepG2", "Promoter K562", "Promoter: HepG2 vs K562"),
+    ("Enhancer HepG2", "Enhancer K562", "Enhancer: HepG2 vs K562"),
 ]
 
 # Create subplot layout
@@ -60,7 +60,7 @@ for ax, (x_cat, y_cat, title) in zip(axes, comparisons):
     # Compute the Pearson correlation coefficient and annotate the plot
     corr = data_dstat[x_cat].corr(data_dstat[y_cat])
     ax.annotate(f"r = {corr:.2f}", xy=(0.5, 0.9), xycoords='axes fraction',
-                ha='center', fontsize=5, color='black')
+                ha='center', fontsize=7, color='black')
     
     # Set titles and axis labels
     ax.set_title(title, fontsize=7)

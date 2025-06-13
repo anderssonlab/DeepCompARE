@@ -11,6 +11,11 @@ matplotlib.rcParams['pdf.fonttype']=42
 
 
 
+import sys
+sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
+from plotting import format_text
+
+
 
 
 
@@ -28,30 +33,29 @@ df_mt['file'] = pd.Categorical(df_mt['file'], categories=sorted(df_mt['file'].un
 def plot_performance(df, output_filename, title, color_col,
                      x_label="Dataset", y_label="Pearson correlation",
                      jitter_step=0.2):
-    # Group by color_col and 'file' and compute mean, std, and count
+    # Group and compute statistics
     df_grouped = df.groupby([color_col, 'file'])['pcc'].agg(
-        mean_pcc = 'mean',
-        std_pcc  = 'std',
-        count_pcc= 'count'
+        mean_pcc='mean',
+        std_pcc='std',
+        count_pcc='count'
     ).reset_index()
-    # Compute standard error and 95% confidence intervals
+    # Calculate standard error and confidence intervals
     df_grouped['sem_pcc'] = df_grouped['std_pcc'] / np.sqrt(df_grouped['count_pcc'])
-    df_grouped['ci_low']  = df_grouped['mean_pcc'] - 1.96 * df_grouped['sem_pcc']
+    df_grouped['ci_low'] = df_grouped['mean_pcc'] - 1.96 * df_grouped['sem_pcc']
     df_grouped['ci_high'] = df_grouped['mean_pcc'] + 1.96 * df_grouped['sem_pcc']
-    # Create unique x-positions for each file
+    # Map files to x-axis positions
     files = sorted(df_grouped['file'].unique())
     file_to_x = {f: i for i, f in enumerate(files)}
-    # Get unique data categories and sort them for plotting order
     data_categories = sorted(df_grouped[color_col].unique())
+    # Initialize figure and axis
     plt.figure(figsize=(3, 2.5))
-    # Set thin frame and tick properties for better aesthetics
     ax = plt.gca()
     for spine in ax.spines.values():
         spine.set_linewidth(0.5)
     ax.tick_params(axis='both', which='both', width=0.5)
-    # Initialize a jitter offset (will increment for each data category)
+    # Plot data with jittered x positions
     jitter = 0
-    colors=['tab:blue', 'tab:orange']
+    colors = ['tab:blue', 'tab:orange']
     for i, data_name in enumerate(data_categories):
         df_subset = df_grouped[df_grouped[color_col] == data_name]
         for _, row in df_subset.iterrows():
@@ -64,7 +68,7 @@ def plot_performance(df, output_filename, title, color_col,
                 mean_y,
                 color=colors[i],
                 s=5,
-                label=None  # prevent repeated labels
+                label=None
             )
             plt.errorbar(
                 x_val,
@@ -76,25 +80,21 @@ def plot_performance(df, output_filename, title, color_col,
                 elinewidth=1,
             )
         jitter += jitter_step
-    # Create legend handles (one per category)
-    for i,data_name in enumerate(data_categories):
-        plt.scatter([], [], color=colors[i], label=data_name, s=10)
-    #
+    # Draw legend with formatted category names
+    for i, data_name in enumerate(data_categories):
+        plt.scatter([], [], color=colors[i], label=format_text(data_name), s=10)
     plt.legend(fontsize=5)
-    # Configure x and y ticks
-    plt.xticks(range(len(files)), files, fontsize=5, rotation=45)
+    # Set x and y ticks
+    formatted_files = [format_text(f) for f in files]
+    plt.xticks(range(len(files)), formatted_files, fontsize=5, rotation=30)
     plt.yticks(fontsize=5)
-    # Set axes labels and title
-    plt.xlabel(x_label, fontsize=7, labelpad=0)
-    plt.ylabel(y_label, fontsize=7)
-    plt.title(title, fontsize=7)
+    # Add labels and title
+    plt.xlabel(format_text(x_label), fontsize=7, labelpad=0)
+    plt.ylabel(format_text(y_label), fontsize=7)
+    plt.title(format_text(title), fontsize=7)
     plt.tight_layout()
-    # Save and close the figure
     plt.savefig(output_filename, dpi=300)
     plt.close()
-    
-
-
 
 
 #------------------------------------------
@@ -106,10 +106,10 @@ df_reg=df_mt[df_mt['model_type']=='Reg'].copy().reset_index(drop=True)
 
 # remove  df_reg.data_dir start with "Dataset_5cv_with_multilabel"
 df_reg=df_reg[~df_reg['data_dir'].str.startswith("Dataset_5cv_with_multilabel")].copy().reset_index(drop=True)
-df_reg['data']=df_reg['data_dir'].apply(lambda x: 'Credible regions' if x.startswith("Dataset_5cv_without_multilabel") else 'Loose positive')
+df_reg['data']=df_reg['data_dir'].apply(lambda x: 'Credible subset' if x.startswith("Dataset_5cv_without_multilabel") else 'All positive regions')
 
 
-plot_performance(df_reg, "credible_vs_loose.pdf", "Credible region","data")
+plot_performance(df_reg, "credible_subset_vs_all.pdf", "Credible subset","data")
 
 
 

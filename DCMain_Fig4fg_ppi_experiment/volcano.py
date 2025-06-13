@@ -55,7 +55,7 @@ for bait in bait_list:
     df_bait["-log10_pvalue"] = df_bait["pvalue"].apply(lambda x: -1 if x == 0 else -1 * np.log10(x))
 
     
-    plt.figure(figsize=(2,2)) # (2.8,2.6) for main. (2,2) for sup
+    plt.figure(figsize=(1.9,1.9)) # (2.8,2.6) for main. (1.9,1.9) for sup
     # Adjust thin frame
     for spine in plt.gca().spines.values():
         spine.set_linewidth(0.5)

@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import pandas as pd
 from sklearn.metrics import roc_curve,auc,precision_recall_curve
 import matplotlib.pyplot as plt
@@ -9,6 +7,7 @@ from matplotlib.pyplot import figure
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from prediction import write_predictions 
+from plotting import format_text
 from utils_metrics import *
 
 
@@ -21,10 +20,10 @@ matplotlib.rcParams['pdf.fonttype']=42
 #-------------------------------------------------------
 # Task1: Generate Pd3_DeepCompare_performance/: Write DeepCompare predictions
 #------------------------------------------------------
-for suffix in ["train", "test", "val"]:
-    write_predictions(data_path=f"/isdata/alab/people/pcr980/DeepCompare/Datasets/Dataset_final_rep/dat_{suffix}.csv",
-                      seq_colname="seq",
-                      out_path=f"/isdata/alab/people/pcr980/DeepCompare/Test/Pd3_DeepCompare_performance/pred_dat_{suffix}.csv")
+# for suffix in ["train", "test", "val"]:
+#     write_predictions(data_path=f"/isdata/alab/people/pcr980/DeepCompare/Datasets/Dataset_final_rep/dat_{suffix}.csv",
+#                       seq_colname="seq",
+#                       out_path=f"/isdata/alab/people/pcr980/DeepCompare/Test/Pd3_DeepCompare_performance/pred_dat_{suffix}.csv")
 
 
 
@@ -64,69 +63,60 @@ color_list = [
     "#8B008B", "#D8BFD8"   # Redder Dark Purple (Dark Magenta) and Light Purple
 ]
 
-def plot_roc(df_truth_class,df_pred_class):
+def plot_roc(df_truth_class, df_pred_class):
     figure(figsize=(3, 3))
-    # thin frame
     ax = plt.gca()
     ax.spines['top'].set_linewidth(0.5)
     ax.spines['bottom'].set_linewidth(0.5)
     ax.spines['left'].set_linewidth(0.5)
     ax.spines['right'].set_linewidth(0.5)
-    # Set tick parameters to make ticks thinner
     ax.tick_params(axis='both', which='both', width=0.5)
     for i in range(8):
-        pred,truth=mask_neg1(df_pred_class.iloc[:,i],df_truth_class.iloc[:,i])
-        fpr,tpr,_=roc_curve(truth,pred)
+        pred, truth = mask_neg1(df_pred_class.iloc[:, i], df_truth_class.iloc[:, i])
+        fpr, tpr, _ = roc_curve(truth, pred)
         roc_auc = auc(fpr, tpr)
-        dataset=df_pred_class.columns[i]
-        plt.plot(fpr, tpr, label = dataset+': %0.2f' % roc_auc,color=color_list[i],linewidth=0.5)
-    #
-    plt.plot([0,1],[0,1],linestyle="dotted",color="black",linewidth=0.5)
-    plt.legend(loc = 'lower right',fontsize=5, title_fontsize=5, title="Area under curve")
-    plt.title("Classification performance:\nReceiver operating characteristic",fontsize=7)
-    plt.xlabel("False positive rate",fontsize=7)
-    plt.ylabel("True positive rate",fontsize=7)
+        dataset = format_text(df_pred_class.columns[i])
+        plt.plot(fpr, tpr, label=f"{dataset}: {roc_auc:.2f}", color=color_list[i], linewidth=0.5)
+    plt.plot([0, 1], [0, 1], linestyle="dotted", color="black", linewidth=0.5)
+    plt.legend(loc='lower right', fontsize=5, title_fontsize=5, title=format_text("Area_under_curve"))
+    plt.title(format_text("Classification_performance:\nReceiver_operating_characteristic"), fontsize=7)
+    plt.xlabel(format_text("False_positive_rate"), fontsize=7)
+    plt.ylabel(format_text("True_positive_rate"), fontsize=7)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
     plt.tight_layout()
-    plt.savefig("roc.pdf",dpi=300)
+    plt.savefig("roc.pdf", dpi=300)
     plt.close()
-
 
 plot_roc(df_truth_class,df_pred_class)
 
 
 
 
-
-def plot_prc(df_truth_class,df_pred_class):
+def plot_prc(df_truth_class, df_pred_class):
     figure(figsize=(3, 3))
-    # thin frame
     ax = plt.gca()
     ax.spines['top'].set_linewidth(0.5)
     ax.spines['bottom'].set_linewidth(0.5)
     ax.spines['left'].set_linewidth(0.5)
     ax.spines['right'].set_linewidth(0.5)
-    # Set tick parameters to make ticks thinner
     ax.tick_params(axis='both', which='both', width=0.5)
     for i in range(8):
-        pred,truth=mask_neg1(df_pred_class.iloc[:,i],df_truth_class.iloc[:,i])
-        precision,recall,_=precision_recall_curve(truth,pred)
-        auprc=auc(recall,precision)
-        dataset=df_pred_class.columns[i]
-        plt.plot(recall, precision, label = dataset+': %0.2f' % auprc,color=color_list[i],linewidth=0.5)
-    #
-    plt.plot([0,1],[1,0],linestyle="dotted",color="black",linewidth=0.5)
-    plt.legend(loc = 'lower left',fontsize=5, title_fontsize=5, title="Area under curve")
-    plt.title("Classification performance:\nPrecision recall curve",fontsize=7)
-    plt.xlabel("Recall",fontsize=7)
-    plt.ylabel("Precision",fontsize=7)
+        pred, truth = mask_neg1(df_pred_class.iloc[:, i], df_truth_class.iloc[:, i])
+        precision, recall, _ = precision_recall_curve(truth, pred)
+        auprc = auc(recall, precision)
+        dataset = format_text(df_pred_class.columns[i])
+        plt.plot(recall, precision, label=f"{dataset}: {auprc:.2f}", color=color_list[i], linewidth=0.5)
+    plt.plot([0, 1], [1, 0], linestyle="dotted", color="black", linewidth=0.5)
+    plt.legend(loc='lower left', fontsize=5, title_fontsize=5, title=format_text("Area_under_curve"))
+    plt.title(format_text("Classification_performance:\nPrecision_recall_curve"), fontsize=7)
+    plt.xlabel(format_text("Recall"), fontsize=7)
+    plt.ylabel(format_text("Precision"), fontsize=7)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
     plt.tight_layout()
-    plt.savefig("prc.pdf",dpi=300)
+    plt.savefig("prc.pdf", dpi=300)
     plt.close()
-
 
 plot_prc(df_truth_class,df_pred_class)
 
@@ -138,33 +128,25 @@ plot_prc(df_truth_class,df_pred_class)
 df=pd.read_csv("Pd3_DeepCompare_performance/metrics.csv")
 
 
-
 figure(figsize=(3, 2.5))
-# thin frame
 ax = plt.gca()
 ax.spines['top'].set_linewidth(0.5)
 ax.spines['bottom'].set_linewidth(0.5)
 ax.spines['left'].set_linewidth(0.5)
 ax.spines['right'].set_linewidth(0.5)
-# Set tick parameters to make ticks thinner
 ax.tick_params(axis='both', which='both', width=0.5)
-# Plot each point with its corresponding color, shape, and label
+
+# Plot each point with its corresponding color
 for i, row in df.iterrows():
-    plt.scatter(row['file'], row['pcc'], color=color_list[i], s=5)
-    # plt.scatter(row['file'], row['pcc_class'], facecolors='none', edgecolors=color_list[i], marker='o')
+    plt.scatter(format_text(row['file']), row['pcc'], color=color_list[i], s=5)
 
-plt.ylim(bottom=0,top=1)
-plt.xticks(rotation=45,fontsize=5)
+plt.ylim(bottom=0, top=1)
+plt.xticks(rotation=30, fontsize=5)
 plt.yticks(fontsize=5)
-plt.xlabel('Dataset',fontsize=7)
-plt.ylabel('Pearson correlation',fontsize=7)
-plt.title("Regression Performance",fontsize=7)
-# add invisible dots for legend
-# plt.scatter([], [], facecolors='none', edgecolors='black', label='Regression', s=5)
-# plt.scatter([], [], facecolors='none', edgecolors='black', marker='o', label='Classification (z value)')
-# plt.legend(fontsize=5)
+plt.xlabel(format_text("Dataset"), fontsize=7)
+plt.ylabel(format_text("Pearson_correlation"), fontsize=7)
+plt.title(format_text("Regression_Performance"), fontsize=7)
 plt.tight_layout()
-plt.savefig("pcc.pdf",dpi=300)
+plt.savefig("pcc.pdf", dpi=300)
 plt.close()
-
 

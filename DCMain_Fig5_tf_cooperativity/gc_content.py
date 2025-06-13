@@ -51,8 +51,8 @@ for cell_line in ["hepg2","k562"]:
         "tf_type",
         "gc_content",
         "TFBS Type",
-        "Motif GC percentage",
-        None,
+        "Motif GC fraction",
+        cell_line,
         30,
         f"gc_content_{cell_line}.pdf")
 

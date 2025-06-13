@@ -42,7 +42,7 @@ for cell_line in ["hepg2", "k562"]:
         y_col="cooperativity_index",
         x_label="Reported PPI",
         y_label="Synergy score",
-        title=None,
+        title=cell_line,
         rotation=0,
         output_file=f"ppi_reported_ppi_ci_{cell_line}.pdf"
     )
@@ -54,7 +54,7 @@ for cell_line in ["hepg2", "k562"]:
     y_col="linearity_index",
     x_label="Reported PPI",
     y_label="Independence score",
-    title=None,
+    title=cell_line,
     rotation=0,
     output_file=f"ppi_reported_ppi_li_{cell_line}.pdf"
 )
@@ -70,7 +70,7 @@ for cell_line in ["hepg2", "k562"]:
             y_col="cooperativity_index",
             x_label=col,
             y_label="Synergy score",
-            title=None,
+            title=cell_line,
             rotation=0,
             output_file=f"ppi_{col}_ci_{cell_line}.pdf"
         )

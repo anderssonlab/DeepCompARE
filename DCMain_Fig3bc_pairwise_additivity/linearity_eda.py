@@ -20,11 +20,11 @@ def plot_linear_nonlinear_distance(df,cell):
     df=df[df["nonlinear_count"]>10].reset_index(drop=True)
     plt.figure(figsize=(2,2))
     # thin frame
-    plt.gca().spines['top'].set_linewidth(0.5)
-    plt.gca().spines['right'].set_linewidth(0.5)
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
     plt.gca().spines['bottom'].set_linewidth(0.5)
     plt.gca().spines['left'].set_linewidth(0.5)
-    sns.scatterplot(data=df,x="linear_distance",y="nonlinear_distance",alpha=0.5, s=3)
+    sns.scatterplot(data=df,x="linear_distance",y="nonlinear_distance",alpha=0.5, s=1)
     # count how many points are below the diagonal line
     logger.info(f"Percentage of points below diagonal line: {df[df['linear_distance']<df['nonlinear_distance']].shape[0]/df.shape[0]}")
     plt.xlabel("Independent cases", fontsize=7)
@@ -63,7 +63,7 @@ def plot_hist(df,cell,col,xlabel,outpath):
 
 
 
-for cell in ['k562','hepg2']:
+for cell in ['hepg2','k562']:
     df=pd.read_csv(f'/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_pair_cooperativity_index_{cell}_pe.csv')
     df["total_count"]=df["nonlinear_count"]+df["linear_count"]
     df=df[df["total_count"]>10].reset_index(drop=True)

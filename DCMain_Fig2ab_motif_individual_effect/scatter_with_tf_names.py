@@ -31,7 +31,7 @@ def plot_scatter_with_bias(data, x_column, y_column, title, output_filename):
     )
     #
     # Plot setup
-    plt.figure(figsize=(2.7,2.8)) # 2.8 for main figure, 3.2 for supplementary
+    plt.figure(figsize=(2.7,2.8)) # (2.7,2.8) for main figure, 3.2 for supplementary
     ax = plt.gca()
     ax.spines['top'].set_linewidth(0.5)
     ax.spines['right'].set_linewidth(0.5)

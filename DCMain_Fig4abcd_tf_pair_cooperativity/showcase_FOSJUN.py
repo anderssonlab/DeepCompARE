@@ -12,6 +12,9 @@ import matplotlib
 matplotlib.rcParams['pdf.fonttype']=42
 
 
+thresh=0.1
+
+
 def read_file(file_name):
     df=pd.read_csv(file_name)
     df["distance"]=np.abs(df["start_rel2"]-df["start_rel1"])
@@ -64,13 +67,18 @@ def plot(df, tf, track, title, out_file):
     min_val = min(df_sub[f'isa2_wo_1_{track}'].min(), df_sub[f'isa2_{track}'].min())
     max_val = max(df_sub[f'isa2_wo_1_{track}'].max(), df_sub[f'isa2_{track}'].max())
     # Identify codependent and redundant pairs
-    # df_codependent = df_sub[df_sub[f'isa2_wo_1_{track}'] < df_sub[f'isa2_{track}']]
-    # df_redundant = df_sub[df_sub[f'isa2_wo_1_{track}'] > df_sub[f'isa2_{track}']]
+    df_sub["diff"]=df_sub[f'isa2_{track}']-df_sub[f'isa2_wo_1_{track}']
+    df_codependent = df_sub[(df_sub["diff"] > thresh)]
+    df_redundant = df_sub[(df_sub["diff"] < -thresh)]
     # Annotate number of codependent and redundant pairs
-    # plt.text(min_val + 0.1, max_val - 0.1, f"{df_codependent.shape[0]}\n upper-diagonal pairs", fontsize=5)
-    # plt.text(min_val + 0.2, min_val + 0.1, f"{df_redundant.shape[0]} \nlower-diagonal pairs", fontsize=5)
+    plt.text(min_val + 0.1, max_val - 0.2, f"upper-diagonal:\n{df_codependent.shape[0]} pairs", fontsize=5)
+    plt.text(min_val + 0.8, min_val + 0.1, f"lower-diagonal:\n{df_redundant.shape[0]} pairs", fontsize=5)
     # Add diagonal reference line
     plt.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='--', linewidth=0.1)
+    # add y=x-0.01
+    plt.plot([min_val, max_val], [min_val+thresh, max_val+thresh], color='black', linestyle='--', linewidth=0.1)
+    # add y=x+0.01
+    plt.plot([min_val, max_val], [min_val-thresh, max_val-thresh], color='black', linestyle='--', linewidth=0.1)
     # Labels and formatting
     plt.xlabel("SuRE ISA without partner", fontsize=7)
     plt.ylabel("SuRE ISA with partner", fontsize=7)
@@ -78,6 +86,7 @@ def plot(df, tf, track, title, out_file):
     yticks = [0,0.5,1,1.5,2]
     plt.xticks(xticks, fontsize=5)
     plt.yticks(yticks, fontsize=5)
+    plt.title(title, fontsize=7)
     plt.tight_layout()
     # tight margin
     plt.margins(0.01)
@@ -88,8 +97,8 @@ def plot(df, tf, track, title, out_file):
 
 
 # find TF very different in promoter v.s. enhancer
-df_ci_enhancers=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_enhancer.csv")
-df_ci_promoters=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_promoter.csv")
+df_ci_enhancers=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_k562_enhancer_pe.csv")
+df_ci_promoters=pd.read_csv("/isdata/alab/people/pcr980/DeepCompare/Pd7_TF_cooperativity/tf_cooperativity_index_k562_promoter_pe.csv")
 df=pd.merge(df_ci_enhancers,df_ci_promoters,on=["protein2"],suffixes=("_enhancer","_promoter"))
 df=df[df["c_sum_enhancer"]>10].reset_index(drop=True)
 df=df[df["c_sum_promoter"]>10].reset_index(drop=True)
@@ -105,5 +114,6 @@ df.to_csv("temp.csv",index=False)
 df_enhancers_k562=read_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_enhancers_k562.csv")
 df_promoters_k562=read_file("/isdata/alab/people/pcr980/DeepCompare/Pd6_mutate_pair/mutate_pairs_promoters_k562.csv")
 
-plot(df_enhancers_k562,"FOS::JUN","sure","Enhancers K562", "FOSJUN_enhancers_k562_sure.pdf")
-plot(df_promoters_k562,"FOS::JUN","sure","Promoters K562", "FOSJUN_promoters_k562_sure.pdf")
+tf="FOS::JUN"
+plot(df_enhancers_k562,tf,"sure","Enhancers K562",f"{tf}_enhancers_k562.pdf")
+plot(df_promoters_k562,tf,"sure","Promoters K562", f"{tf}_promoters_k562.pdf")
