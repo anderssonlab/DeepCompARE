@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import pandas as pd
 import matplotlib.ticker as ticker
+from loguru import logger
+from scipy.stats import pearsonr
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
@@ -121,7 +123,7 @@ def plot_motif_imp(df_motif,ax,ylim):
         prev_text_pos=current_text_pos
     #  set labels
     ax.set_title("Motif ISA",fontsize=7)
-    ax.tick_params(axis='y', which='major', labelsize=7)
+    ax.tick_params(axis='y', which='major', labelsize=5)
     ax.set_xticks([])
     ax.set_ylim(ylim)
 
@@ -166,37 +168,45 @@ def plot_region_4panels(seq_extractor,jaspar_annotator, df_truth, element_name, 
     ymax=max(max(ism),max(isa))
     ymin=min(min(ism),min(isa))
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True, figsize = (180/25.4, 110/25.4))
-    # Plot ISA score on the first axis
-    plot_motif_imp(df_motif, ax1,(ymin,ymax))
-    # plot isa on the second axis
-    df_n= pd.DataFrame({"position":list(range(len(isa))),"base":list(seq),"imp":isa})
-    plot_base_imp(df_n,ax2)
-    # customize ax2
-    ax2.set_title("ISA (Base replaced by N)",fontsize=7)
-    ax2.tick_params(axis='y', which='major', labelsize=7)
-    ax2.set_ylim((ymin,ymax))
-    # plot ism on the third axis
-    df_a=pd.DataFrame({"position":list(range(len(ism))),"base":list(seq),"imp":ism})
-    plot_base_imp(df_a,ax3)
-    ax3.set_title("ISM (Average of 3 alternative bases)",fontsize=7)
-    ax3.tick_params(axis='y', which='major', labelsize=7)
-    ax3.set_ylim((ymin,ymax))
-    # plot truth on the fourth axis
+    # ax1: truth
     df_truth=df_truth.loc[df_truth["Element"]==element_name,:].reset_index(drop=True)
     df_truth["position"]=df_truth["position"]-region[1]
-    plot_base_imp(df_truth,ax4)
-    # add supra ticks and labels
-    ax4.xaxis.set_major_locator(ticker.MaxNLocator(nbins=6))
-    ax4.tick_params(axis='both', which='major', labelsize=7)
-    ax4.set_title("MPRA experiment",fontsize=7)
+    plot_base_imp(df_truth,ax1)
+    ax1.xaxis.set_major_locator(ticker.MaxNLocator(nbins=6))
+    ax1.tick_params(axis='both', which='major', labelsize=5)
+    ax1.set_title("MPRA experiment",fontsize=7)
+    # ax2: base level ism
+    df_a=pd.DataFrame({"position":list(range(len(ism))),"base":list(seq),"imp":ism})
+    plot_base_imp(df_a,ax2)
+    ax2.set_title("ISM (Average of 3 alternative bases)",fontsize=7)
+    ax2.tick_params(axis='y', which='major', labelsize=5)
+    ax2.set_ylim((ymin,ymax))
+    # ax3: base level isa
+    df_n= pd.DataFrame({"position":list(range(len(isa))),"base":list(seq),"imp":isa})
+    plot_base_imp(df_n,ax3)
+    ax3.set_title("ISA (Base replaced by N)",fontsize=7)
+    ax3.tick_params(axis='y', which='major', labelsize=5)
+    ax3.set_ylim((ymin,ymax))
+    # Plot motif ISA on the last axis
+    plot_motif_imp(df_motif, ax4,(ymin,ymax))
     # add legend
     color_dict = {"A": "#1f77b4", "C": "#ff7f0e", "G": "#2ca02c", "T": "#d62728"}
     handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
     ax4.legend(handles=handles, title="Bases", title_fontsize=5, fontsize=5, loc="upper right")
-    fig.text(0.5, 0.01, "Relative position", ha='center', fontsize=7)
-    plt.tight_layout()
+    fig.text(0.5, 0.05, "Relative position", ha='center', fontsize=7)
+    fig.text(0.05, 0.5, "Feature importance (base or motif)", va='center', rotation='vertical', fontsize=7)
     plt.savefig(f"{element_name}_track{track_num}.pdf",dpi=300)
     plt.close()
+    # calculate correlation between truth and ism
+    df_merged=pd.merge(df_truth, df_a, on='position', suffixes=('_truth', '_ism'))
+    df_merged=df_merged.dropna()
+    r,p=pearsonr(df_merged.imp_truth, df_merged.imp_ism)
+    logger.info(f"correlation between truth and ISM: {r}")
+    # calculate correlation between truth and isa
+    df_merged=pd.merge(df_truth, df_n, on='position', suffixes=('_truth', '_isa'))
+    df_merged=df_merged.dropna()
+    r,p=pearsonr(df_merged.imp_truth, df_merged.imp_isa)
+    logger.info(f"correlation between truth and ISA: {r}")
 
 
 
@@ -237,8 +247,6 @@ def plot_region_2panels(seq_extractor,df_truth, element_name, region, track_num,
     handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
     ax2.legend(handles=handles, title="Bases", title_fontsize=5, fontsize=5, loc="upper right")
     fig.text(0.5, 0.01, "Relative position", ha='center', fontsize=7)
-    # supra xlabel
-    plt.tight_layout()
     plt.savefig(f"{element_name}_track{track_num}.pdf",dpi=300)
     plt.close()
 
@@ -274,7 +282,7 @@ plot_region_4panels(seq_extractor,jaspar_hepg2_annotator,df_truth,"F9",("chrX",1
 # LDLR promoter: chr19:11,089,231-11,089,548
 # plot_region_2panels(seq_extractor,jaspar_hepg2_annotator,df_truth,"LDLR",("chr19",11089231,11089548),6,500,1) 
 # PKLR promoter: chr1:155,301,395-155,301,864
-plot_region_2panels(seq_extractor,df_truth,"PKLR-24h",("chr1",155301395,155301864),7,0.8)
+# plot_region_2panels(seq_extractor,df_truth,"PKLR-24h",("chr1",155301395,155301864),7,0.8)
 
 
 
@@ -289,7 +297,7 @@ plot_region_2panels(seq_extractor,df_truth,"PKLR-24h",("chr1",155301395,15530186
 
 
 def plot_ism_ref_vs_mut(imp_ref,imp_mut,title_prefix):
-    fig, (ax0, ax1) = plt.subplots(2, 1, sharex=True, figsize=(150/25.4, 70/25.4))
+    fig, (ax0, ax1) = plt.subplots(2, 1, sharex=True, figsize=(160/25.4, 70/25.4))
     # plot ism_ref on the first axis
     df_ref= pd.DataFrame({"position":list(range(len(imp_ref))),"base":list(seq_ref),"imp":imp_ref})
     plot_base_imp(df_ref,ax0)
@@ -311,9 +319,10 @@ def plot_ism_ref_vs_mut(imp_ref,imp_mut,title_prefix):
     handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
     ax1.legend(handles=handles, title="Bases", title_fontsize=5, fontsize=5, loc="upper right")
     # add supra labels and title
-    fig.text(0.5, 0.01, "Relative position", ha='center', fontsize=7)
+    fig.text(0.5, 0.05, "Relative position", ha='center', fontsize=7)
+    fig.text(0.05, 0.5, "Base importance", va='center', rotation='vertical', fontsize=7)
     plt.suptitle("SORT1 enhancer", fontsize=7)
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0.01, 1, 0.95])
     plt.savefig(f"SORT1_enhancer_mutation_{title_prefix}.pdf",dpi=300)
     plt.close()
 

@@ -18,9 +18,17 @@ prefix="/isdata/alab/people/pcr980/DeepCompare/Pd9_trait_regions"
 file_dict={"hepg2":{"clinvar":f"{prefix}/ClinVar_non_benign_non_coding.bed","eqtl":f"{prefix}/liver_eQTLs_PIP_01_non_coding.bed","gwas":f"{prefix}/liver_trait_GWAS_PIP_01_non_coding.bed"},
            "k562":{"clinvar":f"{prefix}/ClinVar_non_benign_non_coding.bed","eqtl":f"{prefix}/whole_blood_eQTLs_PIP_01_non_coding.bed","gwas":f"{prefix}/red_blood_cell_trait_GWAS_PIP_01_non_coding.bed"}
            }
-           
+
 track_dict={"hepg2":0,"k562":1}
 
+title_dict = {"clinvar": {"hepg2": "ClinVar: non-coding non-benign", 
+                          "k562": "ClinVar: non-coding non-benign"},
+              "eqtl": {"hepg2": "eQTLs: liver (PIP > 0.1)",
+                       "k562": "eQTLs: whole blood (PIP > 0.1)"},
+            "gwas": {"hepg2": "GWAS: liver traits(PIP > 0.1)",
+                     "k562": "GWAS: red blood cell traits (PIP > 0.1)"}}
+
+xlabel_dict = {"hepg2": "HepG2", "k562": "K562"}
 #--------------------
 # Helper functions
 #--------------------
@@ -71,10 +79,10 @@ def main(trait, cell_line):
 
     df_res = pd.DataFrame(df_res)
 
-    plt.figure(figsize=(2.1,2.2))
+    plt.figure(figsize=(2.1,2))
     # thin frame
-    plt.gca().spines['top'].set_linewidth(0.5)
-    plt.gca().spines['right'].set_linewidth(0.5)
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
     plt.gca().spines['bottom'].set_linewidth(0.5)
     plt.gca().spines['left'].set_linewidth(0.5)
     
@@ -90,18 +98,17 @@ def main(trait, cell_line):
     )
     plt.ylim(bottom=0)
     plt.axhline(y=1, color='black', linestyle='--', linewidth=0.5)
-    plt.xlabel("Quantile of ISA threshold", fontsize=7)
+    plt.xlabel(f"ISA quantile (CAGE {xlabel_dict[cell_line]})", fontsize=7)
     plt.ylabel("Odds ratio", fontsize=7)
     plt.xticks(
-        ticks=np.arange(0.0, 1.01, 0.1),  # Tick positions from 0.0 to 1.0 in steps of 0.1
-        labels=[f"{x:.2f}" for x in np.arange(0.0, 1.01, 0.1)],  # Format as 0.00, 0.10, ..., 1.00
-        rotation=90,
+        ticks=np.arange(0.0, 1.01, 0.2),  # Tick positions from 0.0 to 1.0 in steps of 0.1
+        labels=[f"{x:.1f}" for x in np.arange(0.0, 1.01, 0.2)],  # Format as 0.00, 0.10, ..., 1.00
         fontsize=5
     )
     plt.yticks(fontsize=5)
 
     # Ensure tight layout and save the figure
-    plt.title(f"{trait} {cell_line}", fontsize=7)
+    plt.title(f"{title_dict[trait][cell_line]}", fontsize=7)
     plt.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01)
     plt.tight_layout()
     plt.savefig(f"{trait}_{cell_line}.pdf")
