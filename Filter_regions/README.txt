@@ -18,7 +18,7 @@ Filter_regions/SuRE/NarrowPeak_hg19
  
  lift hg19 to hg38 using listover_sure_hg19.sh
  
-  
+ 
 -----------------------
 Preprocess: CAGE
 ----------------------
@@ -42,7 +42,7 @@ Preprocess: STARR
 ----------------------
 Only for loose
 code: STARR_loose_preprocessing.R
-
+Peaks_irreproducible/ is directly copied from Raw_data/STARR/Bed/
 
 
 
@@ -59,7 +59,7 @@ Filter_regions/DHS/Peaks_reproducible_within_modality/
 
 Loose: None
 
-
+Peaks_irreproducible/ is directly copied from /maps/projects/ralab/people/pcr980/DeepCompare/Raw_data/DHS/Bed
 
 ----------------------
 Reproducibility STARR
