@@ -5,3 +5,5 @@
 * Quantify_regions/ stores the code to quantify regions and produce Datasets/. The python code should run on styx.
 
 * Train/ stores the code for training models for benchmark.
+
+Scripts_python/
