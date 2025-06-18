@@ -1,5 +1,5 @@
 
-source("/maps/projects/ralab/people/pcr980/DeepCompare/Scripts_R/Generate_data/Function_utils.R")
+source("Function_utils.R")
 library(rtracklayer)
 library(gridExtra)
 library(grid)
