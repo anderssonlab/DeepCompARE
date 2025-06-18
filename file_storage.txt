@@ -1,0 +1,7 @@
+* Raw_data/ is downloaded from ENCODE or produced in Andersson lab.
+
+* Filter_regions/ stores the code to clean up raw data and produce Pd1_bed_processed/
+
+* Quantify_regions/ stores the code to quantify regions and produce Datasets/. The python code should run on styx.
+
+* Train/ stores the code for training models for benchmark.
