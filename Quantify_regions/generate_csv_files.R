@@ -3,10 +3,10 @@ library(rtracklayer)
 library(purrr)
 library(BSgenome.Hsapiens.UCSC.hg38)
 library(plyr)
-source("/maps/projects/ralab/people/pcr980/DeepCompare/Scripts_R/Generate_data/Function_bigwig.R")
-source("/maps/projects/ralab/people/pcr980/DeepCompare/Scripts_R/Generate_data/Function_utils.R")
-source("/maps/projects/ralab/people/pcr980/DeepCompare/Scripts_R/Generate_data/Function_multilabel.R")
-source("/maps/projects/ralab/people/pcr980/DeepCompare/Scripts_R/Generate_data/Function_generate_data_for_ML.R")
+source("Function_bigwig.R")
+source("Function_utils.R")
+source("Function_multilabel.R")
+source("Function_generate_data_for_ML.R")
 
 
 
