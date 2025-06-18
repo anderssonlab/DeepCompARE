@@ -1,12 +1,11 @@
-setwd("/maps/projects/ralab/people/pcr980/DeepCompare/Filter_regions")
 library(rtracklayer)
 library(dplyr)
 library(ggplot2)
 library(patchwork)
 
-source("Rcode/Function_EDA.R")
-source("/maps/projects/ralab/people/pcr980/DeepCompare/Scripts_R/Generate_dataFunction_utils.R")
-source("/maps/projects/ralab/people/pcr980/DeepCompare/Scripts_R/Generate_data/Function_reproducibility.R")
+source("Function_EDA.R")
+source("Function_utils.R")
+source("Function_reproducibility.R")
 
 modalities <- c("CAGE/","DHS/","STARR/","SuRE/") # The order is always like this.
 cells <- c("HepG2","K562") # The order is always like this.
