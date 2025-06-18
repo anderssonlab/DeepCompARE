@@ -46,7 +46,7 @@ def plot_or(df, color_mapping, n_mapping, feature_label, title, out_path):
                    label=f"max({feature_label})>{threshold} (n={n_mapping[threshold]})", s=10)
         jitter += 0.15
 
-    ax.set_xlabel("Motif ISA score", fontsize=7)
+    ax.set_xlabel("Motif-level ISA", fontsize=7)
     ax.set_ylabel("Odds ratio", fontsize=7)
     ax.axhline(y=1, color='black', linestyle=':', linewidth=0.5)
     ax.legend(fontsize=5)

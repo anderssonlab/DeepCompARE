@@ -3,7 +3,7 @@ import sys
 
 from loguru import logger
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
-from tf_cooperativity import read_cooperativity, calculate_tf_pair_cooperativity_index, calculate_tf_cooperativity_index
+from tf_cooperativity import read_cooperativity, calculate_tf_pair_synergy_score, calculate_tf_synergy_score
 
 
 # ----------------------------------------------------
@@ -52,11 +52,11 @@ def write_ci(df,suffix):
         track_nums=[1,3,5,7]
     else:
         raise ValueError("cell line not found")
-    df_coop=calculate_tf_pair_cooperativity_index(df,track_nums)
-    df_coop.to_csv(f"tf_pair_cooperativity_index_{suffix}.csv",index=False)
-    df_coop=pd.read_csv(f"tf_pair_cooperativity_index_{suffix}.csv")
-    df_tf=calculate_tf_cooperativity_index(df_coop)
-    df_tf.to_csv(f"tf_cooperativity_index_{suffix}.csv",index=False)
+    df_coop=calculate_tf_pair_synergy_score(df,track_nums)
+    df_coop.to_csv(f"tf_pair_synergy_score_{suffix}.csv",index=False)
+    df_coop=pd.read_csv(f"tf_pair_synergy_score_{suffix}.csv")
+    df_tf=calculate_tf_synergy_score(df_coop)
+    df_tf.to_csv(f"tf_synergy_score_{suffix}.csv",index=False)
 
 
 

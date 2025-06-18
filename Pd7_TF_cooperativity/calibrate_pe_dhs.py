@@ -20,7 +20,7 @@ cmap = sns.color_palette("rocket_r", as_cmap=True)
 def preprocess(df, c_sum_thresh):
     df["total_count"] = df["linear_count"] + df["nonlinear_count"]
     df = df[df["total_count"] > 10].reset_index(drop=True)
-    df = df[df['c_sum'] > c_sum_thresh].reset_index(drop=True)
+    df = df[df['i_sum'] > c_sum_thresh].reset_index(drop=True)
     return df
 
 # TF pair level

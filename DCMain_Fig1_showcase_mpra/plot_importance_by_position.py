@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.ticker as ticker
 from loguru import logger
 from scipy.stats import pearsonr
+import numpy as np
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
@@ -122,9 +123,14 @@ def plot_motif_imp(df_motif,ax,ylim):
         ax.text(current_text_pos,row["isa"], row["protein"], rotation=90, fontsize=5)
         prev_text_pos=current_text_pos
     #  set labels
-    ax.set_title("Motif ISA",fontsize=7)
-    ax.tick_params(axis='y', which='major', labelsize=5)
-    ax.set_xticks([])
+    xmax = df_motif["end_rel"].max()
+    xtick_max = int(np.ceil(xmax / 50.0)) * 50
+    # Create ticks from 0 to xtick_max with step of 50
+    xticks = np.arange(0, xtick_max + 1, 50)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticks, fontsize=5)
+    ax.set_title("Motif-level ISA",fontsize=7)
+    ax.tick_params(axis='both', which='major', labelsize=5)
     ax.set_ylim(ylim)
 
 
@@ -178,13 +184,13 @@ def plot_region_4panels(seq_extractor,jaspar_annotator, df_truth, element_name, 
     # ax2: base level ism
     df_a=pd.DataFrame({"position":list(range(len(ism))),"base":list(seq),"imp":ism})
     plot_base_imp(df_a,ax2)
-    ax2.set_title("ISM (Average of 3 alternative bases)",fontsize=7)
+    ax2.set_title("Base-level ISM (average of 3 alternative bases)",fontsize=7)
     ax2.tick_params(axis='y', which='major', labelsize=5)
     ax2.set_ylim((ymin,ymax))
     # ax3: base level isa
     df_n= pd.DataFrame({"position":list(range(len(isa))),"base":list(seq),"imp":isa})
     plot_base_imp(df_n,ax3)
-    ax3.set_title("ISA (Base replaced by N)",fontsize=7)
+    ax3.set_title("Base-level ISA (base replaced by N)",fontsize=7)
     ax3.tick_params(axis='y', which='major', labelsize=5)
     ax3.set_ylim((ymin,ymax))
     # Plot motif ISA on the last axis
@@ -192,7 +198,7 @@ def plot_region_4panels(seq_extractor,jaspar_annotator, df_truth, element_name, 
     # add legend
     color_dict = {"A": "#1f77b4", "C": "#ff7f0e", "G": "#2ca02c", "T": "#d62728"}
     handles = [mpatches.Patch(color=color, label=base) for base, color in color_dict.items()]
-    ax4.legend(handles=handles, title="Bases", title_fontsize=5, fontsize=5, loc="upper right")
+    ax1.legend(handles=handles, title="Bases", title_fontsize=5, fontsize=5, loc="center left", bbox_to_anchor=(1.01, 0.5), borderaxespad=0.)
     fig.text(0.5, 0.05, "Relative position", ha='center', fontsize=7)
     fig.text(0.05, 0.5, "Feature importance (base or motif)", va='center', rotation='vertical', fontsize=7)
     plt.savefig(f"{element_name}_track{track_num}.pdf",dpi=300)

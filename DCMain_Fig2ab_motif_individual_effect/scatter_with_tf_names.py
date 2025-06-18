@@ -7,16 +7,13 @@ from adjustText import adjust_text
 
 
 
-def plot_scatter_with_bias(data, x_column, y_column, x_label, y_label, title, output_filename):
-    """
-    Plots a scatter plot with a continuous colorbar using the coolwarm colormap.
-    No alpha is used to avoid conflicting visual cues.
-    """
+def plot_scatter_with_bias(data, x_column, y_column, x_label, y_label, title, output_filename,
+                           x_gt_y_thresh, y_gt_x_thresh):
     # Compute bias
     data["bias_value"] = data[x_column] - data[y_column]
 
     # Plot setup
-    plt.figure(figsize=(3, 2.8))
+    plt.figure(figsize=(3.1, 2.8))
     ax = plt.gca()
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -38,7 +35,7 @@ def plot_scatter_with_bias(data, x_column, y_column, x_label, y_label, title, ou
     for _, row in data.iterrows():
         x = row[x_column]
         y = row[y_column]
-        if x - y > 0.45 or abs(x + y) > 0.95 or y - x > 0.3: # 0.4 for main, 0.25 for sup
+        if x - y > x_gt_y_thresh or abs(x + y) > 0.95 or y - x > y_gt_x_thresh:
             texts.append(plt.text(x, y, row["protein"], fontsize=5, alpha=0.7))
 
     adjust_text(texts)
@@ -79,36 +76,42 @@ plot_scatter_with_bias(
     data=merged_data,
     x_column="dstat_isa_cage_activity_hepg2",
     y_column="dstat_isa_cage_activity_k562",
-    x_label="ISA-derived importance (HepG2)",
-    y_label="ISA-derived importance (K562)",
-    title="CAGE: HepG2 vs K562",
-    output_filename="scatter_with_tf_names_hepg2_vs_k562.pdf"
+    x_label="CAGE (HepG2)",
+    y_label="CAGE (K562)",
+    title="ISA-derived importance (D statistic)",
+    output_filename="scatter_with_tf_names_hepg2_vs_k562.pdf",
+    x_gt_y_thresh=0.45,
+    y_gt_x_thresh=0.3
 )
 
 
 
-# plot_scatter_with_bias(
-#     data=k562_data,
-#     x_column="dstat_isa_cage_activity",
-#     y_column="dstat_isa_starr_activity",
-#     x_label="ISA-derived importance (CAGE)",
-#     y_label="ISA-derived importance (STARR)",
-#     title="K562: CAGE vs STARR",
-#     output_filename="scatter_with_tf_names_cage_vs_starr.pdf"
-# )
+plot_scatter_with_bias(
+    data=k562_data,
+    x_column="dstat_isa_cage_activity",
+    y_column="dstat_isa_starr_activity",
+    x_label="CAGE (K562)",
+    y_label="STARR (K562)",
+    title="ISA-derived importance (D statistic)",
+    output_filename="scatter_with_tf_names_cage_vs_starr.pdf",
+    x_gt_y_thresh=0.3,
+    y_gt_x_thresh=0.4
+)
 
 
 
 
-# plot_scatter_with_bias(
-#     data=merged_data,
-#     x_column="dstat_isa_cage_activity_k562",
-#     y_column="dstat_isa_dhs_activity_k562",
-#     x_label="ISA-derived importance (CAGE)",
-#     y_label="ISA-derived importance (DHS)",
-#     title="K562: CAGE vs DHS",
-#     output_filename="scatter_with_tf_names_cage_vs_dhs.pdf"
-# )
+plot_scatter_with_bias(
+    data=merged_data,
+    x_column="dstat_isa_cage_activity_k562",
+    y_column="dstat_isa_dhs_activity_k562",
+    x_label="CAGE (K562)",
+    y_label="DNase (K562)",
+    title="ISA-derived importance (D statistic)",
+    output_filename="scatter_with_tf_names_cage_vs_dhs.pdf",
+    x_gt_y_thresh=0.25,
+    y_gt_x_thresh=0.3
+)
 
 
 
