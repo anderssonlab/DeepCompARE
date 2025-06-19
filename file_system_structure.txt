@@ -7,3 +7,5 @@
 * Train/ stores the code for training models for benchmark.
 
 * Scripts_python/ contains tools for model prediction and interpretation.
+
+* The rest files are ordered according to figures. 
