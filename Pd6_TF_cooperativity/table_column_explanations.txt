@@ -1,0 +1,18 @@
+count_redundancy: number of TFBS (pair) that behave in redundant manner
+count_synergy: number of TFBS (pair) that behave in synergistic manner
+cooperative_distance: median genomic distance (bp) between TF pair
+cooperative_distance_iqr: interquartile range between TF pair that behave in cooperative manner
+independent_count: number of TFBS (pair) that behave in independent manner
+independent_distance: median genomic distance (bp) between TF pair that behave in independent manner
+independent_distance_iqr: interquartile range between TF pair that behave in independent manner
+i_redundancy: sum of absolute interaction values for all redundant cases
+i_synergy: sum of interaction values for all synergistic cases
+
+i_sum = i_redundancy + i_synergy
+synergy_score = i_synergy / (i_sum)
+cooperative_count = count_redundancy+count_synergy
+synergy_fraction = count_synergy / cooperative_count
+total_count = cooperative_count + independent_count
+independence_score = independent_count / total_count
+
+
