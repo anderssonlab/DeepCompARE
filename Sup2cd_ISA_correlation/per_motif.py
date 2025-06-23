@@ -69,12 +69,12 @@ df_corr.to_csv("corr_per_motif.csv",index=False)
 def plot(title,col):
     df_corr=pd.read_csv("corr_per_motif.csv")
     # plot the correlation
-    plt.figure(figsize=(3,2.5))
+    plt.figure(figsize=(2,2))
     # thin frame
-    plt.gca().spines['top'].set_linewidth(0.5)
+    plt.gca().spines['top'].set_visible(False)
     plt.gca().spines['bottom'].set_linewidth(0.5)
     plt.gca().spines['left'].set_linewidth(0.5)
-    plt.gca().spines['right'].set_linewidth(0.5)
+    plt.gca().spines['right'].set_visible(False)
     sns.kdeplot(df_corr[col],linewidth=1)
     plt.title(title,fontsize=7)
     plt.xlabel("Pearson correlation",fontsize=7)

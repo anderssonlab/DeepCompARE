@@ -266,7 +266,7 @@ def plot_region_2panels(seq_extractor,df_truth, element_name, region, track_num,
 
 
 # truth
-df_truth=pd.read_csv("GRCh38_TERT-GAa_TERT-GSc_TERT-GBM_TERT-HEK_LDLR_F9_PKLR-24h_SORT1.tsv",sep="\t")
+df_truth=pd.read_csv("GRCh38_F9_LDLR_PKLR-24h_SORT1.tsv",sep="\t")
 # select P-Value<0.05
 df_truth=df_truth.loc[df_truth["P-Value"]<0.05,:].reset_index(drop=True)
 # group by Position, Ref, Element, and select the largest Value
