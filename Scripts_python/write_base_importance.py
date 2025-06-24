@@ -4,7 +4,7 @@ import pandas as pd
 from utils import find_available_gpu
 from seq_ops import SeqExtractor
 from gradxinp import  compute_gradxinp
-from in_silico_mutagenesis import compute_mutagenesis_score
+from in_silico_perturbation import compute_mutagenesis_score
 
 
 

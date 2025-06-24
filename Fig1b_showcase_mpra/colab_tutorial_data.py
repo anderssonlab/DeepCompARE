@@ -6,12 +6,10 @@ import matplotlib.ticker as ticker
 from scipy.stats import pearsonr
 import numpy as np
 
-from plot_importance_by_position import reduce_motifs
 
 import sys
 sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from seq_ops import SeqExtractor
-from region_ops import resize_region
 from seq_annotators import JasparAnnotator
 
 

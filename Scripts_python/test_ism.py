@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import shutil
 from pandas.testing import assert_frame_equal
-from in_silico_mutagenesis import compute_mutagenesis_score
+from in_silico_perturbation import compute_mutagenesis_score
 from gradxinp import compute_gradxinp
 
 

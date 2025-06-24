@@ -12,7 +12,7 @@ sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
 from seq_ops import SeqExtractor
 from region_ops import resize_region
 from seq_annotators import JasparAnnotator
-from in_silico_mutagenesis import compute_mutagenesis_score, get_motif_isa
+from in_silico_perturbation import compute_mutagenesis_score, get_motif_isa
 
 
 matplotlib.rcParams['pdf.fonttype']=42
