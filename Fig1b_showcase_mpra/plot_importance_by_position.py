@@ -8,7 +8,7 @@ from scipy.stats import pearsonr
 import numpy as np
 
 import sys
-sys.path.insert(1,"/isdata/alab/people/pcr980/Scripts_python")
+sys.path.insert(1,"/isdata/alab/people/pcr980/DeepCompare/Scripts_python")
 from seq_ops import SeqExtractor
 from region_ops import resize_region
 from seq_annotators import JasparAnnotator
