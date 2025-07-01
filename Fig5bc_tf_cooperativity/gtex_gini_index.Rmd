@@ -1,0 +1,63 @@
+---
+title: "deepCompare.dispersionEstimates"
+output: html_document
+date: "2024-12-19"
+---
+
+```{r}
+library(matrixStats)
+library(DescTools)
+
+# Simplified function from PRIME
+DMadjustedCV <- function(mean,sd){
+  require(zoo)
+  
+  CV <- sd/mean 
+  log10_CV2 <- log10(CV^2) 
+  mean_order <- order(mean)
+    
+  rolling_median <- rollapply(log10_CV2[mean_order],width=50,by=25,FUN=median,fill=list("extend","extend","extend"),partial=FALSE)
+    
+  names(rolling_median) <- (1:length(log10_CV2))[mean_order] 
+  reorder <- match(1:length(log10_CV2),names(rolling_median)) 
+  rolling_median <- rolling_median[reorder]
+    
+  adjusted_log10_CV2 <- log10_CV2-rolling_median
+  
+  adjusted_log10_CV2 
+}
+```
+
+
+```{r}
+# Read in gene quantified gene expression from GTEX
+# Downloaded from https://www.gtexportal.org/home/downloads/adult-gtex/bulk_tissue_expression
+gtex <- read.table(
+  gzfile("GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct.gz"),
+  header=T,skip=2) 
+```
+
+
+```{r}
+# Calculate dispersion estimates
+dispersion.estimates <- data.frame(symbol=gtex$Description, geneID=gtex$Name)
+
+# Means
+dispersion.estimates$means <- rowMeans(gtex[,3:ncol(gtex)])
+
+# Sd
+dispersion.estimates$sd <- rowSds(gtex[,3:ncol(gtex)])
+
+# adjusted dispersion
+dispersion.estimates$adjusted_dispersion <- 
+  DMadjustedCV(dispersion.estimates$means, dispersion.estimates$sd)
+
+# Gini coefficient
+dispersion.estimates$gini <- apply(gtex[,3:ncol(gtex)], 1, Gini)
+```
+
+
+```{r}
+write.table(dispersion.estimates,"gtex.dispersionEstimates.tab",sep="\t",
+            quote=FALSE, row.names=FALSE)
+```
